@@ -1,0 +1,54 @@
+{
+  "generation": 4,
+  "best_fitness": 0,
+  "best_params": {
+    "BUY_THRESHOLD": 0.35,
+    "SELL_THRESHOLD": -0.25,
+    "PROFIT_TARGET": 0.01,
+    "STOP_LOSS": 0.01,
+    "MIN_PROFIT": 0.007,
+    "MIN_CONFLUENCE_BUY": 5,
+    "MIN_CONFIDENCE_BUY": 0.45,
+    "TRAILING_ACTIVATION": 0.01,
+    "INDICATOR_WEIGHTS": {
+      "momentum": 0.18,
+      "macd": 0.12,
+      "bollinger": 0.15,
+      "ema": 0.05,
+      "support_resistance": 0.15,
+      "ml_prediction": 0.08,
+      "ichimoku": 0.0675,
+      "mfi": 0.0675,
+      "williams_r": 0.0675,
+      "cci": 0.0675
+    }
+  },
+  "history": [
+    {
+      "generation": 1,
+      "best_fitness": 0,
+      "avg_fitness": 0.0,
+      "timestamp": "2026-02-02T02:22:18.965065"
+    },
+    {
+      "generation": 2,
+      "best_fitness": 0,
+      "avg_fitness": 0.0,
+      "timestamp": "2026-02-02T02:22:58.269284"
+    },
+    {
+      "generation": 3,
+      "best_fitness": 0,
+      "avg_fitness": 0.0,
+      "timestamp": "2026-02-03T22:15:05.375547"
+    },
+    {
+      "generation": 4,
+      "best_fitness": 0,
+      "avg_fitness": 0.0,
+      "timestamp": "2026-02-03T22:15:46.925410"
+    }
+  ],
+  "mutation_rate": 0.17496,
+  "timestamp": "2026-02-03T22:16:45.580058"
+}

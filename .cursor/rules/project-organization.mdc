@@ -1,0 +1,37 @@
+---
+description: Project structure and organization - keep the codebase organized
+alwaysApply: true
+---
+
+# Project Organization
+
+Keep the codebase organized. Follow this structure when adding or moving files.
+
+**Reference AGENTS.md** for component flow and entry points. **Reference RULE.md** for file-specific guidelines.
+
+## Package Layout
+
+| Package | Purpose | Examples |
+|---------|---------|----------|
+| **core/** | Exchange client, trader, self-healing | binance_client, trader, self_healing |
+| **ai/** | AI/ML engine, analysis, optimization | ai_engine, analyzer, ml_*, meta_ai, backtester |
+| **market/** | Market analysis, regime, sentiment | market_regime, order_book, correlation, sentiment, multi_timeframe |
+| **notifications/** | Alerts and messaging | telegram_bot, telegram_notifier |
+| **tests/** | Tests and utilities | test_ml_prediction, status_check |
+
+## Root (Entry Points Only)
+
+- `main.py` - CLI entry
+- `dashboard.py` - Web dashboard entry
+- `config.py` - Configuration
+- `data/` - Runtime state (use `config.DATA_DIR`)
+- `models/` - ML models (use `config.MODEL_DIR`)
+- `scripts/` - Start/stop scripts
+- `templates/` - Dashboard HTML
+
+## Rules
+
+1. **Imports**: Use package paths (`from core.binance_client import ...`, `from ai.ai_engine import ...`)
+2. **Paths**: Use `config.DATA_DIR` and `config.MODEL_DIR` - never hardcode `"data"` or `"models"`
+3. **New modules**: Place in the correct package; add `__init__.py` if creating a new package
+4. **Tests**: Add to `tests/`; utilities like status_check go in `tests/`

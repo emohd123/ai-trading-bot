@@ -1,0 +1,39 @@
+# Secrets - never commit
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+
+# Logs and runtime
+*.log
+dashboard.log
+
+# Bot state and data (optional: exclude so VPS starts fresh, or include for backup)
+data/trading_bot.log
+data/temp_state.json
+# Uncomment to exclude all runtime state (VPS will create fresh):
+# data/*.json
+# bot_state.json
+# meta_ai_state.json
+
+# ML models (large; can be re-trained on VPS)
+models/*.pkl
+# Keep meta if small: models/meta.json, models/ml_performance.json
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

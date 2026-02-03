@@ -1,0 +1,72 @@
+{
+  "insights": [
+    {
+      "timestamp": "2026-02-02T01:38:24.449131",
+      "summary": {
+        "win_rate": 61.1,
+        "total_profit": 1.54,
+        "weaknesses_count": 3,
+        "strengths_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-02-02T10:39:26.360307",
+      "summary": {
+        "win_rate": 63.6,
+        "total_profit": 2.22,
+        "weaknesses_count": 2,
+        "strengths_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-02-03T21:12:30.090792",
+      "summary": {
+        "win_rate": 60.9,
+        "total_profit": 2.22,
+        "weaknesses_count": 2,
+        "strengths_count": 2
+      }
+    }
+  ],
+  "patterns": {
+    "consecutive_losses": {
+      "pattern": "consecutive_losses",
+      "description": "Had 3 consecutive losses",
+      "severity": "medium",
+      "recommendation": "Consider reducing position size after 2 consecutive losses"
+    },
+    "asymmetric_risk_reward": {
+      "pattern": "asymmetric_risk_reward",
+      "description": "Average loss (1.69%) is much larger than average win (0.59%)",
+      "severity": "high",
+      "recommendation": "Tighten stop loss or let winners run longer"
+    }
+  },
+  "weaknesses": [
+    {
+      "weakness": "poor_risk_reward",
+      "description": "Profit factor is 0.55 (should be > 1.5)",
+      "impact": "high",
+      "suggestion": "Adjust profit targets and stop losses"
+    },
+    {
+      "weakness": "large_losses",
+      "description": "Worst trade was -5.09%",
+      "impact": "medium",
+      "suggestion": "Consider tighter stop losses or position sizing"
+    }
+  ],
+  "strengths": [
+    {
+      "strength": "high_win_rate",
+      "description": "Win rate is 60.9% (above 60%)",
+      "leverage": "Can be more aggressive with position sizing"
+    },
+    {
+      "strength": "time_expertise",
+      "description": "Strong performance at hour 3 (100.0%)",
+      "leverage": "Focus trading around hour 3"
+    }
+  ],
+  "last_updated": "2026-02-03T21:12:30.106533"
+}

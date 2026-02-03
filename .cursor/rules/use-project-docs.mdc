@@ -1,0 +1,14 @@
+---
+description: Reference project docs (AGENTS.md, RULE.md) when working on this codebase
+alwaysApply: true
+---
+
+# Use Project Docs
+
+When editing, adding features, or answering questions about this project:
+
+1. **AGENTS.md** – Read for project overview, entry points, component flow, and data flow. Use it to understand how parts connect and where to add new code.
+
+2. **RULE.md** – Read for file- and folder-specific rules. Follow its guidelines when editing core/, ai/, market/, notifications/, or root files.
+
+3. **When to reference** – Before making edits, adding modules, or changing imports. When unsure about structure, paths, or conventions.

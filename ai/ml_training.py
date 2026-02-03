@@ -1,0 +1,320 @@
+"""
+ML Training Pipeline
+Multi-horizon predictions with feature selection, hyperparameter tuning, walk-forward validation.
+"""
+import os
+import json
+import numpy as np
+import pandas as pd
+from typing import Dict, Tuple, Optional, List
+import config
+
+# Optional imports
+try:
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.model_selection import TimeSeriesSplit, GridSearchCV
+    import joblib
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+
+try:
+    import xgboost as xgb
+    XGBOOST_AVAILABLE = True
+except ImportError:
+    XGBOOST_AVAILABLE = False
+
+try:
+    import lightgbm as lgb
+    LIGHTGBM_AVAILABLE = True
+except ImportError:
+    LIGHTGBM_AVAILABLE = False
+
+from ai.ml_features import MLFeatureEngineer, select_features
+from ai.ml_ensemble import create_random_forest, create_xgboost, create_lightgbm
+from ai.ml_evaluation import evaluate_model
+
+# Multi-horizon: hours ahead to predict
+HORIZONS = {'1h': 1, '4h': 4, '12h': 12, '24h': 24}
+DEFAULT_HORIZON = '4h'
+N_SELECTED_FEATURES = 25
+
+
+def fetch_historical_data(limit: int = 4320) -> pd.DataFrame:
+    """Fetch 6 months of hourly data from Binance."""
+    try:
+        from binance.client import Client
+        client = Client()
+        all_klines = []
+        batch_size = 1000
+        end_time = None
+
+        while len(all_klines) < limit:
+            fetch_limit = min(batch_size, limit - len(all_klines))
+            params = {'symbol': config.SYMBOL, 'interval': '1h', 'limit': fetch_limit}
+            if end_time is not None:
+                params['endTime'] = end_time
+
+            klines = client.get_klines(**params)
+            if not klines:
+                break
+
+            all_klines = klines + all_klines
+            end_time = klines[0][0] - 1
+            if len(klines) < batch_size:
+                break
+
+        if not all_klines:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(all_klines, columns=[
+            'timestamp', 'open', 'high', 'low', 'close', 'volume',
+            'close_time', 'quote_volume', 'trades', 'taker_buy_base',
+            'taker_buy_quote', 'ignore'
+        ])
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        for col in ['open', 'high', 'low', 'close', 'volume']:
+            df[col] = df[col].astype(float)
+        df.set_index('timestamp', inplace=True)
+        df = df.sort_index()
+        return df[['open', 'high', 'low', 'close', 'volume']].tail(limit)
+    except Exception as e:
+        print(f"Error fetching data: {e}")
+        return pd.DataFrame()
+
+
+def create_target(df: pd.DataFrame, horizon: int = 4) -> np.ndarray:
+    """Target: Will price be higher in N hours? 1=UP, 0=DOWN"""
+    target = (df['close'].shift(-horizon) > df['close']).astype(int)
+    return target.values
+
+
+def walk_forward_validation(
+    X: np.ndarray, y: np.ndarray, model, scaler,
+    n_splits: int = 5
+) -> Tuple[float, float]:
+    """Time-series aware cross-validation. Returns (mean_score, std_score)."""
+    if not SKLEARN_AVAILABLE:
+        return 0.5, 0.0
+
+    tscv = TimeSeriesSplit(n_splits=n_splits)
+    scores = []
+
+    for train_idx, test_idx in tscv.split(X):
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+
+        model.fit(X_train_scaled, y_train)
+        pred = model.predict(X_test_scaled)
+        acc = (pred == y_test).mean()
+        scores.append(acc)
+
+    return float(np.mean(scores)), float(np.std(scores)) if scores else 0.0
+
+
+def tune_hyperparameters(X_train, y_train, model_type: str = 'rf'):
+    """Grid search for optimal hyperparameters."""
+    if model_type == 'rf' and SKLEARN_AVAILABLE:
+        param_grid = {
+            'n_estimators': [100, 200, 300],
+            'max_depth': [10, 15, 20],
+            'min_samples_split': [2, 5, 10]
+        }
+        base = RandomForestClassifier(random_state=42, n_jobs=-1)
+        gs = GridSearchCV(base, param_grid, cv=3, scoring='accuracy', n_jobs=-1, verbose=0)
+        gs.fit(X_train, y_train)
+        return gs.best_estimator_
+    elif model_type == 'xgb' and XGBOOST_AVAILABLE:
+        param_grid = {
+            'n_estimators': [100, 200],
+            'max_depth': [6, 8, 10],
+            'learning_rate': [0.05, 0.1]
+        }
+        base = xgb.XGBClassifier(random_state=42, eval_metric='logloss')
+        gs = GridSearchCV(base, param_grid, cv=3, scoring='accuracy', n_jobs=-1, verbose=0)
+        gs.fit(X_train, y_train)
+        return gs.best_estimator_
+    elif model_type == 'lgb' and LIGHTGBM_AVAILABLE:
+        param_grid = {
+            'n_estimators': [100, 200],
+            'max_depth': [6, 8, 10],
+            'learning_rate': [0.05, 0.1]
+        }
+        base = lgb.LGBMClassifier(random_state=42, verbose=-1)
+        gs = GridSearchCV(base, param_grid, cv=3, scoring='accuracy', n_jobs=-1, verbose=0)
+        gs.fit(X_train, y_train)
+        return gs.best_estimator_
+    return None
+
+
+def train_models(model_dir: str = None, horizon: str = DEFAULT_HORIZON) -> Dict:
+    model_dir = model_dir or config.MODEL_DIR
+    """
+    Full training pipeline with multi-horizon, feature selection, tuning, walk-forward.
+    """
+    os.makedirs(model_dir, exist_ok=True)
+    h = HORIZONS.get(horizon, 4)
+
+    print("Fetching historical data (6 months)...")
+    df = fetch_historical_data(limit=4320)
+    if df.empty or len(df) < 500:
+        print("Insufficient data for training")
+        return {"error": "Insufficient data"}
+
+    print(f"Loaded {len(df)} candles")
+    print(f"Training for horizon: {horizon} ({h} hours)")
+
+    engineer = MLFeatureEngineer()
+    features_list = []
+    targets_list = []
+
+    max_horizon = max(HORIZONS.values())
+    for i in range(100, len(df) - max_horizon):
+        df_slice = df.iloc[:i + 1].copy()
+        feat_df = engineer.create_features(df_slice)
+        if not feat_df.empty:
+            features_list.append(feat_df)
+            target = 1 if df['close'].iloc[i + h] > df['close'].iloc[i] else 0
+            targets_list.append(target)
+
+    if len(features_list) < 100:
+        print("Not enough samples for training")
+        return {"error": "Not enough samples"}
+
+    X = pd.concat(features_list, ignore_index=True)
+    y = np.array(targets_list)
+
+    X = X.fillna(0)
+    X = X.replace([np.inf, -np.inf], 0)
+
+    # Feature selection
+    print(f"Selecting top {N_SELECTED_FEATURES} features...")
+    X_selected, selected_features = select_features(X, y, n_features=N_SELECTED_FEATURES)
+    X = X_selected
+
+    n = len(X)
+    train_end = int(n * 0.7)
+    val_end = int(n * 0.85)
+
+    X_train, X_val, X_test = X.iloc[:train_end], X.iloc[train_end:val_end], X.iloc[val_end:]
+    y_train, y_val, y_test = y[:train_end], y[train_end:val_end], y[val_end:]
+
+    print(f"Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
+
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_val_scaled = scaler.transform(X_val)
+    X_test_scaled = scaler.transform(X_test)
+
+    results = {}
+    feature_names = list(X.columns)
+
+    # Train Random Forest (with optional tuning)
+    if SKLEARN_AVAILABLE:
+        print("Training Random Forest...")
+        rf = tune_hyperparameters(X_train_scaled, y_train, 'rf')
+        if rf is None:
+            rf = create_random_forest()
+        if rf is not None:
+            rf.fit(X_train_scaled, y_train)
+            y_pred = rf.predict(X_test_scaled)
+            y_prob = rf.predict_proba(X_test_scaled)[:, 1] if hasattr(rf, 'predict_proba') else y_pred
+            metrics = evaluate_model(y_test, y_pred, y_prob)
+            results['rf_accuracy'] = round(metrics['accuracy'], 4)
+            results['rf_metrics'] = metrics
+            joblib.dump(rf, os.path.join(model_dir, 'rf_model.pkl'))
+            print(f"  RF Accuracy: {metrics['accuracy']:.2%}")
+
+    # Train XGBoost
+    if XGBOOST_AVAILABLE:
+        print("Training XGBoost...")
+        xgb_model = tune_hyperparameters(X_train_scaled, y_train, 'xgb')
+        if xgb_model is None:
+            xgb_model = create_xgboost()
+        if xgb_model is not None:
+            xgb_model.fit(X_train_scaled, y_train)
+            y_pred = xgb_model.predict(X_test_scaled)
+            y_prob = xgb_model.predict_proba(X_test_scaled)[:, 1]
+            metrics = evaluate_model(y_test, y_pred, y_prob)
+            results['xgb_accuracy'] = round(metrics['accuracy'], 4)
+            results['xgb_metrics'] = metrics
+            joblib.dump(xgb_model, os.path.join(model_dir, 'xgb_model.pkl'))
+            print(f"  XGB Accuracy: {metrics['accuracy']:.2%}")
+
+    # Train LightGBM
+    if LIGHTGBM_AVAILABLE:
+        print("Training LightGBM...")
+        lgb_model = tune_hyperparameters(X_train_scaled, y_train, 'lgb')
+        if lgb_model is None:
+            lgb_model = create_lightgbm()
+        if lgb_model is not None:
+            lgb_model.fit(X_train_scaled, y_train)
+            y_pred = lgb_model.predict(X_test_scaled)
+            y_prob = lgb_model.predict_proba(X_test_scaled)[:, 1]
+            metrics = evaluate_model(y_test, y_pred, y_prob)
+            results['lgb_accuracy'] = round(metrics['accuracy'], 4)
+            results['lgb_metrics'] = metrics
+            joblib.dump(lgb_model, os.path.join(model_dir, 'lgb_model.pkl'))
+            print(f"  LGB Accuracy: {metrics['accuracy']:.2%}")
+
+    # Train LSTM (optional)
+    try:
+        from ml_lstm import train_lstm, SEQ_LENGTH
+        print("Training LSTM...")
+        lstm_model = train_lstm(
+            X_train_scaled, y_train,
+            X_val_scaled, y_val,
+            seq_length=SEQ_LENGTH,
+            epochs=30,
+            batch_size=32
+        )
+        if lstm_model is not None:
+            from ml_lstm import create_sequences
+            X_test_seq, y_test_seq = create_sequences(X_test_scaled, y_test, SEQ_LENGTH)
+            if len(X_test_seq) > 0:
+                y_prob_lstm = lstm_model.predict(X_test_seq, verbose=0).flatten()
+                y_pred_lstm = (y_prob_lstm > 0.5).astype(int)
+                metrics = evaluate_model(y_test_seq, y_pred_lstm, y_prob_lstm)
+                results['lstm_accuracy'] = round(metrics['accuracy'], 4)
+                results['lstm_metrics'] = metrics
+                lstm_model.save(os.path.join(model_dir, 'lstm_model.keras'))
+                print(f"  LSTM Accuracy: {metrics['accuracy']:.2%}")
+    except Exception as e:
+        print(f"  LSTM skipped: {e}")
+
+    joblib.dump(scaler, os.path.join(model_dir, 'scaler.pkl'))
+    with open(os.path.join(model_dir, 'meta.json'), 'w', encoding='utf-8') as f:
+        json.dump({
+            'feature_names': feature_names,
+            'selected_features': selected_features,
+            'n_samples': len(X),
+            'horizon': horizon,
+            'results': results
+        }, f, indent=2)
+
+    print("Models saved to", model_dir)
+    return results
+
+
+def train_all_horizons(model_dir: str = None) -> Dict:
+    """Train models for all horizons (1h, 4h, 12h, 24h)."""
+    model_dir = model_dir or config.MODEL_DIR
+    all_results = {}
+    for horizon in HORIZONS:
+        subdir = os.path.join(model_dir, f"horizon_{horizon}")
+        os.makedirs(subdir, exist_ok=True)
+        print(f"\n=== Training horizon {horizon} ===")
+        all_results[horizon] = train_models(model_dir=subdir, horizon=horizon)
+    return all_results
+
+
+if __name__ == '__main__':
+    print("=" * 50)
+    print("ML Model Training Pipeline (Enhanced)")
+    print("=" * 50)
+    results = train_models(horizon=DEFAULT_HORIZON)
+    print("\nResults:", results)

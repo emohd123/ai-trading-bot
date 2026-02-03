@@ -1,0 +1,114 @@
+{
+  "feature_names": [
+    "volume_trend",
+    "session_europe",
+    "near_resistance",
+    "price_above_ema",
+    "rsi_change",
+    "stoch_d",
+    "buy_sell_ratio",
+    "atr_percent",
+    "macd_hist",
+    "macd_signal",
+    "adx",
+    "hour_sin",
+    "hour_cos",
+    "session_asia",
+    "dist_from_24h_low",
+    "bb_width",
+    "hl_range_pct",
+    "near_support",
+    "day_sin",
+    "day_cos",
+    "is_weekend",
+    "dist_from_24h_high",
+    "ema_cross_dist",
+    "volatility_24h",
+    "volatility_7d"
+  ],
+  "selected_features": [
+    "volume_trend",
+    "session_europe",
+    "near_resistance",
+    "price_above_ema",
+    "rsi_change",
+    "stoch_d",
+    "buy_sell_ratio",
+    "atr_percent",
+    "macd_hist",
+    "macd_signal",
+    "adx",
+    "hour_sin",
+    "hour_cos",
+    "session_asia",
+    "dist_from_24h_low",
+    "bb_width",
+    "hl_range_pct",
+    "near_support",
+    "day_sin",
+    "day_cos",
+    "is_weekend",
+    "dist_from_24h_high",
+    "ema_cross_dist",
+    "volatility_24h",
+    "volatility_7d"
+  ],
+  "n_samples": 4196,
+  "horizon": "4h",
+  "results": {
+    "rf_accuracy": 0.5016,
+    "rf_metrics": {
+      "accuracy": 0.5015873015873016,
+      "precision": 0.4581673306772908,
+      "recall": 0.3924914675767918,
+      "f1": 0.4227941176470588,
+      "confusion_matrix": [
+        [
+          201,
+          136
+        ],
+        [
+          178,
+          115
+        ]
+      ],
+      "roc_auc": 0.5135252833169605
+    },
+    "xgb_accuracy": 0.519,
+    "xgb_metrics": {
+      "accuracy": 0.5190476190476191,
+      "precision": 0.4789915966386555,
+      "recall": 0.3890784982935154,
+      "f1": 0.4293785310734463,
+      "confusion_matrix": [
+        [
+          213,
+          124
+        ],
+        [
+          179,
+          114
+        ]
+      ],
+      "roc_auc": 0.5048055012608744
+    },
+    "lgb_accuracy": 0.4825,
+    "lgb_metrics": {
+      "accuracy": 0.48253968253968255,
+      "precision": 0.44329896907216493,
+      "recall": 0.4402730375426621,
+      "f1": 0.4417808219178082,
+      "confusion_matrix": [
+        [
+          175,
+          162
+        ],
+        [
+          164,
+          129
+        ]
+      ],
+      "roc_auc": 0.48174517171185227
+    }
+  }
+}

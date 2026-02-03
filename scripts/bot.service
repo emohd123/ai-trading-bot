@@ -1,0 +1,23 @@
+# Systemd service for AI Trading Bot (dashboard) - 24/7 on Linux
+# Install: sudo cp scripts/bot.service /etc/systemd/system/
+# Edit paths below, then: sudo systemctl daemon-reload && sudo systemctl enable bot && sudo systemctl start bot
+
+[Unit]
+Description=AI Trading Bot (Dashboard + Trading)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/bot
+Environment=PATH=/usr/bin:/usr/local/bin
+# If using a venv: ExecStart=/home/YOUR_USER/bot/venv/bin/python dashboard.py
+ExecStart=/usr/bin/python3 dashboard.py
+Restart=always
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

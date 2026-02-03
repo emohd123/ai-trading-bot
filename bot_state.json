@@ -1,0 +1,158 @@
+{
+  "running": true,
+  "position": null,
+  "positions": [],
+  "logs": [
+    {
+      "time": "04:15:58",
+      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.33)",
+      "level": "info"
+    },
+    {
+      "time": "04:15:19",
+      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.37)",
+      "level": "info"
+    },
+    {
+      "time": "04:14:00",
+      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.37)",
+      "level": "info"
+    },
+    {
+      "time": "03:17:06",
+      "message": "SELL #1: $34.26 | P/L: $+0.29 (+0.84%) | Remaining: 0",
+      "level": "success"
+    },
+    {
+      "time": "03:17:04",
+      "message": "SELL #1 (min_profit) at $77,858.65",
+      "level": "info"
+    },
+    {
+      "time": "03:17:04",
+      "message": "\ud83d\udcb0 POSITION #1 MIN PROFIT: +0.84% - SELLING!",
+      "level": "success"
+    },
+    {
+      "time": "03:08:14",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.56 is STRONG BULLISH - Delaying stop (1/3)",
+      "level": "info"
+    },
+    {
+      "time": "03:07:34",
+      "message": "\u26a0\ufe0f Max delay cycles (3) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "03:06:57",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.55 is STRONG BULLISH - Delaying stop (3/3)",
+      "level": "info"
+    },
+    {
+      "time": "03:06:14",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.55 is STRONG BULLISH - Delaying stop (2/3)",
+      "level": "info"
+    },
+    {
+      "time": "03:05:37",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.63 is STRONG BULLISH - Delaying stop (1/3)",
+      "level": "info"
+    },
+    {
+      "time": "03:04:53",
+      "message": "\u26a0\ufe0f Max delay cycles (3) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "03:04:15",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.61 is STRONG BULLISH - Delaying stop (3/3)",
+      "level": "info"
+    },
+    {
+      "time": "03:03:35",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.69 is STRONG BULLISH - Delaying stop (2/3)",
+      "level": "info"
+    },
+    {
+      "time": "03:02:56",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.65 is STRONG BULLISH - Delaying stop (1/3)",
+      "level": "info"
+    },
+    {
+      "time": "03:02:12",
+      "message": "\u26a0\ufe0f Max delay cycles (3) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "03:01:34",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.58 is STRONG BULLISH - Delaying stop (3/3)",
+      "level": "info"
+    },
+    {
+      "time": "03:00:54",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.65 is STRONG BULLISH - Delaying stop (2/3)",
+      "level": "info"
+    },
+    {
+      "time": "03:00:17",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.56 is STRONG BULLISH - Delaying stop (1/3)",
+      "level": "info"
+    },
+    {
+      "time": "02:59:34",
+      "message": "\u26a0\ufe0f Max delay cycles (3) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "02:58:51",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.72 is STRONG BULLISH - Delaying stop (3/3)",
+      "level": "info"
+    },
+    {
+      "time": "02:58:12",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.45 is STRONG BULLISH - Delaying stop (2/3)",
+      "level": "info"
+    },
+    {
+      "time": "02:57:33",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.56 is STRONG BULLISH - Delaying stop (1/3)",
+      "level": "info"
+    },
+    {
+      "time": "02:56:53",
+      "message": "\u26a0\ufe0f Max delay cycles (3) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "02:56:16",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.41 is STRONG BULLISH - Delaying stop (3/3)",
+      "level": "info"
+    },
+    {
+      "time": "02:55:35",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.56 is STRONG BULLISH - Delaying stop (2/3)",
+      "level": "info"
+    },
+    {
+      "time": "02:54:54",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.44 is STRONG BULLISH - Delaying stop (1/3)",
+      "level": "info"
+    },
+    {
+      "time": "02:54:06",
+      "message": "\u26a0\ufe0f Max delay cycles (3) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "02:53:28",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.56 is STRONG BULLISH - Delaying stop (3/3)",
+      "level": "info"
+    },
+    {
+      "time": "02:52:47",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.51 is STRONG BULLISH - Delaying stop (2/3)",
+      "level": "info"
+    }
+  ],
+  "decision": "HOLD"
+}
