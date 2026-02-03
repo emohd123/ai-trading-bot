@@ -4,6 +4,11 @@
   "positions": [],
   "logs": [
     {
+      "time": "00:46:36",
+      "message": "AI Think: check_goals",
+      "level": "info"
+    },
+    {
       "time": "22:16:03",
       "message": "BUY skipped: Downtrend - no new buys (NO_BUY_IN_DOWNTREND)",
       "level": "info"
@@ -147,11 +152,6 @@
       "time": "21:48:33",
       "message": "SELL failed: Quantity 0.0 below minimum 1e-05",
       "level": "error"
-    },
-    {
-      "time": "21:48:32",
-      "message": "SELL #1 (stop_loss) at $73,395.09",
-      "level": "info"
     }
   ],
   "decision": "HOLD"

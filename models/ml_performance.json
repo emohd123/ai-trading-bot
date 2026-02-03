@@ -1,30 +1,6 @@
 {
   "predictions": [
     {
-      "timestamp": "2026-02-02T04:30:51.764861",
-      "predicted_direction": "DOWN",
-      "confidence": 0.4097,
-      "probability": 0.2951,
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-02T04:31:29.030814",
-      "predicted_direction": "DOWN",
-      "confidence": 0.4019,
-      "probability": 0.299,
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-02T04:32:08.671966",
-      "predicted_direction": "DOWN",
-      "confidence": 0.2936,
-      "probability": 0.3532,
-      "actual_direction": null,
-      "correct": null
-    },
-    {
       "timestamp": "2026-02-02T04:32:45.919878",
       "predicted_direction": "DOWN",
       "confidence": 0.4151,
@@ -799,8 +775,32 @@
       "probability": 0.4052,
       "actual_direction": null,
       "correct": null
+    },
+    {
+      "timestamp": "2026-02-03T23:38:51.596753",
+      "predicted_direction": "DOWN",
+      "confidence": 0.3457,
+      "probability": 0.3271,
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-03T23:38:51.972573",
+      "predicted_direction": "DOWN",
+      "confidence": 0.3457,
+      "probability": 0.3271,
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-03T23:38:58.828616",
+      "predicted_direction": "DOWN",
+      "confidence": 0.5221,
+      "probability": 0.2389,
+      "actual_direction": null,
+      "correct": null
     }
   ],
   "last_retrain_date": null,
-  "updated_at": "2026-02-02T05:32:11.634133"
+  "updated_at": "2026-02-03T23:38:58.829393"
 }

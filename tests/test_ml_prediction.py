@@ -3,7 +3,11 @@ End-to-end test for ML prediction system.
 Verifies: data fetch -> feature engineering -> prediction -> AI engine integration.
 """
 import sys
+import os
 import time
+
+# Ensure project root is on path when running as script
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def test_ml_prediction():
     """Test full ML prediction pipeline"""

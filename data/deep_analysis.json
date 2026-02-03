@@ -26,6 +26,15 @@
         "weaknesses_count": 2,
         "strengths_count": 2
       }
+    },
+    {
+      "timestamp": "2026-02-04T01:17:03.759410",
+      "summary": {
+        "win_rate": 56.0,
+        "total_profit": 2.22,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
     }
   ],
   "patterns": {
@@ -37,7 +46,7 @@
     },
     "asymmetric_risk_reward": {
       "pattern": "asymmetric_risk_reward",
-      "description": "Average loss (1.69%) is much larger than average win (0.59%)",
+      "description": "Average loss (1.58%) is much larger than average win (0.59%)",
       "severity": "high",
       "recommendation": "Tighten stop loss or let winners run longer"
     }
@@ -45,7 +54,7 @@
   "weaknesses": [
     {
       "weakness": "poor_risk_reward",
-      "description": "Profit factor is 0.55 (should be > 1.5)",
+      "description": "Profit factor is 0.49 (should be > 1.5)",
       "impact": "high",
       "suggestion": "Adjust profit targets and stop losses"
     },
@@ -58,15 +67,10 @@
   ],
   "strengths": [
     {
-      "strength": "high_win_rate",
-      "description": "Win rate is 60.9% (above 60%)",
-      "leverage": "Can be more aggressive with position sizing"
-    },
-    {
       "strength": "time_expertise",
       "description": "Strong performance at hour 3 (100.0%)",
       "leverage": "Focus trading around hour 3"
     }
   ],
-  "last_updated": "2026-02-03T21:12:30.106533"
+  "last_updated": "2026-02-04T01:17:03.775283"
 }

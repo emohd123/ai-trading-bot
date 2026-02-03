@@ -31,7 +31,7 @@ AI-powered BTC/USDT trading bot for Binance. Uses technical analysis, ML predict
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  core/trader.py  – Main trading loop (or dashboard runs its own loop)    │
 │  • Fetches data via BinanceClient                                         │
-│  • Gets analysis from TechnicalAnalyzer + MultiTimeframe                  │
+│  • Gets analysis from TechnicalAnalyzer + get_mtf_analysis               │
 │  • Gets decision from AIEngine                                            │
 │  • Executes BUY/SELL via BinanceClient                                    │
 └────────────────┬────────────────────────────────────────────────────────┘
