@@ -477,8 +477,26 @@
       "old_value": -0.25,
       "new_value": -0.245,
       "timestamp": "2026-02-03T22:12:38.678873"
+    },
+    {
+      "param": "BUY_THRESHOLD",
+      "old_value": 0.38,
+      "new_value": 0.37,
+      "timestamp": "2026-02-04T08:25:56.896421"
+    },
+    {
+      "param": "SELL_THRESHOLD",
+      "old_value": -0.25,
+      "new_value": -0.245,
+      "timestamp": "2026-02-04T08:25:56.896741"
+    },
+    {
+      "param": "MIN_CONFLUENCE_BUY",
+      "old_value": 6,
+      "new_value": 6,
+      "timestamp": "2026-02-04T08:25:56.897814"
     }
   ],
-  "last_optimization": "2026-02-03T22:12:38.672490",
-  "timestamp": "2026-02-03T22:12:38.679333"
+  "last_optimization": "2026-02-04T08:25:56.887170",
+  "timestamp": "2026-02-04T08:25:56.898126"
 }

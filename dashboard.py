@@ -673,13 +673,15 @@ def update_trailing_stop(current_price, regime_data):
 
 _last_state_save = 0
 _STATE_SAVE_INTERVAL = 60  # Save state every 60 seconds when running
+_last_idle_heartbeat = 0
+_IDLE_HEARTBEAT_INTERVAL = 300  # Log once per 5 min when idle in downtrend (so activity log doesn't look dead)
 
 
 def bot_loop():
     """Main bot trading loop with smart features"""
     global client, analyzer, ai_engine, regime_detector, self_healer
     global trailing_stop_price, highest_price_since_entry, consecutive_losses, daily_losses, daily_trades
-    global last_health_check
+    global last_health_check, _last_idle_heartbeat
 
     add_log("Smart bot started", "success")
     bot_state["activity_status"] = "Starting - Fetching market data..."
@@ -1314,6 +1316,14 @@ def bot_loop():
             # Update dashboard
             update_dashboard()
 
+            # Idle heartbeat: log periodically when in downtrend with no position (so activity log shows bot is alive)
+            has_position = bool(bot_state.get("position") or bot_state.get("positions"))
+            if not has_position and (bot_state.get("market_regime") or "").lower() == "trending_down":
+                now_t = time.time()
+                if now_t - _last_idle_heartbeat >= _IDLE_HEARTBEAT_INTERVAL:
+                    add_log("Monitoring: downtrend, no position — waiting for trend change.", "info")
+                    _last_idle_heartbeat = now_t
+
             # === TELEGRAM PERIODIC STATUS UPDATES ===
             notifier = get_notifier()
             if notifier.enabled and notifier.should_send_periodic_status():
@@ -1521,7 +1531,8 @@ def execute_sell(price, exit_type="manual", position_index=None):
 
     add_log(f"SELL #{pos_num} ({exit_type}) at ${price:,.2f}", "info")
 
-    result = client.place_market_sell(quantity=position_to_sell["quantity"])
+    # Sell total balance (position + any dust) so we clear the account in one order
+    result = client.place_market_sell(quantity=None)
 
     if result.get("status") == "filled":
         entry_price = position_to_sell["entry_price"]
@@ -1576,17 +1587,33 @@ def execute_sell(price, exit_type="manual", position_index=None):
                 )
             except Exception:
                 pass
-        
-        # PHASE 5: Check if ML models need retraining
+
+            # ML outcome feedback: update prediction with actual direction so ML can learn
+            try:
+                ml = ai_engine.ml_predictor if ai_engine else None
+                if not ml:
+                    from ai.ml_predictor import MLPredictor
+                    ml = MLPredictor()
+                entry_time_str = position_to_sell.get("entry_time")
+                actual_direction = "UP" if pnl > 0 else "DOWN"
+                if entry_time_str:
+                    ml.update_outcome_for_position_close(entry_time_str, actual_direction)
+            except Exception:
+                pass
+
+        # PHASE 5: Check if ML models need retraining; request retrain so worker can run it
         try:
             from ai.ml_predictor import MLPredictor
-            ml = MLPredictor()
+            from ai.ml_training import request_ml_retrain
+            ml = ai_engine.ml_predictor if ai_engine else None
+            if not ml:
+                ml = MLPredictor()
             should_retrain, reason = ml.should_retrain()
             if should_retrain:
                 add_log(f"🧠 ML retrain needed: {reason}", "warning")
-                # Notify via Telegram
+                request_ml_retrain(reason="accuracy_drop")
                 if notifier:
-                    notifier.send_message(f"🧠 ML Retrain Alert: {reason}\nRun: python ml_training.py")
+                    notifier.send_message(f"🧠 ML Retrain Alert: {reason}\nWorker will process request.")
         except Exception:
             pass  # ML predictor not available
 
@@ -1606,15 +1633,9 @@ def execute_sell(price, exit_type="manual", position_index=None):
         bot_state["trade_history"].insert(0, trade)
         save_trades()
 
-        # Remove from positions list
-        if position_index is not None and positions:
-            bot_state["positions"].pop(position_index)
-
-        # Update legacy position (set to remaining position or None)
-        if bot_state.get("positions"):
-            bot_state["position"] = bot_state["positions"][0] if bot_state["positions"] else None
-        else:
-            bot_state["position"] = None
+        # We sold total balance (position + dust), so clear all positions
+        bot_state["positions"] = []
+        bot_state["position"] = None
 
         # Only clear trailing stop if no positions left
         if not bot_state.get("positions") and not bot_state["position"]:
@@ -1627,10 +1648,9 @@ def execute_sell(price, exit_type="manual", position_index=None):
             bot_state["highest_price"] = None
             bot_state["ai_stop_override"] = None
 
-        remaining = len(bot_state.get("positions", []))
         level = "success" if pnl >= 0 else "warning"
-        add_log(f"SELL #{pos_num}: ${result['quote_amount']:,.2f} | P/L: ${pnl:+,.2f} ({pnl_percent:+.2f}%) | Remaining: {remaining}", level)
-        bot_state["activity_status"] = f"Position #{pos_num} closed - {remaining} active"
+        add_log(f"SELL #{pos_num}: ${result['quote_amount']:,.2f} | P/L: ${pnl:+,.2f} ({pnl_percent:+.2f}%) | All closed", level)
+        bot_state["activity_status"] = "Position closed (sold total balance)"
         save_bot_state()
 
         # Send Telegram notification with total profit

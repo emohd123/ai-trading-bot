@@ -231,19 +231,28 @@ class MLEnsemble:
 
         return predictions
 
-    def ensemble_predict(self, X: pd.DataFrame, X_seq: Optional[np.ndarray] = None) -> Tuple[float, Dict[str, float]]:
+    def ensemble_predict(self, X: pd.DataFrame, X_seq: Optional[np.ndarray] = None, weights: Optional[Dict[str, float]] = None) -> Tuple[float, Dict[str, float]]:
         """
         Weighted ensemble prediction.
-        X_seq: optional sequence for LSTM (last 24 rows of scaled features).
+        X_seq: optional sequence for LSTM (last 24 rows of scaled features). When None, LSTM weight is redistributed to rf/xgb/lgb.
+        weights: optional per-model weights (e.g. from dynamic accuracy); when None use self.weights.
         Returns (probability_up, model_votes_dict)
         """
         votes = self.predict_proba(X, X_seq=X_seq)
 
-        # Weighted average
+        use_weights = weights if weights is not None else dict(self.weights)
+        if X_seq is None and "lstm" in votes:
+            use_weights = {k: v for k, v in use_weights.items() if k != "lstm"}
+            total_w = sum(use_weights.values())
+            if total_w > 0:
+                use_weights = {k: v / total_w for k, v in use_weights.items()}
+            else:
+                use_weights = {k: 1.0 / 3 for k in ["rf", "xgb", "lgb"] if k in votes}
+
         total_weight = 0
         weighted_sum = 0
         for model, prob in votes.items():
-            w = self.weights.get(model, 0.25)
+            w = use_weights.get(model, 0)
             weighted_sum += prob * w
             total_weight += w
 

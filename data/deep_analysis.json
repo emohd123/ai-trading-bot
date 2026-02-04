@@ -35,6 +35,15 @@
         "weaknesses_count": 2,
         "strengths_count": 1
       }
+    },
+    {
+      "timestamp": "2026-02-04T05:25:46.061002",
+      "summary": {
+        "win_rate": 56.0,
+        "total_profit": 2.22,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
     }
   ],
   "patterns": {
@@ -72,5 +81,5 @@
       "leverage": "Focus trading around hour 3"
     }
   ],
-  "last_updated": "2026-02-04T01:17:03.775283"
+  "last_updated": "2026-02-04T05:25:46.067015"
 }

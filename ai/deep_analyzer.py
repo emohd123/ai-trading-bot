@@ -10,6 +10,8 @@ from typing import Dict, List, Optional, Tuple
 from collections import defaultdict
 import statistics
 
+import config
+
 
 class DeepAnalyzer:
     """
@@ -17,7 +19,7 @@ class DeepAnalyzer:
     Identifies patterns, weaknesses, and improvement opportunities
     """
     
-    ANALYSIS_FILE = os.path.join("data", "deep_analysis.json")
+    ANALYSIS_FILE = os.path.join(config.DATA_DIR, "deep_analysis.json")
     
     def __init__(self):
         self.trade_history = []
@@ -64,11 +66,12 @@ class DeepAnalyzer:
     def load_trade_history(self) -> List[Dict]:
         """Load trade history from file"""
         try:
-            if os.path.exists(os.path.join("data", "trade_history.json")):
-                with open(os.path.join("data", "trade_history.json"), 'r') as f:
+            path = os.path.join(config.DATA_DIR, "trade_history.json")
+            if os.path.exists(path):
+                with open(path, 'r', encoding='utf-8') as f:
                     self.trade_history = json.load(f)
             return self.trade_history
-        except:
+        except Exception:
             return []
     
     def analyze_all(self) -> Dict:

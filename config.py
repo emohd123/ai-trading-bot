@@ -46,34 +46,34 @@ MIN_PROFIT = 0.007     # 0.7% - better risk/reward (was 0.5%)
 # =============================================================================
 # AI ENGINE CONFIGURATION
 # =============================================================================
-# AI score thresholds (more selective for better entries)
-BUY_THRESHOLD = 0.38   # Buy when AI score > 0.38 (stricter - fewer bad entries)
+# AI score thresholds (balanced: some activity without overtrading)
+BUY_THRESHOLD = 0.35   # Buy when AI score > 0.35 (was 0.38 - slightly more entries)
 BUY_THRESHOLD_DOWNTREND = 0.60   # In downtrend: require very strong signal (0.60) if buys allowed
 SELL_THRESHOLD = -0.25 # Sell when AI score < -0.25 (stronger signal needed)
-# Best for avoiding losses: skip new buys entirely when market is falling
-NO_BUY_IN_DOWNTREND = True   # True = no new BUY when regime is trending_down (recommended)
+# Allow buys in downtrend only when signal is strong (score > 0.60, confluence >= 5)
+NO_BUY_IN_DOWNTREND = False  # False = can buy in downtrend if score >= BUY_THRESHOLD_DOWNTREND
 
 # When buying in downtrend is allowed (or for positions carried into downtrend): use smaller size
 POSITION_SIZE_DOWNTREND_MULT = 0.6   # 60% of normal size in downtrend (0.7 = 70%, 1.0 = no reduction)
 
 # Indicator weights for AI scoring (must sum to 1.0) - 10 indicators with ML prediction
-# Rebalanced based on accuracy data: Bollinger/SR best, EMA worst
+# Rebalanced to match your learned accuracy (25 trades): best macd/ml/ichimoku/ema, weak williams_r/sr/mfi
 INDICATOR_WEIGHTS = {
-    "momentum": 0.18,           # Combined RSI + Stochastic (increased - good performer)
-    "macd": 0.12,               # Stable performer
-    "bollinger": 0.15,          # Best performer (76.5% accuracy) - increased
-    "ema": 0.05,                # Worst performer (23.5% accuracy) - decreased
-    "support_resistance": 0.15, # Best performer (76.5% accuracy) - increased
-    "ml_prediction": 0.08,      # Needs improvement (27.7% accuracy) - reduced
-    "ichimoku": 0.08,           # Phase 4 - Ichimoku Cloud
-    "mfi": 0.08,                # Phase 4 - Money Flow Index
-    "williams_r": 0.06,         # Phase 4 - Williams %R
-    "cci": 0.05,                # Phase 4 - CCI
+    "macd": 0.18,               # Best performer 76.6%
+    "ml_prediction": 0.15,      # 74.8%
+    "ichimoku": 0.12,           # 70%
+    "ema": 0.10,                # 69.4%
+    "momentum": 0.10,           # 38%
+    "bollinger": 0.10,          # 30.6%
+    "support_resistance": 0.08, # 29.1% - needs improvement
+    "mfi": 0.07,                # 30%
+    "williams_r": 0.05,         # 27.9% - needs improvement
+    "cci": 0.05,                # 30%
 }
 
-# Entry rules (more selective for quality setups)
-MIN_CONFIDENCE_BUY = 0.45      # Require Medium+ confidence (increased from 0.35)
-MIN_CONFLUENCE_BUY = 6         # At least 6 indicators must agree for BUY (safer entries)
+# Entry rules (balanced: 5 indicators = enough for a buy when score is good)
+MIN_CONFIDENCE_BUY = 0.45      # Require Medium+ confidence
+MIN_CONFLUENCE_BUY = 5         # At least 5 indicators must agree for BUY (was 6 - allows more entries)
 MIN_CONFLUENCE_SELL = 4        # At least 4 indicators must agree for SELL
 MIN_CONFLUENCE = 5             # Default confluence requirement
 REQUIRE_VOLUME_BLOCKING = False # Volume is now a modifier, not a blocker
@@ -269,6 +269,11 @@ SR_LOOKBACK = 50
 # How often to check prices and analyze (in seconds)
 # 30s = fast reaction | 15s = very fast (more API calls)
 CHECK_INTERVAL = 30
+
+# ML inference throttle: run ML at most every N seconds (avoids blocking the loop)
+ML_INTERVAL_SEC = 300  # 5 minutes; set to 60 for more frequent updates
+# Set to False for faster inference (LSTM is slow); weight is redistributed to RF/XGB/LGB
+ML_USE_LSTM = False
 
 # Number of historical candles to fetch for analysis
 CANDLE_LIMIT = 100

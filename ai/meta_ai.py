@@ -232,10 +232,11 @@ class MetaAI:
         self.state = AIState.ANALYZING
         
         try:
-            # Load trade history
+            # Load trade history (use config.DATA_DIR so paths match dashboard)
             trades = []
-            if os.path.exists("trade_history.json"):
-                with open("trade_history.json", 'r') as f:
+            trade_history_path = os.path.join(config.DATA_DIR, "trade_history.json")
+            if os.path.exists(trade_history_path):
+                with open(trade_history_path, 'r', encoding='utf-8') as f:
                     trades = json.load(f)
             
             sells = [t for t in trades if t.get("type") == "SELL"]
@@ -243,8 +244,9 @@ class MetaAI:
             
             # Load AI learning state
             learning = {}
-            if os.path.exists(os.path.join("data", "ai_learning.json")):
-                with open(os.path.join("data", "ai_learning.json"), 'r') as f:
+            learning_path = os.path.join(config.DATA_DIR, "ai_learning.json")
+            if os.path.exists(learning_path):
+                with open(learning_path, 'r', encoding='utf-8') as f:
                     learning = json.load(f)
             
             # Calculate current metrics
@@ -263,6 +265,20 @@ class MetaAI:
                 "recent_performance": self._get_recent_performance(sells),
                 "system_health": "healthy"
             }
+            
+            # ML accuracy and retrain status (optional)
+            try:
+                from ai.ml_predictor import MLPredictor
+                _ml = MLPredictor()
+                acc = _ml.get_accuracy()
+                should_r, reason = _ml.should_retrain()
+                self.awareness["ml_accuracy"] = acc
+                self.awareness["ml_needs_retrain"] = should_r
+                self.awareness["ml_retrain_reason"] = reason or ""
+            except Exception:
+                self.awareness["ml_accuracy"] = {}
+                self.awareness["ml_needs_retrain"] = False
+                self.awareness["ml_retrain_reason"] = ""
             
             # Update goal progress
             self._update_goal_progress()
@@ -313,13 +329,17 @@ class MetaAI:
            (now - self.last_analysis).total_seconds() / 3600 >= self.analysis_interval:
             return "analyze"
         
-        # Priority 3: Optimization if overdue and have enough data
+        # Priority 3: ML retrain if accuracy dropped or requested
+        if self.awareness.get("ml_needs_retrain"):
+            return "ml_retrain"
+        
+        # Priority 4: Optimization if overdue and have enough data
         if self.awareness.get("trades_learned", 0) >= 10:
             if self.last_optimization is None or \
                (now - self.last_optimization).total_seconds() / 3600 >= self.optimization_interval:
                 return "optimize"
         
-        # Priority 4: Evolution if overdue and have enough data
+        # Priority 5: Evolution if overdue and have enough data
         if self.awareness.get("trades_learned", 0) >= 20:
             if self.last_evolution is None or \
                (now - self.last_evolution).total_seconds() / 3600 >= self.evolution_interval:
@@ -337,6 +357,8 @@ class MetaAI:
                 result = self._do_health_check()
             elif action == "analyze":
                 result = self._do_analysis()
+            elif action == "ml_retrain":
+                result = self._do_ml_retrain()
             elif action == "optimize":
                 result = self._do_optimization()
             elif action == "evolve":
@@ -392,6 +414,23 @@ class MetaAI:
             "action": "analyze",
             "status": "complete",
             "insights": self.awareness.get("last_analysis", {})
+        }
+    
+    def _do_ml_retrain(self) -> Dict:
+        """Request ML retrain (writes request file; worker or cron runs training)."""
+        self.state = AIState.LEARNING
+        reason = self.awareness.get("ml_retrain_reason", "meta_ai") or "meta_ai"
+        self.log_action("Requesting ML retrain", {"reason": reason})
+        try:
+            from ai.ml_training import request_ml_retrain
+            request_ml_retrain(reason="meta_ai")
+        except Exception as e:
+            logger.warning("META-AI: Could not request ML retrain: %s", e)
+        self.state = AIState.IDLE
+        return {
+            "action": "ml_retrain",
+            "status": "complete",
+            "reason": reason
         }
     
     def _do_optimization(self) -> Dict:

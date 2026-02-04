@@ -30,6 +30,7 @@ PHASE 4 NEW FEATURES:
 - Correlation Analysis: BTC dominance, market context
 """
 import logging
+import time
 from typing import Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -216,28 +217,29 @@ class AIEngine:
         
         # Calculate effective weights
         effective = {}
+        neutral_prior = 1.0 / len(self.weights) if self.weights else 0.1
         for ind in self.weights:
             base_weight = base_weights.get(ind, self.weights.get(ind, 0.1))
-            
-            # Get accuracy (use regime-specific if available, else global)
+            samples = self.indicator_samples.get(ind, 0) if hasattr(self, "indicator_samples") else 0
+
+            # Get accuracy (prefer regime-specific when enough samples)
             accuracy = self.indicator_accuracy.get(ind, 0.5)
-            if regime and hasattr(self, 'regime_indicator_accuracy'):
+            if regime and hasattr(self, "regime_indicator_accuracy"):
                 regime_acc = self.regime_indicator_accuracy.get(regime, {})
                 if ind in regime_acc:
-                    # Blend regime-specific (70%) with global (30%)
-                    accuracy = 0.7 * regime_acc[ind] + 0.3 * accuracy
-            
-            # Statistical significance check
-            samples = self.indicator_samples.get(ind, 0) if hasattr(self, 'indicator_samples') else 0
-            if samples < min_trades_for_learning:
-                # Not enough samples - use base weight without accuracy adjustment
+                    if samples >= min_trades_for_learning:
+                        accuracy = 0.9 * regime_acc[ind] + 0.1 * accuracy
+                    else:
+                        accuracy = 0.7 * regime_acc[ind] + 0.3 * accuracy
+
+            # Very low samples: nudge toward neutral prior so 1–2 trades don't move weights wildly
+            if samples < 3:
+                effective[ind] = 0.7 * base_weight + 0.3 * neutral_prior
+            elif samples < min_trades_for_learning:
                 effective[ind] = base_weight
             elif abs(accuracy - 0.5) < min_deviation:
-                # Accuracy too close to random - don't adjust
                 effective[ind] = base_weight
             else:
-                # Apply accuracy-based adjustment: effective = base * (0.5 + accuracy)
-                # This gives range [0.6x, 1.4x] for accuracy in [0.1, 0.9]
                 effective[ind] = base_weight * (0.5 + accuracy)
         
         # Apply time decay to older trades when calculating overall learning confidence
@@ -1341,11 +1343,21 @@ class AIEngine:
             self.current_regime = self.regime_data.get("regime", MarketRegime.UNKNOWN)
 
         # Add ML prediction to analysis for confluence (before calculate_confluence)
+        # Throttle: run ML at most every ML_INTERVAL_SEC to avoid blocking the loop
         ml_score = 0
         ml_result = {}
         if self.ml_predictor and df is not None and not df.empty and len(df) >= 100:
             try:
-                ml_score, ml_result = self.ml_predictor.get_score(df)
+                now_ts = time.time()
+                interval = getattr(config, "ML_INTERVAL_SEC", 300)
+                last_ml_time = getattr(self, "_last_ml_time", 0)
+                last_ml_result = getattr(self, "_last_ml_result", None)
+                if last_ml_result is not None and last_ml_time and (now_ts - last_ml_time) < interval:
+                    ml_score, ml_result = last_ml_result
+                else:
+                    ml_score, ml_result = self.ml_predictor.get_score(df)
+                    self._last_ml_time = now_ts
+                    self._last_ml_result = (ml_score, ml_result)
                 analysis = dict(analysis)
                 analysis["ml_prediction"] = {
                     "score": ml_score,

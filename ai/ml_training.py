@@ -7,6 +7,7 @@ import json
 import numpy as np
 import pandas as pd
 from typing import Dict, Tuple, Optional, List
+from datetime import datetime
 import config
 
 # Optional imports
@@ -39,6 +40,43 @@ from ai.ml_evaluation import evaluate_model
 HORIZONS = {'1h': 1, '4h': 4, '12h': 12, '24h': 24}
 DEFAULT_HORIZON = '4h'
 N_SELECTED_FEATURES = 25
+
+# Retrain request file (written by dashboard/Meta AI; consumed by worker or cron)
+RETRAIN_REQUEST_FILE = os.path.join(config.DATA_DIR, "ml_retrain_request.json")
+PREVIOUS_VAL_FILE = "previous_val.json"  # stored in model_dir
+BACKUP_SUBDIR = "backup"
+# Optional ML hyperparams (horizon, n_selected_features) from param_optimizer tune_ml_hyperparams
+ML_HYPERPARAMS_FILE = os.path.join(config.DATA_DIR, "ml_hyperparams.json")
+
+
+def get_ml_hyperparams() -> Dict:
+    """Read preferred horizon and n_selected_features from tune run (if any)."""
+    try:
+        if os.path.exists(ML_HYPERPARAMS_FILE):
+            with open(ML_HYPERPARAMS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+
+def request_ml_retrain(reason: str = "requested") -> None:
+    """Write a retrain request so a worker or cron can run training (non-blocking)."""
+    try:
+        os.makedirs(config.DATA_DIR, exist_ok=True)
+        with open(RETRAIN_REQUEST_FILE, "w", encoding="utf-8") as f:
+            json.dump({"requested_at": datetime.now().isoformat(), "reason": reason}, f, indent=2)
+    except Exception:
+        pass
+
+
+def clear_retrain_request() -> None:
+    """Remove the retrain request file after processing."""
+    try:
+        if os.path.exists(RETRAIN_REQUEST_FILE):
+            os.remove(RETRAIN_REQUEST_FILE)
+    except Exception:
+        pass
 
 
 def fetch_historical_data(limit: int = 4320) -> pd.DataFrame:
@@ -151,12 +189,30 @@ def tune_hyperparameters(X_train, y_train, model_type: str = 'rf'):
     return None
 
 
-def train_models(model_dir: str = None, horizon: str = DEFAULT_HORIZON) -> Dict:
-    model_dir = model_dir or config.MODEL_DIR
+def train_models(model_dir: str = None, horizon: str = DEFAULT_HORIZON, safe_deploy: bool = False) -> Dict:
     """
     Full training pipeline with multi-horizon, feature selection, tuning, walk-forward.
+    When safe_deploy=True: backup current models, train new ones, deploy only if val accuracy improves.
     """
+    model_dir = model_dir or config.MODEL_DIR
     os.makedirs(model_dir, exist_ok=True)
+    backup_dir = os.path.join(model_dir, BACKUP_SUBDIR)
+    previous_val_path = os.path.join(model_dir, PREVIOUS_VAL_FILE)
+
+    if safe_deploy:
+        try:
+            os.makedirs(backup_dir, exist_ok=True)
+            for name in ["rf_model.pkl", "xgb_model.pkl", "lgb_model.pkl", "scaler.pkl", "meta.json", "previous_val.json"]:
+                src = os.path.join(model_dir, name)
+                if os.path.exists(src):
+                    shutil.copy2(src, os.path.join(backup_dir, name))
+            for name in ["lstm_model.keras"]:
+                src = os.path.join(model_dir, name)
+                if os.path.exists(src):
+                    shutil.copy2(src, os.path.join(backup_dir, name))
+        except Exception as e:
+            print(f"Safe deploy backup failed: {e}; continuing without restore capability")
+
     h = HORIZONS.get(horizon, 4)
 
     print("Fetching historical data (6 months)...")
@@ -192,8 +248,8 @@ def train_models(model_dir: str = None, horizon: str = DEFAULT_HORIZON) -> Dict:
     X = X.replace([np.inf, -np.inf], 0)
 
     # Feature selection
-    print(f"Selecting top {N_SELECTED_FEATURES} features...")
-    X_selected, selected_features = select_features(X, y, n_features=N_SELECTED_FEATURES)
+    print(f"Selecting top {n_selected_features} features...")
+    X_selected, selected_features = select_features(X, y, n_features=n_selected_features)
     X = X_selected
 
     n = len(X)
@@ -202,6 +258,8 @@ def train_models(model_dir: str = None, horizon: str = DEFAULT_HORIZON) -> Dict:
 
     X_train, X_val, X_test = X.iloc[:train_end], X.iloc[train_end:val_end], X.iloc[val_end:]
     y_train, y_val, y_test = y[:train_end], y[train_end:val_end], y[val_end:]
+
+    rf, xgb_model, lgb_model = None, None, None
 
     print(f"Train: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
 
@@ -286,6 +344,23 @@ def train_models(model_dir: str = None, horizon: str = DEFAULT_HORIZON) -> Dict:
     except Exception as e:
         print(f"  LSTM skipped: {e}")
 
+    val_accuracy = 0.5
+    try:
+        probs = []
+        if SKLEARN_AVAILABLE and rf is not None:
+            probs.append(rf.predict_proba(X_val_scaled)[:, 1])
+        if XGBOOST_AVAILABLE and xgb_model is not None:
+            probs.append(xgb_model.predict_proba(X_val_scaled)[:, 1])
+        if LIGHTGBM_AVAILABLE and lgb_model is not None:
+            probs.append(lgb_model.predict_proba(X_val_scaled)[:, 1])
+        if probs:
+            avg_prob = np.mean(probs, axis=0)
+            val_pred = (avg_prob > 0.5).astype(int)
+            val_accuracy = (val_pred == y_val).mean()
+        results["val_accuracy"] = round(float(val_accuracy), 4)
+    except Exception:
+        results["val_accuracy"] = 0.5
+
     joblib.dump(scaler, os.path.join(model_dir, 'scaler.pkl'))
     with open(os.path.join(model_dir, 'meta.json'), 'w', encoding='utf-8') as f:
         json.dump({
@@ -295,6 +370,33 @@ def train_models(model_dir: str = None, horizon: str = DEFAULT_HORIZON) -> Dict:
             'horizon': horizon,
             'results': results
         }, f, indent=2)
+
+    if safe_deploy:
+        previous_acc = 0.0
+        try:
+            if os.path.exists(previous_val_path):
+                with open(previous_val_path, "r", encoding="utf-8") as f:
+                    prev = json.load(f)
+                    previous_acc = float(prev.get("accuracy", 0))
+        except Exception:
+            pass
+        if val_accuracy >= previous_acc:
+            with open(previous_val_path, "w", encoding="utf-8") as f:
+                json.dump({"accuracy": val_accuracy, "updated_at": datetime.now().isoformat()}, f, indent=2)
+            print(f"Safe deploy: val accuracy {val_accuracy:.2%} >= previous {previous_acc:.2%}; keeping new models")
+        else:
+            print(f"Safe deploy: val accuracy {val_accuracy:.2%} < previous {previous_acc:.2%}; restoring backup")
+            try:
+                for name in ["rf_model.pkl", "xgb_model.pkl", "lgb_model.pkl", "scaler.pkl", "meta.json", "previous_val.json"]:
+                    b = os.path.join(backup_dir, name)
+                    if os.path.exists(b):
+                        shutil.copy2(b, os.path.join(model_dir, name))
+                for name in ["lstm_model.keras"]:
+                    b = os.path.join(backup_dir, name)
+                    if os.path.exists(b):
+                        shutil.copy2(b, os.path.join(model_dir, name))
+            except Exception as e:
+                print(f"Restore failed: {e}")
 
     print("Models saved to", model_dir)
     return results
@@ -316,5 +418,5 @@ if __name__ == '__main__':
     print("=" * 50)
     print("ML Model Training Pipeline (Enhanced)")
     print("=" * 50)
-    results = train_models(horizon=DEFAULT_HORIZON)
+    results = train_models(horizon=DEFAULT_HORIZON, safe_deploy=True)
     print("\nResults:", results)

@@ -13,6 +13,7 @@ PHASE 2 NEW FEATURES:
 - Win Streak Integration: Uses AI engine's streak tracking
 """
 import logging
+import os
 import time
 import json
 from datetime import datetime, date, timedelta
@@ -680,7 +681,8 @@ class Trader:
 
         logger.info("EXECUTING SELL ORDER - Exit type: %s", exit_type.upper())
 
-        result = self.client.place_market_sell(quantity=self.current_position["quantity"])
+        # Sell total balance (position + any dust) so we clear the account in one order
+        result = self.client.place_market_sell(quantity=None)
 
         if result.get("status") == "filled":
             # Calculate profit/loss
@@ -722,6 +724,22 @@ class Trader:
                 profit_percent, exit_type,
                 indicator_scores_at_entry=indicator_scores if indicator_scores else None
             )
+
+            # ML outcome feedback: update prediction with actual direction so ML can learn
+            try:
+                ml = getattr(self.ai_engine, "ml_predictor", None)
+                if ml:
+                    entry_time_str = self.current_position.get("entry_time")
+                    actual_direction = "UP" if profit > 0 else "DOWN"
+                    if entry_time_str:
+                        ml.update_outcome_for_position_close(entry_time_str, actual_direction)
+                    # Trigger retrain request if accuracy dropped
+                    should_retrain, reason = ml.should_retrain()
+                    if should_retrain:
+                        from ai.ml_training import request_ml_retrain
+                        request_ml_retrain(reason="accuracy_drop")
+            except Exception:
+                pass
 
             # Log result
             logger.info("SELL FILLED: entry $%s, exit $%s, qty %.8f %s, P/L $%+.2f (%.2f%%)",
@@ -776,9 +794,10 @@ class Trader:
 
         self.trade_history.append(trade)
 
-        # Save to file
+        # Save to file (use DATA_DIR so path is correct when run from any CWD, e.g. service/script)
         try:
-            with open("trades.json", "w") as f:
+            path = os.path.join(config.DATA_DIR, "trades.json")
+            with open(path, "w", encoding="utf-8") as f:
                 json.dump(self.trade_history, f, indent=2)
         except Exception as e:
             logger.error("Error saving trades: %s", e)

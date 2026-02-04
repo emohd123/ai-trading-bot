@@ -73,6 +73,12 @@ AI-powered BTC/USDT trading bot for Binance. Uses technical analysis, ML predict
 
 ---
 
+## Restart after changes
+
+After changing `config.py` or any bot code (core/, ai/, dashboard.py, etc.), **restart the bot** so changes take effect: stop Python processes, then start `dashboard.py` (e.g. `scripts\start_bot.bat` or run `dashboard.py` minimized). See `.cursor/rules/restart-bot-after-changes.mdc`.
+
+---
+
 ## Config
 
 All settings in `config.py`. Paths: `config.DATA_DIR`, `config.MODEL_DIR`. API keys from `.env`.

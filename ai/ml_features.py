@@ -8,15 +8,15 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple
 import config
 
-# Optional market context imports
+# Optional market context imports (market.sentiment, market.order_book)
 try:
-    from sentiment import SentimentAnalyzer
+    from market.sentiment import SentimentAnalyzer
     SENTIMENT_AVAILABLE = True
 except ImportError:
     SENTIMENT_AVAILABLE = False
 
 try:
-    from order_book import OrderBookAnalyzer
+    from market.order_book import OrderBookAnalyzer
     ORDER_BOOK_AVAILABLE = True
 except ImportError:
     ORDER_BOOK_AVAILABLE = False

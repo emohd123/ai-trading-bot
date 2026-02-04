@@ -4,154 +4,154 @@
   "positions": [],
   "logs": [
     {
-      "time": "00:46:36",
-      "message": "AI Think: check_goals",
+      "time": "09:21:42",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:16:03",
-      "message": "BUY skipped: Downtrend - no new buys (NO_BUY_IN_DOWNTREND)",
+      "time": "09:16:21",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:14:55",
-      "message": "BUY skipped: Downtrend - no new buys (NO_BUY_IN_DOWNTREND)",
+      "time": "09:11:03",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:14:15",
+      "time": "09:05:39",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
+      "level": "info"
+    },
+    {
+      "time": "09:00:22",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
+      "level": "info"
+    },
+    {
+      "time": "09:00:06",
       "message": "\ud83d\udd27 Auto-fix: Synced balances: USDT=45.85, BTC=0.00000755",
       "level": "info"
     },
     {
-      "time": "22:14:13",
+      "time": "09:00:05",
       "message": "Self-healing system initialized",
       "level": "success"
     },
     {
-      "time": "22:14:13",
+      "time": "09:00:05",
       "message": "Bot auto-resumed for 24/7 live trading",
       "level": "success"
     },
     {
-      "time": "22:14:13",
+      "time": "09:00:05",
       "message": "Smart bot started",
       "level": "success"
     },
     {
-      "time": "22:11:24",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.43)",
+      "time": "08:55:06",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:10:50",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.43)",
+      "time": "08:49:48",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:10:14",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.43)",
+      "time": "08:44:23",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:09:40",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.41)",
+      "time": "08:39:07",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:07:28",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.41)",
+      "time": "08:33:45",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:06:56",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.36)",
+      "time": "08:28:22",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:06:22",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.41)",
+      "time": "08:23:04",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:05:50",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.41)",
+      "time": "08:17:50",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:05:16",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.36)",
+      "time": "08:12:33",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:04:42",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.36)",
+      "time": "08:07:21",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:04:07",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.36)",
+      "time": "08:01:58",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:03:35",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.41)",
+      "time": "07:56:38",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:03:01",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.50)",
+      "time": "07:51:23",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:02:28",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.45)",
+      "time": "07:46:05",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:01:54",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.45)",
+      "time": "07:40:45",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "22:00:48",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.41)",
+      "time": "07:35:28",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "21:59:42",
-      "message": "Trade blocked by risk rules",
-      "level": "warning"
-    },
-    {
-      "time": "21:59:08",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.37)",
+      "time": "07:30:11",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "21:58:33",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.41)",
+      "time": "07:24:51",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "21:57:27",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.37)",
+      "time": "07:19:39",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "21:56:55",
-      "message": "BUY blocked: Downtrend - need score > 0.5 (got 0.36)",
+      "time": "07:14:37",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
     },
     {
-      "time": "21:49:04",
-      "message": "\ud83d\udd27 Auto-fix: Cleared ghost position (no BTC on exchange)",
+      "time": "07:09:34",
+      "message": "Monitoring: downtrend, no position \u2014 waiting for trend change.",
       "level": "info"
-    },
-    {
-      "time": "21:48:33",
-      "message": "SELL failed: Quantity 0.0 below minimum 1e-05",
-      "level": "error"
     }
   ],
   "decision": "HOLD"

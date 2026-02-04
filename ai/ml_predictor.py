@@ -58,26 +58,30 @@ class MLPredictor:
         self._load_performance()
         
     def _load_performance(self):
-        """Load performance history from file."""
+        """Load performance history and model accuracy from file."""
         try:
             if os.path.exists(self.performance_file):
-                with open(self.performance_file, 'r') as f:
+                with open(self.performance_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     self.predictions_history = data.get("predictions", [])[-self.max_history:]
                     self.last_retrain_date = data.get("last_retrain_date")
+                    self._model_accuracy = data.get("model_accuracy", {})
         except Exception:
             self.predictions_history = []
-            
+        if not hasattr(self, "_model_accuracy"):
+            self._model_accuracy = {}
+
     def _save_performance(self):
-        """Save performance history to file."""
+        """Save performance history and model accuracy to file."""
         try:
             os.makedirs(self.model_dir, exist_ok=True)
             data = {
                 "predictions": self.predictions_history[-self.max_history:],
                 "last_retrain_date": self.last_retrain_date,
-                "updated_at": datetime.now().isoformat()
+                "model_accuracy": getattr(self, "_model_accuracy", {}),
+                "updated_at": datetime.now().isoformat(),
             }
-            with open(self.performance_file, 'w') as f:
+            with open(self.performance_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
         except Exception:
             pass
@@ -85,23 +89,19 @@ class MLPredictor:
     def record_prediction(self, prediction: Dict, actual_direction: Optional[str] = None):
         """
         Record a prediction for performance tracking.
-        
-        Args:
-            prediction: The prediction dict from predict()
-            actual_direction: 'UP' or 'DOWN' when known (after price move)
+        Stores model_votes so we can compute per-model accuracy when outcome is set.
         """
         record = {
             "timestamp": datetime.now().isoformat(),
             "predicted_direction": prediction.get("direction"),
             "confidence": prediction.get("confidence", 0),
             "probability": prediction.get("probability", 0.5),
+            "model_votes": prediction.get("model_votes", {}),
             "actual_direction": actual_direction,
             "correct": None
         }
-        
         if actual_direction:
             record["correct"] = prediction.get("direction") == actual_direction
-            
         self.predictions_history.append(record)
         
         # Keep only last N predictions
@@ -113,18 +113,100 @@ class MLPredictor:
     def update_prediction_outcome(self, timestamp: str, actual_direction: str):
         """
         Update a past prediction with the actual outcome.
-        
-        Args:
-            timestamp: ISO timestamp of the prediction
-            actual_direction: 'UP' or 'DOWN'
+        Also updates per-model accuracy for dynamic ensemble weights.
         """
         for pred in self.predictions_history:
             if pred.get("timestamp") == timestamp:
                 pred["actual_direction"] = actual_direction
                 pred["correct"] = pred.get("predicted_direction") == actual_direction
+                model_votes = pred.get("model_votes") or {}
+                acc = getattr(self, "_model_accuracy", {})
+                for model, prob in model_votes.items():
+                    if model not in acc:
+                        acc[model] = {"correct": 0, "total": 0}
+                    acc[model]["total"] += 1
+                    model_up = (prob or 0.5) > 0.5
+                    if (model_up and actual_direction == "UP") or (not model_up and actual_direction == "DOWN"):
+                        acc[model]["correct"] += 1
+                self._model_accuracy = acc
                 break
         self._save_performance()
-        
+
+    def update_outcome_for_position_close(self, entry_time_str: str, actual_direction: str) -> bool:
+        """
+        Find the latest prediction without outcome and with timestamp <= entry_time;
+        update it with actual_direction (e.g. from trade PnL: 'UP' if pnl > 0 else 'DOWN').
+
+        Args:
+            entry_time_str: Position entry time, e.g. 'YYYY-MM-DD HH:MM:SS' or ISO
+            actual_direction: 'UP' or 'DOWN'
+
+        Returns:
+            True if a prediction was updated, False otherwise
+        """
+        if not entry_time_str:
+            return False
+        try:
+            if "T" in entry_time_str:
+                entry_dt = datetime.fromisoformat(entry_time_str.replace("Z", "+00:00"))
+            else:
+                entry_dt = datetime.strptime(entry_time_str, "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            return False
+        if entry_dt.tzinfo:
+            entry_ts = entry_dt.timestamp()
+        else:
+            entry_ts = entry_dt.timestamp()
+        candidate = None
+        candidate_ts = -1.0
+        for pred in self.predictions_history:
+            if pred.get("actual_direction") is not None:
+                continue
+            ts_str = pred.get("timestamp")
+            if not ts_str:
+                continue
+            try:
+                if "T" in ts_str:
+                    pred_dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                else:
+                    pred_dt = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
+                pred_ts = pred_dt.timestamp() if not pred_dt.tzinfo else pred_dt.timestamp()
+            except Exception:
+                continue
+            if pred_ts <= entry_ts and pred_ts > candidate_ts:
+                candidate_ts = pred_ts
+                candidate = pred
+        if candidate is None:
+            return False
+        self.update_prediction_outcome(candidate["timestamp"], actual_direction)
+        return True
+
+    def get_ensemble_weights(self, regime: Optional[str] = None) -> Dict[str, float]:
+        """
+        Get dynamic ensemble weights from per-model accuracy (from prediction outcomes).
+        When a model has too few evaluations, use prior 0.25 each so we don't overfit to tiny samples.
+        """
+        acc = getattr(self, "_model_accuracy", {})
+        default_models = ["rf", "xgb", "lgb", "lstm"]
+        min_eval = 10
+        prior = 1.0 / len(default_models)
+        weights = {}
+        for m in default_models:
+            stats = acc.get(m, {"correct": 0, "total": 0})
+            total = stats.get("total", 0)
+            correct = stats.get("correct", 0)
+            if total < min_eval:
+                weights[m] = prior
+            else:
+                rate = correct / total if total else 0.5
+                weights[m] = max(0.05, min(0.6, 0.2 + 0.4 * rate))
+        total_w = sum(weights.values())
+        if total_w > 0:
+            weights = {k: v / total_w for k, v in weights.items()}
+        else:
+            weights = {k: prior for k in default_models}
+        return weights
+
     def get_accuracy(self, last_n: int = 50) -> Dict:
         """
         Calculate prediction accuracy over recent predictions.
@@ -361,9 +443,9 @@ class MLPredictor:
                     'error': 'Feature creation failed'
                 }
 
-            # Create sequence for LSTM (last 24 rows of features)
+            # Create sequence for LSTM only when enabled (LSTM is slow; config.ML_USE_LSTM = False for fast path)
             X_seq = None
-            if self.ensemble.lstm_model is not None and len(df) >= 100 + SEQ_LENGTH:
+            if getattr(config, "ML_USE_LSTM", False) and self.ensemble.lstm_model is not None and len(df) >= 100 + SEQ_LENGTH:
                 feat_seq = self.feature_engineer.create_features_sequence(df, n_rows=SEQ_LENGTH)
                 if not feat_seq.empty and len(feat_seq) >= SEQ_LENGTH:
                     feat_seq = feat_seq.fillna(0).replace([np.inf, -np.inf], 0)
@@ -377,8 +459,9 @@ class MLPredictor:
                     else:
                         X_seq = feat_seq.values
 
-            # Get ensemble prediction
-            prob_up, model_votes = self.ensemble.ensemble_predict(features, X_seq=X_seq)
+            # Get ensemble prediction (with dynamic weights from recent accuracy)
+            dynamic_weights = self.get_ensemble_weights()
+            prob_up, model_votes = self.ensemble.ensemble_predict(features, X_seq=X_seq, weights=dynamic_weights)
 
             # Determine direction and confidence
             direction = 'UP' if prob_up > 0.5 else 'DOWN'
