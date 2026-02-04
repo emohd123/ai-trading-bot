@@ -1,5 +1,16 @@
 [
   {
+    "id": 52,
+    "time": "2026-02-04 17:17:35",
+    "type": "BUY",
+    "price": 75240.58,
+    "quantity": 0.00057,
+    "amount": 43.199999999999996,
+    "pnl": 0,
+    "pnl_percent": 0,
+    "regime": "ranging"
+  },
+  {
     "id": 51,
     "time": "2026-02-03 21:46:52",
     "type": "SELL",

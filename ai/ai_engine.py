@@ -1801,14 +1801,16 @@ class AIEngine:
                 elif has_bullish_divergence:
                     details["reason"].append(f"✅ Bullish divergence - buy allowed in downtrend")
             
-            # In trending_down, require MORE confluence
+            # In trending_down, use same or slightly higher confluence (but don't add +1 automatically)
             min_confluence_buy = getattr(config, 'MIN_CONFLUENCE_BUY', 5)
             if regime == MarketRegime.TRENDING_DOWN:
-                min_confluence_buy += 1  # Need 6 indicators in downtrend
-                details["reason"].append(f"📉 Downtrend: requiring {min_confluence_buy} confluence (stricter)")
+                # Use downtrend threshold if configured, otherwise same as normal
+                downtrend_confluence = getattr(config, 'MIN_CONFLUENCE_BUY_DOWNTREND', min_confluence_buy)
+                min_confluence_buy = downtrend_confluence
+                details["reason"].append(f"📉 Downtrend: requiring {min_confluence_buy} confluence")
 
-            # Volume required in ranging/unknown regime
-            if getattr(config, 'REQUIRE_VOLUME_RANGING', True):
+            # Volume required in ranging/unknown regime (disabled for more trading activity)
+            if getattr(config, 'REQUIRE_VOLUME_RANGING', False):
                 if regime in (MarketRegime.RANGING, MarketRegime.UNKNOWN):
                     if not enhanced.get("volume_confirmed", False):
                         details["reason"].append("Volume confirmation required in ranging/unknown regime")
@@ -1825,7 +1827,9 @@ class AIEngine:
             confluence_count = confluence.get("count", 0)
             has_enough_confluence = confluence_count >= min_confluence_buy
             
-            if has_enough_confluence and confluence_direction == "bullish":
+            # Allow BUY if confluence count is met, even if direction is neutral (for more trading activity)
+            confluence_direction = confluence.get("direction", "neutral")
+            if has_enough_confluence and (confluence_direction == "bullish" or (confluence_direction == "neutral" and confluence_count >= min_confluence_buy)):
                 details["reason"].append(f"AI bullish: {score:.2f} (threshold: {buy_threshold})")
                 details["reason"].append(f"Confluence: {confluence_count}/{min_confluence_buy} required ({confluence.get('strength')})")
 

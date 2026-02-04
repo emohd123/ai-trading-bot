@@ -810,9 +810,27 @@ def bot_loop():
                     bot_state["positions"][i]["lowest_price"] = current_price
 
                 # === IMMEDIATE MIN PROFIT CHECK (highest priority) ===
-                min_profit_pct = getattr(config, 'MIN_PROFIT', 0.0025) * 100
+                # In volatile markets: use lower profit target for faster sells
+                atr_data_pos = pos.get("atr", {}) or bot_state.get("atr", {})
+                volatility_high = atr_data_pos.get("volatility_level") in ("high", "extreme")
+                if volatility_high:
+                    min_profit_pct = getattr(config, 'MIN_PROFIT_HIGH_VOL', 0.0015) * 100
+                    profit_target_pct = getattr(config, 'PROFIT_TARGET_HIGH_VOL', 0.005) * 100
+                else:
+                    min_profit_pct = getattr(config, 'MIN_PROFIT', 0.0025) * 100
+                    profit_target_pct = getattr(config, 'PROFIT_TARGET', 0.01) * 100
+                
+                # Check profit target (in volatile: 0.5%, normal: 1%)
+                if pnl_percent >= profit_target_pct:
+                    vol_msg = " (volatile - quick profit)" if volatility_high else ""
+                    add_log(f"💰 POSITION #{i+1} PROFIT TARGET: +{pnl_percent:.2f}%{vol_msg} - SELLING!", "success")
+                    positions_to_close.append((i, pos, "profit_target"))
+                    continue
+                
+                # Check minimum profit (in volatile: 0.15%, normal: 0.25%)
                 if pnl_percent >= min_profit_pct:
-                    add_log(f"💰 POSITION #{i+1} MIN PROFIT: +{pnl_percent:.2f}% - SELLING!", "success")
+                    vol_msg = " (volatile - quick profit)" if volatility_high else ""
+                    add_log(f"💰 POSITION #{i+1} MIN PROFIT: +{pnl_percent:.2f}%{vol_msg} - SELLING!", "success")
                     positions_to_close.append((i, pos, "min_profit"))
                     continue
 
@@ -866,9 +884,28 @@ def bot_loop():
                 if current_price < lowest_price:
                     bot_state["position"]["lowest_price"] = current_price
 
-                min_profit_pct = getattr(config, 'MIN_PROFIT', 0.0025) * 100
+                # In volatile markets: use lower profit target for faster sells
+                atr_data_legacy = bot_state.get("atr", {})
+                volatility_high_legacy = atr_data_legacy.get("volatility_level") in ("high", "extreme")
+                if volatility_high_legacy:
+                    min_profit_pct = getattr(config, 'MIN_PROFIT_HIGH_VOL', 0.0015) * 100
+                    profit_target_pct = getattr(config, 'PROFIT_TARGET_HIGH_VOL', 0.005) * 100
+                else:
+                    min_profit_pct = getattr(config, 'MIN_PROFIT', 0.0025) * 100
+                    profit_target_pct = getattr(config, 'PROFIT_TARGET', 0.01) * 100
+                
+                # Check profit target first (in volatile: 0.5%, normal: 1%)
+                if pnl_percent >= profit_target_pct:
+                    vol_msg = " (volatile - quick profit)" if volatility_high_legacy else ""
+                    add_log(f"💰 PROFIT TARGET REACHED: +{pnl_percent:.2f}%{vol_msg} - SELLING NOW!", "success")
+                    execute_sell(current_price, "profit_target")
+                    update_dashboard()
+                    continue
+                
+                # Check minimum profit (in volatile: 0.15%, normal: 0.25%)
                 if pnl_percent >= min_profit_pct:
-                    add_log(f"💰 MIN PROFIT REACHED: +{pnl_percent:.2f}% - SELLING NOW!", "success")
+                    vol_msg = " (volatile - quick profit)" if volatility_high_legacy else ""
+                    add_log(f"💰 MIN PROFIT REACHED: +{pnl_percent:.2f}%{vol_msg} - SELLING NOW!", "success")
                     execute_sell(current_price, "min_profit")
                     update_dashboard()
                     continue
@@ -898,7 +935,7 @@ def bot_loop():
                     if current_regime == "trending_down":
                         stop_loss_pct = getattr(config, 'STOP_LOSS_TRENDING_DOWN', 0.008) * 100
                     elif volatility_high:
-                        stop_loss_pct = getattr(config, 'STOP_LOSS_HIGH_VOL', 0.012) * 100
+                        stop_loss_pct = getattr(config, 'STOP_LOSS_HIGH_VOL', 0.01) * 100  # Tighter in volatile
                     else:
                         stop_loss_pct = getattr(config, 'STOP_LOSS', 0.01) * 100
                         
@@ -1316,12 +1353,38 @@ def bot_loop():
             # Update dashboard
             update_dashboard()
 
-            # Idle heartbeat: log periodically when in downtrend with no position (so activity log shows bot is alive)
+            # Diagnostic heartbeat: log periodically why no trade is happening (so we can debug)
             has_position = bool(bot_state.get("position") or bot_state.get("positions"))
-            if not has_position and (bot_state.get("market_regime") or "").lower() == "trending_down":
+            if not has_position:
                 now_t = time.time()
                 if now_t - _last_idle_heartbeat >= _IDLE_HEARTBEAT_INTERVAL:
-                    add_log("Monitoring: downtrend, no position — waiting for trend change.", "info")
+                    regime = bot_state.get("market_regime", "unknown")
+                    ai_score = details.get("score", 0) if details else 0
+                    confluence_count = confluence.get("count", 0)
+                    decision_val = decision.value if decision else "UNKNOWN"
+                    can_trade = bot_state.get("risk_status", {}).get("can_trade", True)
+                    
+                    # Build diagnostic message
+                    reasons = []
+                    if decision_val != "BUY":
+                        reasons.append(f"Decision: {decision_val} (not BUY)")
+                    if regime == "trending_down":
+                        downtrend_threshold = getattr(config, 'BUY_THRESHOLD_DOWNTREND', 0.40)
+                        if ai_score < downtrend_threshold:
+                            reasons.append(f"Downtrend: score {ai_score:.2f} < {downtrend_threshold}")
+                    else:
+                        buy_threshold = getattr(config, 'BUY_THRESHOLD', 0.25)
+                        if ai_score < buy_threshold:
+                            reasons.append(f"Score {ai_score:.2f} < {buy_threshold}")
+                    min_confluence = getattr(config, 'MIN_CONFLUENCE_BUY', 4)
+                    if confluence_count < min_confluence:
+                        reasons.append(f"Confluence {confluence_count} < {min_confluence}")
+                    if not can_trade:
+                        risk_reason = bot_state.get("risk_status", {}).get("reason", "risk rules")
+                        reasons.append(f"Risk blocked: {risk_reason}")
+                    
+                    msg = f"🔍 No trade: {', '.join(reasons) if reasons else 'Unknown'}"
+                    add_log(msg, "info")
                     _last_idle_heartbeat = now_t
 
             # === TELEGRAM PERIODIC STATUS UPDATES ===

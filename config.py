@@ -37,20 +37,23 @@ TRADE_AMOUNT_USDT = 40  # Amount to trade per position
 MAX_POSITIONS = 2  # Allow 2 trades at once - speed up profit generation
 
 # Profit and loss targets (as decimals)
-PROFIT_TARGET = 0.01  # 1% profit target
+PROFIT_TARGET = 0.01  # 1% profit target (normal)
+PROFIT_TARGET_HIGH_VOL = 0.005  # 0.5% profit target in high volatility (faster sells for quick profits)
+MIN_PROFIT = 0.0025  # 0.25% minimum profit to take
+MIN_PROFIT_HIGH_VOL = 0.0015  # 0.15% minimum profit in high volatility (faster exits)
 STOP_LOSS = 0.01       # 1% stop loss (base)
 STOP_LOSS_TRENDING_DOWN = 0.008  # 0.8% in downtrend - cut losses faster (more frequent, smaller stop-outs)
-STOP_LOSS_HIGH_VOL = 0.012       # 1.2% in high volatility (wider)
-MIN_PROFIT = 0.007     # 0.7% - better risk/reward (was 0.5%)
+STOP_LOSS_HIGH_VOL = 0.01       # 1% in high volatility (tighter for faster exits)
+MIN_PROFIT = 0.0025   # 0.25% minimum profit to take (quick exits - lowered for volatile markets)
 
 # =============================================================================
 # AI ENGINE CONFIGURATION
 # =============================================================================
-# AI score thresholds (lowered for more trading activity)
-BUY_THRESHOLD = 0.25   # Buy when AI score > 0.25 (lowered from 0.35 for more entries)
-BUY_THRESHOLD_DOWNTREND = 0.40   # In downtrend: require moderate signal (0.40) if buys allowed
+# AI score thresholds (very low for maximum trading activity - debug mode)
+BUY_THRESHOLD = 0.15   # Buy when AI score > 0.15 (very low - should trade often)
+BUY_THRESHOLD_DOWNTREND = 0.25   # In downtrend: require score > 0.25 (lowered for activity)
 SELL_THRESHOLD = -0.25 # Sell when AI score < -0.25 (stronger signal needed)
-# Allow buys in downtrend with moderate signal (score > 0.40, confluence >= 4)
+# Allow buys in downtrend with low signal (score > 0.25, confluence >= 3)
 NO_BUY_IN_DOWNTREND = False  # False = can buy in downtrend if score >= BUY_THRESHOLD_DOWNTREND
 
 # When buying in downtrend is allowed (or for positions carried into downtrend): use smaller size
@@ -71,12 +74,14 @@ INDICATOR_WEIGHTS = {
     "cci": 0.05,                # 30%
 }
 
-# Entry rules (lowered for more trading activity)
-MIN_CONFIDENCE_BUY = 0.30      # Require Low+ confidence (lowered from 0.45)
-MIN_CONFLUENCE_BUY = 4         # At least 4 indicators must agree for BUY (lowered from 5)
+# Entry rules (very low for maximum trading activity - debug mode)
+MIN_CONFIDENCE_BUY = 0.20      # Require very low confidence (lowered from 0.30)
+MIN_CONFLUENCE_BUY = 3         # At least 3 indicators must agree for BUY (lowered from 4)
+MIN_CONFLUENCE_BUY_DOWNTREND = 3  # Same as normal (no extra requirement in downtrend)
 MIN_CONFLUENCE_SELL = 4        # At least 4 indicators must agree for SELL
 MIN_CONFLUENCE = 5             # Default confluence requirement
 REQUIRE_VOLUME_BLOCKING = False # Volume is now a modifier, not a blocker
+REQUIRE_VOLUME_RANGING = False  # Don't require volume in ranging/unknown (was True - blocking trades)
 VOLUME_NO_CONFIRM_PENALTY = 0.15  # Reduce score by 15% if no volume confirmation
 ADAPTIVE_WEIGHTS_ENABLED = True # Learn indicator weights from trade outcomes
 
