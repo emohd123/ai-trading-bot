@@ -1,9 +1,9 @@
 {
   "running": true,
   "position": {
-    "entry_price": 74182.69,
+    "entry_price": 73471.36,
     "quantity": 0.00039,
-    "entry_time": "2026-02-04 19:27:48",
+    "entry_time": "2026-02-04 19:52:26",
     "amount_usdt": 28.799999999999997,
     "regime": "trending_down",
     "indicator_scores": {
@@ -12,14 +12,14 @@
       "bollinger": 1.0,
       "ema": -0.7,
       "support_resistance": 0.8,
-      "ml_prediction": 0.1534,
+      "ml_prediction": 0.314,
       "ichimoku": -0.5,
-      "mfi": 0.4,
-      "williams_r": 0.3,
+      "mfi": 0.8,
+      "williams_r": 0.7,
       "cci": 0.9
     },
     "position_id": 1,
-    "trade_id": 72,
+    "trade_id": 74,
     "entry_conditions": {
       "rsi_state": "neutral",
       "rsi_value": 50,
@@ -31,25 +31,25 @@
       "day_of_week": "Wednesday",
       "regime": "trending_down",
       "fear_greed": "extreme_fear",
-      "confluence_count": 6
+      "confluence_count": 7
     },
     "indicator_combo_key": "no_signals",
     "volatility": "normal",
-    "lowest_price": 73825.05,
+    "lowest_price": 73471.36,
     "sizing_conditions": {
       "regime": "trending_down",
       "volatility": "normal",
-      "volatility_ratio": 0.86,
-      "confidence": 1.0,
-      "confluence": 6,
-      "streak_multiplier": 1.0
+      "volatility_ratio": 0.88,
+      "confidence": 0.96,
+      "confluence": 7,
+      "streak_multiplier": 0.75
     }
   },
   "positions": [
     {
-      "entry_price": 74182.69,
+      "entry_price": 73471.36,
       "quantity": 0.00039,
-      "entry_time": "2026-02-04 19:27:48",
+      "entry_time": "2026-02-04 19:52:26",
       "amount_usdt": 28.799999999999997,
       "regime": "trending_down",
       "indicator_scores": {
@@ -58,14 +58,14 @@
         "bollinger": 1.0,
         "ema": -0.7,
         "support_resistance": 0.8,
-        "ml_prediction": 0.1534,
+        "ml_prediction": 0.314,
         "ichimoku": -0.5,
-        "mfi": 0.4,
-        "williams_r": 0.3,
+        "mfi": 0.8,
+        "williams_r": 0.7,
         "cci": 0.9
       },
       "position_id": 1,
-      "trade_id": 72,
+      "trade_id": 74,
       "entry_conditions": {
         "rsi_state": "neutral",
         "rsi_value": 50,
@@ -77,22 +77,102 @@
         "day_of_week": "Wednesday",
         "regime": "trending_down",
         "fear_greed": "extreme_fear",
-        "confluence_count": 6
+        "confluence_count": 7
       },
       "indicator_combo_key": "no_signals",
       "volatility": "normal",
-      "lowest_price": 73825.05,
+      "lowest_price": 73471.36,
       "sizing_conditions": {
         "regime": "trending_down",
         "volatility": "normal",
-        "volatility_ratio": 0.86,
-        "confidence": 1.0,
-        "confluence": 6,
-        "streak_multiplier": 1.0
+        "volatility_ratio": 0.88,
+        "confidence": 0.96,
+        "confluence": 7,
+        "streak_multiplier": 0.75
       }
     }
   ],
   "logs": [
+    {
+      "time": "19:52:26",
+      "message": "BUY filled: 0.000390 BTC @ $73,471.36",
+      "level": "success"
+    },
+    {
+      "time": "19:52:24",
+      "message": "Smart BUY #1: $29 (conf: Very High)",
+      "level": "info"
+    },
+    {
+      "time": "19:52:12",
+      "message": "\ud83d\udd27 Auto-fix: Synced balances: USDT=44.87, BTC=0.00000308",
+      "level": "info"
+    },
+    {
+      "time": "19:52:11",
+      "message": "Self-healing system initialized",
+      "level": "success"
+    },
+    {
+      "time": "19:52:11",
+      "message": "Smart bot started",
+      "level": "success"
+    },
+    {
+      "time": "19:52:11",
+      "message": "Position size learner initialized",
+      "level": "success"
+    },
+    {
+      "time": "19:52:11",
+      "message": "Bot auto-resumed for 24/7 live trading",
+      "level": "success"
+    },
+    {
+      "time": "19:43:01",
+      "message": "SELL #1: $28.54 | P/L: $-0.39 (-1.35%) | All closed",
+      "level": "warning"
+    },
+    {
+      "time": "19:42:59",
+      "message": "SELL #1 (stop_loss) at $73,152.00",
+      "level": "info"
+    },
+    {
+      "time": "19:42:59",
+      "message": "\ud83d\uded1 POSITION #1 STOP LOSS: -1.39% (limit: -0.6%) - SELLING!",
+      "level": "warning"
+    },
+    {
+      "time": "19:42:59",
+      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "19:42:57",
+      "message": "\ud83d\udd27 Auto-fix: Synced balances: USDT=16.36, BTC=0.00039308",
+      "level": "info"
+    },
+    {
+      "time": "19:42:56",
+      "message": "Self-healing system initialized",
+      "level": "success"
+    },
+    {
+      "time": "19:42:56",
+      "message": "Smart bot started",
+      "level": "success"
+    },
+    {
+      "time": "19:42:56",
+      "message": "Position size learner initialized",
+      "level": "success"
+    },
+    {
+      "time": "19:42:56",
+      "message": "Bot auto-resumed for 24/7 live trading",
+      "level": "success"
+    },
     {
       "time": "19:32:50",
       "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
@@ -162,87 +242,7 @@
       "time": "19:27:43",
       "message": "\ud83d\udcb0 POSITION #1 MIN PROFIT: +0.42% - SELLING!",
       "level": "success"
-    },
-    {
-      "time": "19:27:09",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:26:37",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:26:03",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:25:31",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:24:59",
-      "message": "BUY filled: 0.000390 BTC @ $73,875.48",
-      "level": "success"
-    },
-    {
-      "time": "19:24:58",
-      "message": "Smart BUY #1: $29 (conf: Very High)",
-      "level": "info"
-    },
-    {
-      "time": "19:24:47",
-      "message": "\ud83d\udd27 Auto-fix: Synced balances: USDT=45.20, BTC=0.00000386",
-      "level": "info"
-    },
-    {
-      "time": "19:24:46",
-      "message": "Self-healing system initialized",
-      "level": "success"
-    },
-    {
-      "time": "19:24:46",
-      "message": "Smart bot started",
-      "level": "success"
-    },
-    {
-      "time": "19:24:46",
-      "message": "Position size learner initialized",
-      "level": "success"
-    },
-    {
-      "time": "19:24:45",
-      "message": "Bot auto-resumed for 24/7 live trading",
-      "level": "success"
-    },
-    {
-      "time": "19:22:45",
-      "message": "SELL #1: $28.65 | P/L: $-0.17 (-0.57%) | All closed",
-      "level": "warning"
-    },
-    {
-      "time": "19:22:40",
-      "message": "SELL #1 (stop_loss) at $73,416.45",
-      "level": "info"
-    },
-    {
-      "time": "19:22:39",
-      "message": "\ud83d\uded1 POSITION #1 STOP LOSS: -0.62% (limit: -0.6%) - SELLING!",
-      "level": "warning"
-    },
-    {
-      "time": "19:22:39",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:22:03",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
     }
   ],
-  "decision": "HOLD"
+  "decision": "BUY"
 }

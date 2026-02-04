@@ -533,7 +533,7 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
     decision = bot_state.get("decision", "HOLD")
     confluence = bot_state.get("confluence", {})
     
-    # === 0. HARD STOP - AI CANNOT OVERRIDE ===
+    # === 0. HARD STOP - AI CANNOT OVERRIDE (always enforced first, no delay/override) ===
     hard_stop = getattr(config, 'HARD_STOP_LIMIT', 0.02) * 100  # 2%
     if pnl_percent <= -hard_stop:
         add_log(f"🚨 HARD STOP: {pnl_percent:.2f}% exceeds max {hard_stop:.1f}% - AI cannot override", "error")
@@ -944,17 +944,29 @@ def bot_loop():
                     continue
                 
                 # Fallback to regime-based stop if smart stop didn't trigger
+                # Min-hold: skip regular stop in first N minutes (hard stop & breakeven still apply)
+                if getattr(config, 'MIN_HOLD_ENABLED', False):
+                    entry_time_str = pos.get("entry_time") or pos.get("time")
+                    if entry_time_str:
+                        try:
+                            entry_dt = datetime.strptime(entry_time_str, "%Y-%m-%d %H:%M:%S")
+                            age_min = (datetime.now() - entry_dt).total_seconds() / 60
+                            if age_min < getattr(config, 'MIN_HOLD_MINUTES', 20):
+                                continue  # Skip regular stop during min-hold
+                        except Exception:
+                            pass
+
                 current_regime = bot_state.get("market_regime", "unknown")
                 atr_data = bot_state.get("atr", {})
                 volatility_high = atr_data.get("volatility_level") == "high"
                 
-                # Select stop loss based on regime (use new tighter values)
+                # Select stop loss based on regime
                 if current_regime == "trending_down":
-                    stop_loss_pct = getattr(config, 'STOP_LOSS_TRENDING_DOWN', 0.006) * 100
+                    stop_loss_pct = getattr(config, 'STOP_LOSS_TRENDING_DOWN', 0.008) * 100
                 elif volatility_high:
                     stop_loss_pct = getattr(config, 'STOP_LOSS_HIGH_VOL', 0.0075) * 100
                 else:
-                    stop_loss_pct = getattr(config, 'STOP_LOSS', 0.0075) * 100
+                    stop_loss_pct = getattr(config, 'STOP_LOSS', 0.01) * 100
                     
                 if pnl_percent <= -stop_loss_pct:
                     add_log(f"🛑 POSITION #{i+1} STOP LOSS: {pnl_percent:.2f}% (limit: -{stop_loss_pct:.1f}%) - SELLING!", "warning")
@@ -1019,23 +1031,32 @@ def bot_loop():
                     # Momentum recovering - skip stop this cycle
                     pass
                 else:
-                    # Fallback to regime-based stop
-                    current_regime = bot_state.get("market_regime", "unknown")
-                    atr_data = bot_state.get("atr", {})
-                    volatility_high = atr_data.get("volatility_level") == "high"
-                    
-                    if current_regime == "trending_down":
-                        stop_loss_pct = getattr(config, 'STOP_LOSS_TRENDING_DOWN', 0.006) * 100
-                    elif volatility_high:
-                        stop_loss_pct = getattr(config, 'STOP_LOSS_HIGH_VOL', 0.0075) * 100
-                    else:
-                        stop_loss_pct = getattr(config, 'STOP_LOSS', 0.0075) * 100
-                        
-                    if pnl_percent <= -stop_loss_pct:
-                        add_log(f"🛑 STOP LOSS HIT: {pnl_percent:.2f}% (limit: -{stop_loss_pct:.1f}%) - SELLING NOW!", "warning")
-                        execute_sell(current_price, "stop_loss")
-                        update_dashboard()
-                        continue
+                    # Apply regime-based stop only when not in min-hold window (hard stop & breakeven already checked above)
+                    apply_regular_stop = True
+                    if getattr(config, 'MIN_HOLD_ENABLED', False):
+                        entry_time_str = bot_state["position"].get("entry_time") or bot_state["position"].get("time")
+                        if entry_time_str:
+                            try:
+                                entry_dt = datetime.strptime(entry_time_str, "%Y-%m-%d %H:%M:%S")
+                                if (datetime.now() - entry_dt).total_seconds() / 60 < getattr(config, 'MIN_HOLD_MINUTES', 20):
+                                    apply_regular_stop = False
+                            except Exception:
+                                pass
+                    if apply_regular_stop:
+                        current_regime = bot_state.get("market_regime", "unknown")
+                        atr_data = bot_state.get("atr", {})
+                        volatility_high = atr_data.get("volatility_level") == "high"
+                        if current_regime == "trending_down":
+                            stop_loss_pct = getattr(config, 'STOP_LOSS_TRENDING_DOWN', 0.008) * 100
+                        elif volatility_high:
+                            stop_loss_pct = getattr(config, 'STOP_LOSS_HIGH_VOL', 0.0075) * 100
+                        else:
+                            stop_loss_pct = getattr(config, 'STOP_LOSS', 0.01) * 100
+                        if pnl_percent <= -stop_loss_pct:
+                            add_log(f"🛑 STOP LOSS HIT: {pnl_percent:.2f}% (limit: -{stop_loss_pct:.1f}%) - SELLING NOW!", "warning")
+                            execute_sell(current_price, "stop_loss")
+                            update_dashboard()
+                            continue
 
                 update_trailing_stop(current_price, regime_data)
 
@@ -1437,10 +1458,25 @@ def bot_loop():
                 # At max positions - wait for one to close
                 bot_state["activity_status"] = f"Max positions ({current_positions}/{max_positions}) - waiting for exit"
             elif decision == Decision.SELL and (bot_state["position"] or current_positions > 0):
-                exit_type = details.get("exit_type", "ai_signal")
-                bot_state["activity_status"] = "Executing SELL - Closing position..."
-                update_dashboard()
-                execute_sell(current_price, exit_type)
+                # When position is in loss, require stronger bearish signal to avoid locking small losses
+                ai_score = details.get("score", 0)
+                sell_threshold_in_loss = getattr(config, 'SELL_THRESHOLD_IN_LOSS', -0.35)
+                position_in_loss = False
+                if bot_state.get("positions"):
+                    for pos in bot_state["positions"]:
+                        ep = pos.get("entry_price")
+                        if ep and current_price < ep:
+                            position_in_loss = True
+                            break
+                elif bot_state.get("position") and current_price < bot_state["position"].get("entry_price", float('inf')):
+                    position_in_loss = True
+                if position_in_loss and ai_score > sell_threshold_in_loss:
+                    add_log(f"SELL skipped: position in loss but AI score {ai_score:.2f} > {sell_threshold_in_loss} (need stronger bearish)", "info")
+                else:
+                    exit_type = details.get("exit_type", "ai_signal")
+                    bot_state["activity_status"] = "Executing SELL - Closing position..."
+                    update_dashboard()
+                    execute_sell(current_price, exit_type)
 
             # Update dashboard
             update_dashboard()

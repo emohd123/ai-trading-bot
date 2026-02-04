@@ -1,5 +1,37 @@
 [
   {
+    "id": 74,
+    "time": "2026-02-04 19:52:26",
+    "type": "BUY",
+    "price": 73471.36,
+    "quantity": 0.00039,
+    "amount": 28.799999999999997,
+    "pnl": 0,
+    "pnl_percent": 0,
+    "regime": "trending_down",
+    "sizing_conditions": {
+      "regime": "trending_down",
+      "volatility": "normal",
+      "volatility_ratio": 0.88,
+      "confidence": 0.96,
+      "confluence": 7,
+      "streak_multiplier": 0.75
+    }
+  },
+  {
+    "id": 72,
+    "time": "2026-02-04 19:43:01",
+    "type": "SELL",
+    "price": 73180.27,
+    "quantity": 0.00039,
+    "amount": 28.5403053,
+    "pnl": -0.3909437999999993,
+    "pnl_percent": -1.3512855896705798,
+    "exit_type": "stop_loss",
+    "regime": "trending_down",
+    "position_num": 1
+  },
+  {
     "id": 72,
     "time": "2026-02-04 19:27:48",
     "type": "BUY",

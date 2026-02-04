@@ -237,14 +237,34 @@ class PositionManager:
                 return True, ExitReason.BREAKEVEN, f"Breakeven stop at ${breakeven_price:,.2f}"
         
         # === 5. STOP LOSS CHECK ===
-        # Get effective stop loss from risk manager
-        base_stop = getattr(config, 'STOP_LOSS', 0.0075)
-        effective_stop, stop_reason = risk_mgr.get_effective_stop_loss(
-            base_stop, regime, volatility, self.entry_price, current_price
-        )
-        
-        if pnl_pct <= -effective_stop * 100:
-            return True, ExitReason.STOP_LOSS, f"Stop loss {stop_reason}: {pnl_pct:.2f}%"
+        # Min-hold: skip regular stop in first N minutes (hard stop already applied in section 1)
+        if getattr(config, 'MIN_HOLD_ENABLED', False):
+            try:
+                entry_dt = datetime.strptime(self.entry_time, "%Y-%m-%d %H:%M:%S")
+                age_min = (datetime.now() - entry_dt).total_seconds() / 60
+                if age_min < getattr(config, 'MIN_HOLD_MINUTES', 20):
+                    pass  # Skip regular stop during min-hold window
+                else:
+                    base_stop = getattr(config, 'STOP_LOSS', 0.01)
+                    effective_stop, stop_reason = risk_mgr.get_effective_stop_loss(
+                        base_stop, regime, volatility, self.entry_price, current_price
+                    )
+                    if pnl_pct <= -effective_stop * 100:
+                        return True, ExitReason.STOP_LOSS, f"Stop loss {stop_reason}: {pnl_pct:.2f}%"
+            except Exception:
+                base_stop = getattr(config, 'STOP_LOSS', 0.01)
+                effective_stop, stop_reason = risk_mgr.get_effective_stop_loss(
+                    base_stop, regime, volatility, self.entry_price, current_price
+                )
+                if pnl_pct <= -effective_stop * 100:
+                    return True, ExitReason.STOP_LOSS, f"Stop loss {stop_reason}: {pnl_pct:.2f}%"
+        else:
+            base_stop = getattr(config, 'STOP_LOSS', 0.01)
+            effective_stop, stop_reason = risk_mgr.get_effective_stop_loss(
+                base_stop, regime, volatility, self.entry_price, current_price
+            )
+            if pnl_pct <= -effective_stop * 100:
+                return True, ExitReason.STOP_LOSS, f"Stop loss {stop_reason}: {pnl_pct:.2f}%"
         
         # === 6. TIME-BASED EXIT ===
         try:
@@ -260,8 +280,9 @@ class PositionManager:
             pass
         
         # === 7. AI SELL SIGNAL ===
+        # When in loss, require stronger bearish signal (SELL_THRESHOLD_IN_LOSS) to avoid locking small losses
         if ai_decision == "SELL" and pnl_pct < 0:
-            sell_threshold = getattr(config, 'SELL_THRESHOLD', -0.25)
+            sell_threshold = getattr(config, 'SELL_THRESHOLD_IN_LOSS', -0.35)
             if ai_score < sell_threshold:
                 return True, ExitReason.AI_SELL, f"AI SELL signal ({ai_score:.2f})"
         

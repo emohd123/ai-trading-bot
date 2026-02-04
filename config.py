@@ -33,26 +33,28 @@ QUOTE_ASSET = "USDT"
 # Trade amount in quote currency (USDT)
 TRADE_AMOUNT_USDT = 40  # Amount to trade per position
 
-# Maximum concurrent positions (2 = faster trading with 2 simultaneous positions)
-MAX_POSITIONS = 2  # Allow 2 trades at once - speed up profit generation
+# Maximum concurrent positions (1 = focus on one position, fewer whipsaw losses)
+MAX_POSITIONS = 1  # Single position to reduce overtrading and fee drag
 
 # Profit and loss targets (as decimals) - 2:1 Risk/Reward Ratio
 PROFIT_TARGET = 0.015  # 1.5% profit target (improved from 1% for better risk/reward)
 PROFIT_TARGET_HIGH_VOL = 0.005  # 0.5% profit target in high volatility (faster sells for quick profits)
 MIN_PROFIT = 0.0025  # 0.25% minimum profit to take
 MIN_PROFIT_HIGH_VOL = 0.0015  # 0.15% minimum profit in high volatility (faster exits)
-STOP_LOSS = 0.0075       # 0.75% stop loss (base) - tighter for better risk/reward (2:1 ratio)
-STOP_LOSS_TRENDING_DOWN = 0.006  # 0.6% in downtrend - cut losses faster
-STOP_LOSS_HIGH_VOL = 0.0075       # 0.75% in high volatility (matches base stop)
+STOP_LOSS = 0.01         # 1.0% stop loss (base) - room for noise, HARD_STOP_LIMIT still 2%
+STOP_LOSS_TRENDING_DOWN = 0.008  # 0.8% in downtrend - less whipsaw than 0.6%
+STOP_LOSS_HIGH_VOL = 0.0075      # 0.75% in high volatility (matches previous)
 
 # =============================================================================
 # AI ENGINE CONFIGURATION
 # =============================================================================
-# AI score thresholds (very low for maximum trading activity - debug mode)
-BUY_THRESHOLD = 0.15   # Buy when AI score > 0.15 (very low - should trade often)
-BUY_THRESHOLD_DOWNTREND = 0.25   # In downtrend: require score > 0.25 (lowered for activity)
-SELL_THRESHOLD = -0.25 # Sell when AI score < -0.25 (stronger signal needed)
-# Allow buys in downtrend with low signal (score > 0.25, confluence >= 3)
+# AI score thresholds (stricter to reduce weak entries and losses)
+BUY_THRESHOLD = 0.30   # Buy when AI score > 0.30 (clearer bullish signal)
+BUY_THRESHOLD_DOWNTREND = 0.40  # In downtrend: require stronger score to buy
+SELL_THRESHOLD = -0.25 # Sell when AI score < -0.25 (in profit)
+# Stricter threshold when position is in loss - avoid locking small losses on weak bearish flicker
+SELL_THRESHOLD_IN_LOSS = -0.35  # Require score < -0.35 to sell at a loss on AI signal
+# Allow buys in downtrend only with stronger signal (BUY_THRESHOLD_DOWNTREND)
 NO_BUY_IN_DOWNTREND = False  # False = can buy in downtrend if score >= BUY_THRESHOLD_DOWNTREND
 
 # When buying in downtrend is allowed (or for positions carried into downtrend): use smaller size
@@ -73,10 +75,10 @@ INDICATOR_WEIGHTS = {
     "cci": 0.05,                # 30%
 }
 
-# Entry rules (very low for maximum trading activity - debug mode)
-MIN_CONFIDENCE_BUY = 0.20      # Require very low confidence (lowered from 0.30)
-MIN_CONFLUENCE_BUY = 3         # At least 3 indicators must agree for BUY (lowered from 4)
-MIN_CONFLUENCE_BUY_DOWNTREND = 3  # Same as normal (no extra requirement in downtrend)
+# Entry rules (stricter to reduce weak entries)
+MIN_CONFIDENCE_BUY = 0.30      # Require higher confidence for BUY
+MIN_CONFLUENCE_BUY = 4         # At least 4 indicators must agree for BUY
+MIN_CONFLUENCE_BUY_DOWNTREND = 4  # Same as normal in downtrend
 MIN_CONFLUENCE_SELL = 4        # At least 4 indicators must agree for SELL
 MIN_CONFLUENCE = 5             # Default confluence requirement
 REQUIRE_VOLUME_BLOCKING = False # Volume is now a modifier, not a blocker
@@ -90,7 +92,7 @@ TRAILING_ACTIVATION_HOT = 0.003  # +0.3% during win streak (even earlier)
 
 # Daily limits
 MAX_DAILY_LOSS_PCT = 0.03      # 3% of total portfolio max daily loss
-MAX_DAILY_TRADES = 20          # Prevent overtrading
+MAX_DAILY_TRADES = 12          # Cap round-trips to reduce churn and fee drag
 
 # =============================================================================
 # SMART STOP LOSS SYSTEM (Avoid premature stops)
@@ -110,6 +112,10 @@ RSI_RECOVERY_THRESHOLD = 35   # If RSI > 35 and rising, delay stop
 # Time-based exit for stale positions
 MAX_POSITION_AGE_HOURS = 4     # Exit negative positions after 4 hours
 STALE_LOSS_THRESHOLD = -0.003  # Only time-exit if loss > -0.3%
+
+# Minimum hold time before regular stop loss applies (reduces whipsaw; hard stop still applies)
+MIN_HOLD_ENABLED = True        # If True, skip regular stop if position age < MIN_HOLD_MINUTES
+MIN_HOLD_MINUTES = 20          # Don't apply regular stop in first 20 min (hard stop & breakeven still apply)
 
 # =============================================================================
 # AI-ASSISTED STOP LOSS (AI can override/delay stops)
