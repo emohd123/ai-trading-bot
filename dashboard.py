@@ -302,6 +302,10 @@ stop_delay_count = 0         # Track AI stop delay cycles
 last_health_check = None
 health_check_interval = 300  # 5 minutes
 
+# Position size learner
+position_size_learner = None
+_last_idle_heartbeat = 0
+
 
 def _get_activity_status(decision, details, position):
     """Get human-readable status of what the bot is doing"""
@@ -353,7 +357,9 @@ def update_dashboard():
 
 
 def calculate_position_size(regime_data, confidence=None):
-    """Calculate smart position size with confidence-based adjustment"""
+    """Calculate smart position size with confidence-based adjustment and ML learning"""
+    global position_size_learner
+    
     base_size = config.TRADE_AMOUNT_USDT
 
     params = regime_data.get("adjusted_params", {}) if regime_data else {}
@@ -386,8 +392,49 @@ def calculate_position_size(regime_data, confidence=None):
     else:
         conf_mult = 0.7  # Low confidence = smaller position
 
-    size = base_size * regime_mult * vol_mult * loss_mult * conf_mult
-    bot_state["risk_status"]["position_size_mult"] = round(regime_mult * vol_mult * loss_mult * conf_mult, 2)
+    # Current multiplier system
+    current_mult = regime_mult * vol_mult * loss_mult * conf_mult
+    
+    # ML-based learned optimal size
+    learned_mult = None
+    if position_size_learner and getattr(config, 'POSITION_SIZE_LEARNING_ENABLED', True):
+        try:
+            # Prepare conditions for learner
+            confluence_count = bot_state.get("confluence", {}).get("count", 0)
+            streak_mult = ai_engine.streak_multiplier if ai_engine else 1.0
+            
+            conditions = {
+                "regime": bot_state.get("market_regime", "unknown"),
+                "volatility": atr_data.get("volatility_level", "medium"),
+                "volatility_ratio": vol_ratio,
+                "confidence": conf_value,
+                "confluence": confluence_count,
+                "streak_multiplier": streak_mult
+            }
+            
+            # Try ML prediction first, then statistical learning
+            learned_mult = position_size_learner.predict_optimal_size_ml(conditions)
+            if learned_mult is None:
+                learned_mult = position_size_learner.get_optimal_multiplier(conditions)
+        except Exception as e:
+            logger.warning(f"Position size learning error: {e}")
+    
+    # Blend learned size with current system (gradual adoption)
+    if learned_mult is not None:
+        blend_ratio = getattr(config, 'POSITION_SIZE_BLEND_RATIO', 0.7)
+        optimal_mult = blend_ratio * learned_mult + (1 - blend_ratio) * current_mult
+    else:
+        optimal_mult = current_mult
+    
+    size = base_size * optimal_mult
+    bot_state["risk_status"]["position_size_mult"] = round(optimal_mult, 2)
+    
+    # Store if using learned size for logging
+    if learned_mult is not None:
+        bot_state["risk_status"]["learned_size_mult"] = round(learned_mult, 2)
+        bot_state["risk_status"]["using_learned_size"] = True
+    else:
+        bot_state["risk_status"]["using_learned_size"] = False
 
     # Min $15, max 1.5x base size
     return max(15, min(size, base_size * 1.5))
@@ -681,7 +728,18 @@ def bot_loop():
     """Main bot trading loop with smart features"""
     global client, analyzer, ai_engine, regime_detector, self_healer
     global trailing_stop_price, highest_price_since_entry, consecutive_losses, daily_losses, daily_trades
-    global last_health_check, _last_idle_heartbeat
+    global last_health_check, position_size_learner
+    
+    # Initialize position size learner
+    global position_size_learner
+    if position_size_learner is None:
+        try:
+            from ai.position_size_learner import PositionSizeLearner
+            position_size_learner = PositionSizeLearner()
+            add_log("Position size learner initialized", "success")
+        except Exception as e:
+            logger.warning(f"Could not initialize position size learner: {e}")
+            position_size_learner = None
 
     add_log("Smart bot started", "success")
     bot_state["activity_status"] = "Starting - Fetching market data..."
@@ -856,13 +914,13 @@ def bot_loop():
                 atr_data = bot_state.get("atr", {})
                 volatility_high = atr_data.get("volatility_level") == "high"
                 
-                # Select stop loss based on regime
+                # Select stop loss based on regime (use new tighter values)
                 if current_regime == "trending_down":
-                    stop_loss_pct = getattr(config, 'STOP_LOSS_TRENDING_DOWN', 0.008) * 100
+                    stop_loss_pct = getattr(config, 'STOP_LOSS_TRENDING_DOWN', 0.006) * 100
                 elif volatility_high:
-                    stop_loss_pct = getattr(config, 'STOP_LOSS_HIGH_VOL', 0.012) * 100
+                    stop_loss_pct = getattr(config, 'STOP_LOSS_HIGH_VOL', 0.0075) * 100
                 else:
-                    stop_loss_pct = getattr(config, 'STOP_LOSS', 0.01) * 100
+                    stop_loss_pct = getattr(config, 'STOP_LOSS', 0.0075) * 100
                     
                 if pnl_percent <= -stop_loss_pct:
                     add_log(f"🛑 POSITION #{i+1} STOP LOSS: {pnl_percent:.2f}% (limit: -{stop_loss_pct:.1f}%) - SELLING!", "warning")
@@ -933,11 +991,11 @@ def bot_loop():
                     volatility_high = atr_data.get("volatility_level") == "high"
                     
                     if current_regime == "trending_down":
-                        stop_loss_pct = getattr(config, 'STOP_LOSS_TRENDING_DOWN', 0.008) * 100
+                        stop_loss_pct = getattr(config, 'STOP_LOSS_TRENDING_DOWN', 0.006) * 100
                     elif volatility_high:
-                        stop_loss_pct = getattr(config, 'STOP_LOSS_HIGH_VOL', 0.01) * 100  # Tighter in volatile
+                        stop_loss_pct = getattr(config, 'STOP_LOSS_HIGH_VOL', 0.0075) * 100
                     else:
-                        stop_loss_pct = getattr(config, 'STOP_LOSS', 0.01) * 100
+                        stop_loss_pct = getattr(config, 'STOP_LOSS', 0.0075) * 100
                         
                     if pnl_percent <= -stop_loss_pct:
                         add_log(f"🛑 STOP LOSS HIT: {pnl_percent:.2f}% (limit: -{stop_loss_pct:.1f}%) - SELLING NOW!", "warning")
@@ -1474,6 +1532,32 @@ def execute_buy(price, regime_data=None, details=None):
             except Exception as e:
                 logger.warning("Could not capture entry conditions: %s", e)
         
+        # Capture entry conditions for position size learning
+        atr_data = regime_data.get("atr", {}) if regime_data else {}
+        volatility_ratio = atr_data.get("volatility_ratio", 1.0)
+        confidence_value = confidence.get("value", 0.5) if confidence else 0.5
+        confluence_count = bot_state.get("confluence", {}).get("count", 0)
+        streak_mult = ai_engine.streak_multiplier if ai_engine else 1.0
+        
+        entry_conditions_for_sizing = {
+            "regime": bot_state["market_regime"],
+            "volatility": bot_state.get("atr", {}).get("volatility_level", "medium"),
+            "volatility_ratio": volatility_ratio,
+            "confidence": confidence_value,
+            "confluence": confluence_count,
+            "streak_multiplier": streak_mult
+        }
+        
+        # Generate trade_id before creating position
+        trade_id = len(bot_state["trade_history"]) + 1
+        
+        # Record entry for position size learning
+        if position_size_learner:
+            try:
+                position_size_learner.record_trade_entry(trade_id, entry_conditions_for_sizing, position_size)
+            except Exception as e:
+                logger.warning(f"Could not record trade entry for sizing: {e}")
+        
         new_position = {
             "entry_price": result["price"],
             "quantity": result["quantity"],
@@ -1482,11 +1566,14 @@ def execute_buy(price, regime_data=None, details=None):
             "regime": bot_state["market_regime"],
             "indicator_scores": (details or {}).get("indicator_scores", {}),
             "position_id": current_positions + 1,
+            "trade_id": trade_id,  # Store trade_id in position for later lookup
             # PHASE 6: Store entry conditions for learning
             "entry_conditions": entry_conditions,
             "indicator_combo_key": indicator_combo_key,
             "volatility": bot_state.get("atr", {}).get("volatility_level", "medium"),
             "lowest_price": result["price"],  # Track lowest price for drawdown
+            # Position size learning: store conditions used for sizing
+            "sizing_conditions": entry_conditions_for_sizing
         }
 
         # Add to positions list
@@ -1512,7 +1599,7 @@ def execute_buy(price, regime_data=None, details=None):
         bot_state["trailing_stop_enabled"] = params.get("trailing_stop_enabled", True)
 
         trade = {
-            "id": len(bot_state["trade_history"]) + 1,
+            "id": trade_id,
             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "type": "BUY",
             "price": result["price"],
@@ -1520,7 +1607,8 @@ def execute_buy(price, regime_data=None, details=None):
             "amount": position_size,
             "pnl": 0,
             "pnl_percent": 0,
-            "regime": bot_state["market_regime"]
+            "regime": bot_state["market_regime"],
+            "sizing_conditions": entry_conditions_for_sizing  # Store for learning
         }
         bot_state["trade_history"].insert(0, trade)
         save_trades()
@@ -1680,8 +1768,13 @@ def execute_sell(price, exit_type="manual", position_index=None):
         except Exception:
             pass  # ML predictor not available
 
+        # Get trade_id from position or generate new one
+        sell_trade_id = position_to_sell.get("trade_id")
+        if not sell_trade_id:
+            sell_trade_id = len(bot_state["trade_history"]) + 1
+        
         trade = {
-            "id": len(bot_state["trade_history"]) + 1,
+            "id": sell_trade_id,
             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "type": "SELL",
             "price": result["price"],
@@ -1695,6 +1788,30 @@ def execute_sell(price, exit_type="manual", position_index=None):
         }
         bot_state["trade_history"].insert(0, trade)
         save_trades()
+        
+        # Record outcome for position size learning
+        if position_size_learner:
+            try:
+                # Find matching BUY trade ID from position's trade_id
+                buy_trade_id = position_to_sell.get("trade_id")
+                if not buy_trade_id:
+                    # Fallback: look for most recent BUY trade before this SELL
+                    for hist_trade in bot_state["trade_history"]:
+                        if hist_trade.get("type") == "BUY" and hist_trade.get("id") < sell_trade_id:
+                            buy_trade_id = hist_trade.get("id")
+                            break
+                
+                if buy_trade_id:
+                    position_size_learner.record_trade_outcome(buy_trade_id, pnl_percent, pnl, exit_type)
+                    
+                    # Safety validation: compare learned vs current performance
+                    stats = position_size_learner.get_stats()
+                    if stats["complete_trades"] >= 20:
+                        # Check if learned sizes are performing well
+                        # This is a simple check - could be enhanced
+                        logger.info(f"Position size learning: {stats['learned_conditions']} conditions learned from {stats['complete_trades']} trades")
+            except Exception as e:
+                logger.warning(f"Could not record trade outcome for sizing: {e}")
 
         # We sold total balance (position + dust), so clear all positions
         bot_state["positions"] = []

@@ -36,15 +36,14 @@ TRADE_AMOUNT_USDT = 40  # Amount to trade per position
 # Maximum concurrent positions (2 = faster trading with 2 simultaneous positions)
 MAX_POSITIONS = 2  # Allow 2 trades at once - speed up profit generation
 
-# Profit and loss targets (as decimals)
-PROFIT_TARGET = 0.01  # 1% profit target (normal)
+# Profit and loss targets (as decimals) - 2:1 Risk/Reward Ratio
+PROFIT_TARGET = 0.015  # 1.5% profit target (improved from 1% for better risk/reward)
 PROFIT_TARGET_HIGH_VOL = 0.005  # 0.5% profit target in high volatility (faster sells for quick profits)
 MIN_PROFIT = 0.0025  # 0.25% minimum profit to take
 MIN_PROFIT_HIGH_VOL = 0.0015  # 0.15% minimum profit in high volatility (faster exits)
-STOP_LOSS = 0.01       # 1% stop loss (base)
-STOP_LOSS_TRENDING_DOWN = 0.008  # 0.8% in downtrend - cut losses faster (more frequent, smaller stop-outs)
-STOP_LOSS_HIGH_VOL = 0.01       # 1% in high volatility (tighter for faster exits)
-MIN_PROFIT = 0.0025   # 0.25% minimum profit to take (quick exits - lowered for volatile markets)
+STOP_LOSS = 0.0075       # 0.75% stop loss (base) - tighter for better risk/reward (2:1 ratio)
+STOP_LOSS_TRENDING_DOWN = 0.006  # 0.6% in downtrend - cut losses faster
+STOP_LOSS_HIGH_VOL = 0.0075       # 0.75% in high volatility (matches base stop)
 
 # =============================================================================
 # AI ENGINE CONFIGURATION
@@ -85,9 +84,9 @@ REQUIRE_VOLUME_RANGING = False  # Don't require volume in ranging/unknown (was T
 VOLUME_NO_CONFIRM_PENALTY = 0.15  # Reduce score by 15% if no volume confirmation
 ADAPTIVE_WEIGHTS_ENABLED = True # Learn indicator weights from trade outcomes
 
-# Trailing stop activation
-TRAILING_ACTIVATION = 0.01     # Activate at +1% (was +2%)
-TRAILING_ACTIVATION_HOT = 0.005  # +0.5% during win streak
+# Trailing stop activation - activate earlier to lock profits
+TRAILING_ACTIVATION = 0.005     # Activate at +0.5% (lowered from 1% to lock profits earlier)
+TRAILING_ACTIVATION_HOT = 0.003  # +0.3% during win streak (even earlier)
 
 # Daily limits
 MAX_DAILY_LOSS_PCT = 0.03      # 3% of total portfolio max daily loss
@@ -279,6 +278,14 @@ CHECK_INTERVAL = 30
 ML_INTERVAL_SEC = 300  # 5 minutes; set to 60 for more frequent updates
 # Set to False for faster inference (LSTM is slow); weight is redistributed to RF/XGB/LGB
 ML_USE_LSTM = False
+
+# =============================================================================
+# POSITION SIZE LEARNING CONFIGURATION
+# =============================================================================
+# ML-based position size learning: learns optimal trade amounts from history
+POSITION_SIZE_LEARNING_ENABLED = True  # Enable position size learning
+POSITION_SIZE_MIN_SAMPLES = 5  # Minimum trades per condition before using learned size
+POSITION_SIZE_BLEND_RATIO = 0.7  # Blend ratio: 70% learned, 30% current system (gradual adoption)
 
 # Number of historical candles to fetch for analysis
 CANDLE_LIMIT = 100

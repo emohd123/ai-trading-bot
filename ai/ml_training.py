@@ -4,6 +4,7 @@ Multi-horizon predictions with feature selection, hyperparameter tuning, walk-fo
 """
 import os
 import json
+import shutil
 import numpy as np
 import pandas as pd
 from typing import Dict, Tuple, Optional, List
@@ -247,7 +248,9 @@ def train_models(model_dir: str = None, horizon: str = DEFAULT_HORIZON, safe_dep
     X = X.fillna(0)
     X = X.replace([np.inf, -np.inf], 0)
 
-    # Feature selection
+    # Feature selection - get n_selected_features from hyperparams or use default
+    hyperparams = get_ml_hyperparams()
+    n_selected_features = hyperparams.get("n_selected_features", N_SELECTED_FEATURES)
     print(f"Selecting top {n_selected_features} features...")
     X_selected, selected_features = select_features(X, y, n_features=n_selected_features)
     X = X_selected
