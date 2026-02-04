@@ -1,118 +1,6 @@
 {
   "predictions": [
     {
-      "timestamp": "2026-02-04T05:52:54.412726",
-      "predicted_direction": "DOWN",
-      "confidence": 0.5649,
-      "probability": 0.2175,
-      "model_votes": {
-        "rf": 0.4481,
-        "xgb": 0.1192,
-        "lgb": 0.0853,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-04T05:57:56.513136",
-      "predicted_direction": "DOWN",
-      "confidence": 0.5567,
-      "probability": 0.2216,
-      "model_votes": {
-        "rf": 0.4465,
-        "xgb": 0.1406,
-        "lgb": 0.0778,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-04T06:03:03.491567",
-      "predicted_direction": "DOWN",
-      "confidence": 0.576,
-      "probability": 0.212,
-      "model_votes": {
-        "rf": 0.4154,
-        "xgb": 0.1485,
-        "lgb": 0.072,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-04T06:08:08.079884",
-      "predicted_direction": "DOWN",
-      "confidence": 0.5925,
-      "probability": 0.2038,
-      "model_votes": {
-        "rf": 0.4139,
-        "xgb": 0.1163,
-        "lgb": 0.0811,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-04T06:13:14.001777",
-      "predicted_direction": "DOWN",
-      "confidence": 0.5546,
-      "probability": 0.2227,
-      "model_votes": {
-        "rf": 0.3891,
-        "xgb": 0.1111,
-        "lgb": 0.1679,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-04T06:18:18.028618",
-      "predicted_direction": "DOWN",
-      "confidence": 0.4886,
-      "probability": 0.2557,
-      "model_votes": {
-        "rf": 0.422,
-        "xgb": 0.1379,
-        "lgb": 0.2073,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-04T06:23:23.462859",
-      "predicted_direction": "DOWN",
-      "confidence": 0.5079,
-      "probability": 0.246,
-      "model_votes": {
-        "rf": 0.4074,
-        "xgb": 0.1379,
-        "lgb": 0.1928,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-04T06:28:28.077751",
-      "predicted_direction": "DOWN",
-      "confidence": 0.4986,
-      "probability": 0.2507,
-      "model_votes": {
-        "rf": 0.4107,
-        "xgb": 0.1435,
-        "lgb": 0.1978,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
       "timestamp": "2026-02-04T06:33:30.228177",
       "predicted_direction": "DOWN",
       "confidence": 0.4887,
@@ -1383,8 +1271,8 @@
         "lgb": 0.4909,
         "lstm": 0.5
       },
-      "actual_direction": null,
-      "correct": null
+      "actual_direction": "DOWN",
+      "correct": false
     },
     {
       "timestamp": "2026-02-04T18:53:50.735462",
@@ -1399,26 +1287,138 @@
       },
       "actual_direction": null,
       "correct": null
+    },
+    {
+      "timestamp": "2026-02-04T18:59:12.988016",
+      "predicted_direction": "UP",
+      "confidence": 0.1187,
+      "probability": 0.5593,
+      "model_votes": {
+        "rf": 0.507,
+        "xgb": 0.688,
+        "lgb": 0.4831,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-04T19:04:31.061670",
+      "predicted_direction": "UP",
+      "confidence": 0.045,
+      "probability": 0.5225,
+      "model_votes": {
+        "rf": 0.4842,
+        "xgb": 0.5644,
+        "lgb": 0.5188,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-04T19:09:50.049489",
+      "predicted_direction": "UP",
+      "confidence": 0.0122,
+      "probability": 0.5061,
+      "model_votes": {
+        "rf": 0.484,
+        "xgb": 0.5985,
+        "lgb": 0.4358,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-04T19:14:20.820531",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0257,
+      "probability": 0.4871,
+      "model_votes": {
+        "rf": 0.4683,
+        "xgb": 0.4971,
+        "lgb": 0.4961,
+        "lstm": 0.5
+      },
+      "actual_direction": "DOWN",
+      "correct": true
+    },
+    {
+      "timestamp": "2026-02-04T19:19:32.332841",
+      "predicted_direction": "UP",
+      "confidence": 0.0364,
+      "probability": 0.5182,
+      "model_votes": {
+        "rf": 0.4993,
+        "xgb": 0.6588,
+        "lgb": 0.3964,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-04T19:20:52.662045",
+      "predicted_direction": "UP",
+      "confidence": 0.0057,
+      "probability": 0.5029,
+      "model_votes": {
+        "rf": 0.4976,
+        "xgb": 0.6508,
+        "lgb": 0.3602,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-04T19:24:54.116946",
+      "predicted_direction": "UP",
+      "confidence": 0.1534,
+      "probability": 0.5767,
+      "model_votes": {
+        "rf": 0.4928,
+        "xgb": 0.6893,
+        "lgb": 0.548,
+        "lstm": 0.5
+      },
+      "actual_direction": "UP",
+      "correct": true
+    },
+    {
+      "timestamp": "2026-02-04T19:30:04.680934",
+      "predicted_direction": "UP",
+      "confidence": 0.2131,
+      "probability": 0.6065,
+      "model_votes": {
+        "rf": 0.4973,
+        "xgb": 0.5956,
+        "lgb": 0.701,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
     }
   ],
   "last_retrain_date": null,
   "model_accuracy": {
     "rf": {
-      "correct": 5,
-      "total": 7
+      "correct": 6,
+      "total": 10
     },
     "xgb": {
-      "correct": 4,
-      "total": 7
+      "correct": 6,
+      "total": 10
     },
     "lgb": {
-      "correct": 6,
-      "total": 7
+      "correct": 9,
+      "total": 10
     },
     "lstm": {
-      "correct": 2,
-      "total": 7
+      "correct": 4,
+      "total": 10
     }
   },
-  "updated_at": "2026-02-04T18:53:50.735988"
+  "updated_at": "2026-02-04T19:30:04.683145"
 }

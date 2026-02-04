@@ -1,0 +1,84 @@
+{
+  "history": [
+    {
+      "error_type": "ValueError",
+      "message": "Test error",
+      "category": "data_error",
+      "severity": "low",
+      "context": {
+        "operation": "unknown"
+      },
+      "timestamp": "2026-02-04T19:28:00.404000",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\cactu\\OneDrive\\Desktop\\app\\bot\\tests\\test_error_handler.py\", line 150, in test_error_is_logged\n    raise ValueError(\"Test error\")\nValueError: Test error\n"
+    },
+    {
+      "error_type": "ConnectionError",
+      "message": "Always fails",
+      "category": "network_error",
+      "severity": "medium",
+      "context": {
+        "attempt": 1,
+        "max_retries": 2,
+        "operation": "test_op"
+      },
+      "timestamp": "2026-02-04T19:28:00.423385",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\cactu\\OneDrive\\Desktop\\app\\bot\\core\\error_handler.py\", line 352, in wrapper\n    result = func(*args, **kwargs)\n  File \"C:\\Users\\cactu\\OneDrive\\Desktop\\app\\bot\\tests\\test_error_handler.py\", line 69, in always_fails\n    raise ConnectionError(\"Always fails\")\nConnectionError: Always fails\n"
+    },
+    {
+      "error_type": "ConnectionError",
+      "message": "Always fails",
+      "category": "network_error",
+      "severity": "medium",
+      "context": {
+        "attempt": 2,
+        "max_retries": 2,
+        "operation": "test_op"
+      },
+      "timestamp": "2026-02-04T19:28:05.427953",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\cactu\\OneDrive\\Desktop\\app\\bot\\core\\error_handler.py\", line 352, in wrapper\n    result = func(*args, **kwargs)\n  File \"C:\\Users\\cactu\\OneDrive\\Desktop\\app\\bot\\tests\\test_error_handler.py\", line 69, in always_fails\n    raise ConnectionError(\"Always fails\")\nConnectionError: Always fails\n"
+    },
+    {
+      "error_type": "ConnectionError",
+      "message": "Simulated failure",
+      "category": "network_error",
+      "severity": "medium",
+      "context": {
+        "attempt": 1,
+        "max_retries": 3,
+        "operation": "test_op"
+      },
+      "timestamp": "2026-02-04T19:28:05.431960",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\cactu\\OneDrive\\Desktop\\app\\bot\\core\\error_handler.py\", line 352, in wrapper\n    result = func(*args, **kwargs)\n  File \"C:\\Users\\cactu\\OneDrive\\Desktop\\app\\bot\\tests\\test_error_handler.py\", line 58, in failing_func\n    raise ConnectionError(\"Simulated failure\")\nConnectionError: Simulated failure\n"
+    },
+    {
+      "error_type": "ConnectionError",
+      "message": "Simulated failure",
+      "category": "network_error",
+      "severity": "medium",
+      "context": {
+        "attempt": 2,
+        "max_retries": 3,
+        "operation": "test_op"
+      },
+      "timestamp": "2026-02-04T19:28:10.435633",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\cactu\\OneDrive\\Desktop\\app\\bot\\core\\error_handler.py\", line 352, in wrapper\n    result = func(*args, **kwargs)\n  File \"C:\\Users\\cactu\\OneDrive\\Desktop\\app\\bot\\tests\\test_error_handler.py\", line 58, in failing_func\n    raise ConnectionError(\"Simulated failure\")\nConnectionError: Simulated failure\n"
+    },
+    {
+      "error_type": "RuntimeError",
+      "message": "Oops",
+      "category": "logic_error",
+      "severity": "high",
+      "context": {
+        "operation": "operation"
+      },
+      "timestamp": "2026-02-04T19:28:20.440759",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\cactu\\OneDrive\\Desktop\\app\\bot\\core\\error_handler.py\", line 399, in safe_execute\n    return func()\n  File \"C:\\Users\\cactu\\OneDrive\\Desktop\\app\\bot\\tests\\test_error_handler.py\", line 90, in bad_func\n    raise RuntimeError(\"Oops\")\nRuntimeError: Oops\n"
+    }
+  ],
+  "counts": {
+    "data_error": 1,
+    "network_error": 4,
+    "logic_error": 1
+  },
+  "last_updated": "2026-02-04T19:28:20.445347"
+}

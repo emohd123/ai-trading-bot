@@ -1,5 +1,101 @@
 [
   {
+    "id": 72,
+    "time": "2026-02-04 19:27:48",
+    "type": "BUY",
+    "price": 74182.69,
+    "quantity": 0.00039,
+    "amount": 28.799999999999997,
+    "pnl": 0,
+    "pnl_percent": 0,
+    "regime": "trending_down",
+    "sizing_conditions": {
+      "regime": "trending_down",
+      "volatility": "normal",
+      "volatility_ratio": 0.86,
+      "confidence": 1.0,
+      "confluence": 6,
+      "streak_multiplier": 1.0
+    }
+  },
+  {
+    "id": 70,
+    "time": "2026-02-04 19:27:45",
+    "type": "SELL",
+    "price": 74179.33,
+    "quantity": 0.00039,
+    "amount": 28.9299387,
+    "pnl": 0.11850150000000227,
+    "pnl_percent": 0.41130020407313206,
+    "exit_type": "min_profit",
+    "regime": "trending_down",
+    "position_num": 1
+  },
+  {
+    "id": 70,
+    "time": "2026-02-04 19:24:59",
+    "type": "BUY",
+    "price": 73875.48,
+    "quantity": 0.00039,
+    "amount": 28.799999999999997,
+    "pnl": 0,
+    "pnl_percent": 0,
+    "regime": "trending_down",
+    "sizing_conditions": {
+      "regime": "trending_down",
+      "volatility": "normal",
+      "volatility_ratio": 0.85,
+      "confidence": 0.76,
+      "confluence": 6,
+      "streak_multiplier": 0.4
+    }
+  },
+  {
+    "id": 68,
+    "time": "2026-02-04 19:22:45",
+    "type": "SELL",
+    "price": 73452.48,
+    "quantity": 0.00039,
+    "amount": 28.6464672,
+    "pnl": -0.16542240000000136,
+    "pnl_percent": -0.5741463065997635,
+    "exit_type": "stop_loss",
+    "regime": "trending_down",
+    "position_num": 1
+  },
+  {
+    "id": 68,
+    "time": "2026-02-04 19:14:38",
+    "type": "BUY",
+    "price": 73876.64,
+    "quantity": 0.00039,
+    "amount": 28.799999999999997,
+    "pnl": 0,
+    "pnl_percent": 0,
+    "regime": "trending_down",
+    "sizing_conditions": {
+      "regime": "trending_down",
+      "volatility": "normal",
+      "volatility_ratio": 0.84,
+      "confidence": 0.76,
+      "confluence": 6,
+      "streak_multiplier": 0.5
+    }
+  },
+  {
+    "id": 67,
+    "time": "2026-02-04 19:09:43",
+    "type": "SELL",
+    "price": 73755.57,
+    "quantity": 0.00029,
+    "amount": 21.3891153,
+    "pnl": -0.13100169999999883,
+    "pnl_percent": -0.6087406495048275,
+    "exit_type": "stop_loss",
+    "regime": "trending_down",
+    "position_num": 1
+  },
+  {
     "id": 66,
     "time": "2026-02-04 18:47:00",
     "type": "BUY",

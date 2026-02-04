@@ -1,0 +1,11 @@
+{
+  "peak_portfolio_value": 1000,
+  "daily_losses": 0.0,
+  "daily_trades": 0,
+  "consecutive_losses": 0,
+  "consecutive_wins": 0,
+  "risk_mode": "normal",
+  "last_reset_date": "2026-02-04",
+  "blocked_until": null,
+  "last_updated": "2026-02-04T19:28:27.436423"
+}

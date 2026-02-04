@@ -242,6 +242,79 @@ class MLFeatureEngineer:
         # Squeeze (Bollinger width)
         features['bb_squeeze'] = 1 if features.get('bb_width', 1) < 0.02 else 0
 
+        # === PHASE 6: ENHANCED FEATURES ===
+        
+        # Moving average convergence/divergence
+        sma_20 = close.rolling(20).mean()
+        sma_50 = close.rolling(50).mean()
+        features['sma_20_50_cross'] = (sma_20.iloc[-1] - sma_50.iloc[-1]) / close.iloc[-1] * 100 if close.iloc[-1] > 0 and not np.isnan(sma_50.iloc[-1]) else 0
+        features['price_sma_20_dist'] = (close.iloc[-1] - sma_20.iloc[-1]) / close.iloc[-1] * 100 if close.iloc[-1] > 0 and not np.isnan(sma_20.iloc[-1]) else 0
+        
+        # Trend strength indicators
+        features['higher_highs'] = sum(1 for i in range(-5, 0) if i > -5 and high.iloc[i] > high.iloc[i-1]) / 4 - 0.5 if len(df) > 6 else 0
+        features['higher_lows'] = sum(1 for i in range(-5, 0) if i > -5 and low.iloc[i] > low.iloc[i-1]) / 4 - 0.5 if len(df) > 6 else 0
+        
+        # Price position in range
+        range_high = high.tail(20).max() if len(df) >= 20 else high.max()
+        range_low = low.tail(20).min() if len(df) >= 20 else low.min()
+        features['price_in_range'] = (close.iloc[-1] - range_low) / (range_high - range_low + 1e-10) - 0.5 if range_high != range_low else 0
+        
+        # Momentum divergence (price vs RSI)
+        if len(df) > 10:
+            price_trend = 1 if close.iloc[-1] > close.iloc[-10] else -1
+            rsi_trend = 1 if rsi.iloc[-1] > rsi.iloc[-10] else -1
+            features['price_rsi_divergence'] = price_trend * rsi_trend  # -1 = divergence
+        else:
+            features['price_rsi_divergence'] = 0
+        
+        # Volume profile
+        vol_up = volume[close > close.shift(1)].tail(20).sum() if len(df) > 20 else 0
+        vol_down = volume[close <= close.shift(1)].tail(20).sum() if len(df) > 20 else 0
+        features['volume_up_down_ratio'] = (vol_up / (vol_down + 1e-10)) - 1 if vol_down > 0 else 0
+        
+        # Candlestick patterns (simplified)
+        o, h, l, c = df['open'].iloc[-1], high.iloc[-1], low.iloc[-1], close.iloc[-1]
+        body_size = abs(c - o)
+        upper_wick = h - max(o, c)
+        lower_wick = min(o, c) - l
+        
+        features['doji'] = 1 if body_size < (h - l) * 0.1 else 0
+        features['hammer'] = 1 if lower_wick > body_size * 2 and upper_wick < body_size * 0.5 else 0
+        features['shooting_star'] = 1 if upper_wick > body_size * 2 and lower_wick < body_size * 0.5 else 0
+        
+        # Williams %R
+        williams_r = -100 * (high_14 - close) / (high_14 - low_14 + 1e-10)
+        features['williams_r'] = (williams_r.iloc[-1] / 100 + 0.5) if not np.isnan(williams_r.iloc[-1]) else 0
+        
+        # CCI (Commodity Channel Index)
+        tp = (high + low + close) / 3
+        cci = (tp - tp.rolling(20).mean()) / (0.015 * tp.rolling(20).std() + 1e-10)
+        features['cci'] = cci.iloc[-1] / 200 if not np.isnan(cci.iloc[-1]) else 0
+        
+        # MFI (Money Flow Index)
+        if 'volume' in df.columns:
+            typical_price = (high + low + close) / 3
+            raw_mf = typical_price * volume
+            pos_mf = raw_mf.where(typical_price > typical_price.shift(1), 0).rolling(14).sum()
+            neg_mf = raw_mf.where(typical_price <= typical_price.shift(1), 0).rolling(14).sum()
+            mfi = 100 - (100 / (1 + pos_mf / (neg_mf + 1e-10)))
+            features['mfi'] = (mfi.iloc[-1] / 100 - 0.5) if not np.isnan(mfi.iloc[-1]) else 0
+        else:
+            features['mfi'] = 0
+        
+        # Recent volatility regime
+        recent_vol = returns.tail(24).std() if len(df) > 24 else 0
+        long_vol = returns.tail(168).std() if len(df) > 168 else recent_vol
+        features['volatility_regime'] = (recent_vol / (long_vol + 1e-10)) - 1 if long_vol > 0 else 0
+        
+        # Price acceleration
+        if len(df) > 10:
+            momentum_now = close.iloc[-1] - close.iloc[-5]
+            momentum_prev = close.iloc[-5] - close.iloc[-10]
+            features['price_acceleration'] = (momentum_now - momentum_prev) / close.iloc[-1] * 100 if close.iloc[-1] > 0 else 0
+        else:
+            features['price_acceleration'] = 0
+
         # Fill NaN with 0
         for k, v in features.items():
             if isinstance(v, (np.floating, float)) and (np.isnan(v) or np.isinf(v)):

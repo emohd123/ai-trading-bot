@@ -49,6 +49,40 @@ from ai.param_optimizer import get_optimizer, record_trade
 from ai.deep_analyzer import get_analyzer
 import config
 
+# Phase enhancements imports (all 6 phases)
+try:
+    from core.risk_manager import get_risk_manager
+    from core.trading_engine import get_trading_engine, ExitReason
+    from core.error_handler import get_error_handler, safe_execute
+    from analytics.performance_tracker import get_performance_tracker
+    from notifications.alert_system import get_alert_system, AlertType, AlertLevel
+    from core.database import get_database
+    from core.cache import get_all_cache_stats, clear_all_caches
+    from api.rest_api import init_api
+    PHASE_ENHANCEMENTS_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Phase enhancements not fully available: {e}")
+    PHASE_ENHANCEMENTS_AVAILABLE = False
+
+# Optional imports for new features
+try:
+    from core.paper_trader import get_paper_trader, is_paper_mode
+    PAPER_TRADING_AVAILABLE = True
+except ImportError:
+    PAPER_TRADING_AVAILABLE = False
+
+try:
+    from core.database import get_database
+    DATABASE_AVAILABLE = True
+except ImportError:
+    DATABASE_AVAILABLE = False
+
+try:
+    from api.rest_api import init_api
+    API_AVAILABLE = True
+except ImportError:
+    API_AVAILABLE = False
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'trading-bot-secret-key'
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -2124,6 +2158,56 @@ def index():
     return response
 
 
+@app.route('/api/performance')
+def get_performance():
+    """Get detailed performance analytics"""
+    try:
+        tracker = get_performance_tracker()
+        metrics = tracker.get_full_metrics()
+        
+        # Add risk status
+        risk_mgr = get_risk_manager()
+        metrics['risk_status'] = risk_mgr.get_status()
+        
+        # Add bot state metrics
+        metrics['bot'] = {
+            'total_profit': bot_state.get('total_profit', 0),
+            'total_trades': bot_state.get('total_trades', 0),
+            'win_rate': bot_state.get('win_rate', 0),
+            'winning_trades': bot_state.get('winning_trades', 0),
+            'losing_trades': bot_state.get('losing_trades', 0)
+        }
+        
+        return jsonify(metrics)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/alerts')
+def get_alerts():
+    """Get recent alerts"""
+    try:
+        alert_system = get_alert_system()
+        limit = request.args.get('limit', 50, type=int)
+        alerts = alert_system.get_recent_alerts(limit)
+        return jsonify({
+            'alerts': alerts,
+            'unacknowledged': alert_system.get_unacknowledged_count()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/risk')
+def get_risk():
+    """Get risk management status"""
+    try:
+        risk_mgr = get_risk_manager()
+        return jsonify(risk_mgr.get_status())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/state')
 def get_state():
     """Get current bot state"""
@@ -3215,10 +3299,53 @@ if __name__ == '__main__':
         logger.info("Meta AI autonomous system started")
     except Exception as e:
         logger.warning("Meta AI not started: %s", e)
+    
+    # Initialize Phase Enhancement Components
+    try:
+        # Initialize Risk Manager
+        risk_mgr = get_risk_manager()
+        logger.info("Risk Manager initialized (mode: %s)", risk_mgr.risk_mode)
+        
+        # Initialize Trading Engine
+        trading_engine = get_trading_engine()
+        logger.info("Trading Engine initialized")
+        
+        # Initialize Performance Tracker
+        perf_tracker = get_performance_tracker()
+        logger.info("Performance Tracker initialized")
+        
+        # Initialize Alert System
+        if getattr(config, 'ALERTS_ENABLED', True):
+            alert_system = get_alert_system()
+            # Connect to Telegram notifier if available
+            notifier = get_notifier()
+            if notifier:
+                def telegram_alert_handler(alert):
+                    try:
+                        msg = f"🚨 {alert.title}\n{alert.message}"
+                        notifier.send_message(msg)
+                    except Exception:
+                        pass
+                alert_system.add_handler(telegram_alert_handler)
+            logger.info("Alert System initialized")
+        
+        # Initialize Database
+        if DATABASE_AVAILABLE and getattr(config, 'USE_DATABASE', True):
+            db = get_database()
+            logger.info("Database initialized")
+        
+        # Initialize REST API
+        if API_AVAILABLE:
+            init_api(app)
+            logger.info("REST API initialized at /api/v1")
+        
+    except Exception as e:
+        logger.warning("Some Phase enhancements not loaded: %s", e)
 
     logger.info("=" * 55)
     logger.info("AI TRADING BOT - FULLY AUTONOMOUS")
     logger.info("Open in browser: http://localhost:5000 | Updates every 3s | Bot checks every 30s")
     logger.info("Features: Self-Healing, Parameter Tuning, Strategy Evolution, Deep Analysis, Goal-Driven Improvement")
+    logger.info("Phase Enhancements: Risk Manager, Trading Engine, Performance Tracker, Alerts, REST API, Database")
 
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)

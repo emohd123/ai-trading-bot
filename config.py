@@ -337,3 +337,63 @@ setup_logging()
 # =============================================================================
 SHOW_DETAILED_ANALYSIS = True
 USE_COLORS = True
+
+# =============================================================================
+# PHASE ENHANCEMENTS - NEW CONFIGURATION
+# =============================================================================
+
+# --- PHASE 1: Risk Management ---
+# Hard stop limit (absolute max loss, AI cannot override)
+HARD_STOP_LIMIT = 0.02  # 2% absolute maximum loss
+
+# Slippage buffer for stop loss execution
+STOP_LOSS_SLIPPAGE_BUFFER = 0.002  # 0.2% buffer
+
+# Maximum drawdown limit (triggers recovery mode)
+MAX_DRAWDOWN_LIMIT = 0.10  # 10% max drawdown
+
+# Position size reduction in recovery mode
+DRAWDOWN_REDUCTION_FACTOR = 0.5  # 50% of normal size in recovery
+
+# Trailing stop percentage
+TRAILING_STOP_PCT = 0.003  # 0.3% trail
+
+# --- PHASE 4: Portfolio Risk Management ---
+# Maximum portfolio exposure (as percentage of total value)
+MAX_PORTFOLIO_EXPOSURE = 0.80  # 80% max in positions
+
+# Maximum single position size (as percentage of total value)
+MAX_SINGLE_POSITION = 0.40  # 40% max per position
+
+# --- PHASE 6: Paper Trading ---
+# Enable paper trading mode (simulated trades)
+PAPER_TRADING_MODE = False  # Set True to enable paper trading
+
+# Paper trading initial balance
+PAPER_TRADING_BALANCE = 1000.0  # Starting USDT for paper trading
+
+# --- PHASE 6: REST API ---
+# API key for protected endpoints (set to None to disable)
+API_KEY = os.getenv("BOT_API_KEY", None)
+
+# --- PHASE 5: Alerts ---
+# Enable alert system
+ALERTS_ENABLED = True
+
+# Alert thresholds
+ALERT_WIN_RATE_THRESHOLD = 45  # Alert if win rate drops below 45%
+ALERT_DAILY_LOSS_WARNING = 2.0  # Alert at 2% daily loss
+ALERT_DRAWDOWN_WARNING = 7.0  # Alert at 7% drawdown
+ALERT_NO_TRADE_HOURS = 8  # Alert if no trades for 8 hours
+
+# --- PHASE 7: Database & Caching ---
+# Enable SQLite database for persistence
+USE_DATABASE = True
+
+# Enable caching for performance
+USE_CACHE = True
+
+# Cache TTL settings (in seconds)
+CACHE_TTL_MARKET = 60  # 1 minute for market data
+CACHE_TTL_INDICATOR = 300  # 5 minutes for indicator calculations
+CACHE_TTL_ML = 300  # 5 minutes for ML predictions
