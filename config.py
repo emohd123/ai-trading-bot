@@ -46,11 +46,11 @@ MIN_PROFIT = 0.007     # 0.7% - better risk/reward (was 0.5%)
 # =============================================================================
 # AI ENGINE CONFIGURATION
 # =============================================================================
-# AI score thresholds (balanced: some activity without overtrading)
-BUY_THRESHOLD = 0.35   # Buy when AI score > 0.35 (was 0.38 - slightly more entries)
-BUY_THRESHOLD_DOWNTREND = 0.60   # In downtrend: require very strong signal (0.60) if buys allowed
+# AI score thresholds (lowered for more trading activity)
+BUY_THRESHOLD = 0.25   # Buy when AI score > 0.25 (lowered from 0.35 for more entries)
+BUY_THRESHOLD_DOWNTREND = 0.40   # In downtrend: require moderate signal (0.40) if buys allowed
 SELL_THRESHOLD = -0.25 # Sell when AI score < -0.25 (stronger signal needed)
-# Allow buys in downtrend only when signal is strong (score > 0.60, confluence >= 5)
+# Allow buys in downtrend with moderate signal (score > 0.40, confluence >= 4)
 NO_BUY_IN_DOWNTREND = False  # False = can buy in downtrend if score >= BUY_THRESHOLD_DOWNTREND
 
 # When buying in downtrend is allowed (or for positions carried into downtrend): use smaller size
@@ -71,9 +71,9 @@ INDICATOR_WEIGHTS = {
     "cci": 0.05,                # 30%
 }
 
-# Entry rules (balanced: 5 indicators = enough for a buy when score is good)
-MIN_CONFIDENCE_BUY = 0.45      # Require Medium+ confidence
-MIN_CONFLUENCE_BUY = 5         # At least 5 indicators must agree for BUY (was 6 - allows more entries)
+# Entry rules (lowered for more trading activity)
+MIN_CONFIDENCE_BUY = 0.30      # Require Low+ confidence (lowered from 0.45)
+MIN_CONFLUENCE_BUY = 4         # At least 4 indicators must agree for BUY (lowered from 5)
 MIN_CONFLUENCE_SELL = 4        # At least 4 indicators must agree for SELL
 MIN_CONFLUENCE = 5             # Default confluence requirement
 REQUIRE_VOLUME_BLOCKING = False # Volume is now a modifier, not a blocker
