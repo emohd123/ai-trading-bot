@@ -648,9 +648,10 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
     max_hours = getattr(config, 'MAX_POSITION_AGE_HOURS', 4)
     stale_threshold = getattr(config, 'STALE_LOSS_THRESHOLD', -0.003) * 100
     
-    if position_data and 'time' in position_data:
+    entry_time_str_pos = (position_data or {}).get('time') or (position_data or {}).get('entry_time')
+    if position_data and entry_time_str_pos:
         try:
-            entry_time = datetime.strptime(position_data['time'], "%Y-%m-%d %H:%M:%S")
+            entry_time = datetime.strptime(entry_time_str_pos, "%Y-%m-%d %H:%M:%S")
             age_hours = (datetime.now() - entry_time).total_seconds() / 3600
             
             if age_hours > max_hours and pnl_percent < stale_threshold:
@@ -1628,10 +1629,12 @@ def execute_buy(price, regime_data=None, details=None):
             except Exception as e:
                 logger.warning(f"Could not record trade entry for sizing: {e}")
         
+        entry_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         new_position = {
             "entry_price": result["price"],
             "quantity": result["quantity"],
-            "entry_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "entry_time": entry_time_str,
+            "time": entry_time_str,  # Same as entry_time for check_smart_stop time-based exit
             "amount_usdt": position_size,
             "regime": bot_state["market_regime"],
             "indicator_scores": (details or {}).get("indicator_scores", {}),

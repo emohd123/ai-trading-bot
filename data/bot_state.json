@@ -1,9 +1,9 @@
 {
   "running": true,
   "position": {
-    "entry_price": 73471.36,
+    "entry_price": 73825.06,
     "quantity": 0.00039,
-    "entry_time": "2026-02-04 19:52:26",
+    "entry_time": "2026-02-04 19:55:33",
     "amount_usdt": 28.799999999999997,
     "regime": "trending_down",
     "indicator_scores": {
@@ -19,7 +19,7 @@
       "cci": 0.9
     },
     "position_id": 1,
-    "trade_id": 74,
+    "trade_id": 78,
     "entry_conditions": {
       "rsi_state": "neutral",
       "rsi_value": 50,
@@ -35,21 +35,21 @@
     },
     "indicator_combo_key": "no_signals",
     "volatility": "normal",
-    "lowest_price": 73471.36,
+    "lowest_price": 73825.06,
     "sizing_conditions": {
       "regime": "trending_down",
       "volatility": "normal",
       "volatility_ratio": 0.88,
-      "confidence": 0.96,
+      "confidence": 1.0,
       "confluence": 7,
-      "streak_multiplier": 0.75
+      "streak_multiplier": 1.2
     }
   },
   "positions": [
     {
-      "entry_price": 73471.36,
+      "entry_price": 73825.06,
       "quantity": 0.00039,
-      "entry_time": "2026-02-04 19:52:26",
+      "entry_time": "2026-02-04 19:55:33",
       "amount_usdt": 28.799999999999997,
       "regime": "trending_down",
       "indicator_scores": {
@@ -65,7 +65,7 @@
         "cci": 0.9
       },
       "position_id": 1,
-      "trade_id": 74,
+      "trade_id": 78,
       "entry_conditions": {
         "rsi_state": "neutral",
         "rsi_value": 50,
@@ -81,18 +81,93 @@
       },
       "indicator_combo_key": "no_signals",
       "volatility": "normal",
-      "lowest_price": 73471.36,
+      "lowest_price": 73825.06,
       "sizing_conditions": {
         "regime": "trending_down",
         "volatility": "normal",
         "volatility_ratio": 0.88,
-        "confidence": 0.96,
+        "confidence": 1.0,
         "confluence": 7,
-        "streak_multiplier": 0.75
+        "streak_multiplier": 1.2
       }
     }
   ],
   "logs": [
+    {
+      "time": "19:56:05",
+      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "19:55:33",
+      "message": "BUY filled: 0.000390 BTC @ $73,825.06",
+      "level": "success"
+    },
+    {
+      "time": "19:55:31",
+      "message": "Smart BUY #1: $29 (conf: Very High)",
+      "level": "info"
+    },
+    {
+      "time": "19:55:30",
+      "message": "SELL #1: $28.78 | P/L: $+0.07 (+0.25%) | All closed",
+      "level": "success"
+    },
+    {
+      "time": "19:55:29",
+      "message": "SELL #1 (min_profit) at $73,803.08",
+      "level": "info"
+    },
+    {
+      "time": "19:55:28",
+      "message": "\ud83d\udcb0 POSITION #1 MIN PROFIT: +0.26% - SELLING!",
+      "level": "success"
+    },
+    {
+      "time": "19:54:56",
+      "message": "BUY filled: 0.000390 BTC @ $73,610.83",
+      "level": "success"
+    },
+    {
+      "time": "19:54:54",
+      "message": "Smart BUY #1: $29 (conf: Very High)",
+      "level": "info"
+    },
+    {
+      "time": "19:54:42",
+      "message": "Error: cannot access local variable '_last_idle_heartbeat' where it is not associated with a value",
+      "level": "error"
+    },
+    {
+      "time": "19:54:39",
+      "message": "SELL #1: $28.72 | P/L: $+0.07 (+0.24%) | All closed",
+      "level": "success"
+    },
+    {
+      "time": "19:54:37",
+      "message": "SELL #1 (min_profit) at $73,663.92",
+      "level": "info"
+    },
+    {
+      "time": "19:54:37",
+      "message": "\ud83d\udcb0 POSITION #1 MIN PROFIT: +0.26% - SELLING!",
+      "level": "success"
+    },
+    {
+      "time": "19:54:05",
+      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "19:53:31",
+      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "19:52:58",
+      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
+      "level": "warning"
+    },
     {
       "time": "19:52:26",
       "message": "BUY filled: 0.000390 BTC @ $73,471.36",
@@ -167,82 +242,7 @@
       "time": "19:42:56",
       "message": "Position size learner initialized",
       "level": "success"
-    },
-    {
-      "time": "19:42:56",
-      "message": "Bot auto-resumed for 24/7 live trading",
-      "level": "success"
-    },
-    {
-      "time": "19:32:50",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:32:18",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:31:44",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:31:12",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:30:38",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:30:02",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:29:27",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:28:54",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:28:20",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:27:48",
-      "message": "BUY filled: 0.000390 BTC @ $74,182.69",
-      "level": "success"
-    },
-    {
-      "time": "19:27:47",
-      "message": "Smart BUY #1: $29 (conf: Very High)",
-      "level": "info"
-    },
-    {
-      "time": "19:27:45",
-      "message": "SELL #1: $28.93 | P/L: $+0.12 (+0.41%) | All closed",
-      "level": "success"
-    },
-    {
-      "time": "19:27:43",
-      "message": "SELL #1 (min_profit) at $74,184.50",
-      "level": "info"
-    },
-    {
-      "time": "19:27:43",
-      "message": "\ud83d\udcb0 POSITION #1 MIN PROFIT: +0.42% - SELLING!",
-      "level": "success"
     }
   ],
-  "decision": "BUY"
+  "decision": "HOLD"
 }

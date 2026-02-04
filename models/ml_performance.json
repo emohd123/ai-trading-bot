@@ -1383,8 +1383,8 @@
         "lgb": 0.8386,
         "lstm": 0.5
       },
-      "actual_direction": null,
-      "correct": null
+      "actual_direction": "UP",
+      "correct": true
     },
     {
       "timestamp": "2026-02-04T19:52:20.109903",
@@ -1397,28 +1397,28 @@
         "lgb": 0.687,
         "lstm": 0.5
       },
-      "actual_direction": null,
-      "correct": null
+      "actual_direction": "UP",
+      "correct": true
     }
   ],
   "last_retrain_date": null,
   "model_accuracy": {
     "rf": {
-      "correct": 7,
-      "total": 11
+      "correct": 9,
+      "total": 13
     },
     "xgb": {
-      "correct": 6,
-      "total": 11
+      "correct": 8,
+      "total": 13
     },
     "lgb": {
-      "correct": 10,
-      "total": 11
+      "correct": 12,
+      "total": 13
     },
     "lstm": {
       "correct": 5,
-      "total": 11
+      "total": 13
     }
   },
-  "updated_at": "2026-02-04T19:52:20.110677"
+  "updated_at": "2026-02-04T19:55:30.715360"
 }
