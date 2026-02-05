@@ -413,6 +413,24 @@
         "weaknesses_count": 2,
         "strengths_count": 2
       }
+    },
+    {
+      "timestamp": "2026-02-05T17:10:48.930645",
+      "summary": {
+        "win_rate": 54.1,
+        "total_profit": 7.36,
+        "weaknesses_count": 2,
+        "strengths_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-02-05T18:15:33.875669",
+      "summary": {
+        "win_rate": 53.3,
+        "total_profit": 7.36,
+        "weaknesses_count": 2,
+        "strengths_count": 2
+      }
     }
   ],
   "patterns": {
@@ -421,18 +439,12 @@
       "description": "Had 6 consecutive losses",
       "severity": "high",
       "recommendation": "Consider reducing position size after 2 consecutive losses"
-    },
-    "weak_afternoon_performance": {
-      "pattern": "weak_afternoon_performance",
-      "description": "Afternoon win rate is only 38.5% (13 trades)",
-      "severity": "medium",
-      "recommendation": "Consider avoiding trades during afternoon hours"
     }
   },
   "weaknesses": [
     {
       "weakness": "poor_risk_reward",
-      "description": "Profit factor is 0.83 (should be > 1.5)",
+      "description": "Profit factor is 0.86 (should be > 1.5)",
       "impact": "high",
       "suggestion": "Adjust profit targets and stop losses"
     },
@@ -446,8 +458,8 @@
   "strengths": [
     {
       "strength": "regime_expertise",
-      "description": "Excellent in ranging regime (100.0% win rate)",
-      "leverage": "Increase position size during ranging regime"
+      "description": "Excellent in trending_up regime (100.0% win rate)",
+      "leverage": "Increase position size during trending_up regime"
     },
     {
       "strength": "time_expertise",
@@ -455,5 +467,5 @@
       "leverage": "Focus trading around hour 3"
     }
   ],
-  "last_updated": "2026-02-05T16:29:15.795285"
+  "last_updated": "2026-02-05T18:15:33.998555"
 }

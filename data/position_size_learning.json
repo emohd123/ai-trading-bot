@@ -720,6 +720,21 @@
         "confidence_tier": "medium",
         "volatility_tier": "low"
       }
+    },
+    {
+      "trade_id": 157,
+      "timestamp": "2026-02-05T18:11:03.262324",
+      "position_size": 42.734034056,
+      "conditions": {
+        "regime": "ranging",
+        "volatility": "normal",
+        "volatility_ratio": 1.04,
+        "confidence": 0.8,
+        "confluence": 6,
+        "streak_multiplier": 1.3,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
     }
   ],
   "trade_outcomes": {
@@ -854,8 +869,14 @@
       "pnl_dollar": 0.25536000000000025,
       "exit_type": "min_profit",
       "timestamp": "2026-02-05T16:01:54.407045"
+    },
+    "157": {
+      "pnl_percent": -0.9146341463414642,
+      "pnl_dollar": -0.39078000000000035,
+      "exit_type": "max_delays_reached_loss",
+      "timestamp": "2026-02-05T18:12:52.478551"
     }
   },
   "ml_model_trained": false,
-  "last_updated": "2026-02-05T16:29:25.573997"
+  "last_updated": "2026-02-05T18:12:52.478843"
 }

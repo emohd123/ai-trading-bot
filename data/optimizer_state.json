@@ -288,6 +288,14 @@
         "exit_type": "min_profit",
         "regime": "trending_up",
         "timestamp": "2026-02-05T16:01:54.300566"
+      },
+      {
+        "value": 0.015,
+        "is_win": false,
+        "pnl_percent": -0.9146341463414642,
+        "exit_type": "max_delays_reached_loss",
+        "regime": "ranging",
+        "timestamp": "2026-02-05T18:12:52.425015"
       }
     ],
     "STOP_LOSS": [
@@ -578,6 +586,14 @@
         "exit_type": "min_profit",
         "regime": "trending_up",
         "timestamp": "2026-02-05T16:01:54.300598"
+      },
+      {
+        "value": 0.007,
+        "is_win": false,
+        "pnl_percent": -0.9146341463414642,
+        "exit_type": "max_delays_reached_loss",
+        "regime": "ranging",
+        "timestamp": "2026-02-05T18:12:52.425032"
       }
     ],
     "MIN_PROFIT": [
@@ -868,6 +884,14 @@
         "exit_type": "min_profit",
         "regime": "trending_up",
         "timestamp": "2026-02-05T16:01:54.300609"
+      },
+      {
+        "value": 0.005,
+        "is_win": false,
+        "pnl_percent": -0.9146341463414642,
+        "exit_type": "max_delays_reached_loss",
+        "regime": "ranging",
+        "timestamp": "2026-02-05T18:12:52.425039"
       }
     ],
     "BUY_THRESHOLD": [
@@ -1158,6 +1182,14 @@
         "exit_type": "min_profit",
         "regime": "trending_up",
         "timestamp": "2026-02-05T16:01:54.300621"
+      },
+      {
+        "value": 0.35,
+        "is_win": false,
+        "pnl_percent": -0.9146341463414642,
+        "exit_type": "max_delays_reached_loss",
+        "regime": "ranging",
+        "timestamp": "2026-02-05T18:12:52.425046"
       }
     ],
     "SELL_THRESHOLD": [
@@ -1448,6 +1480,14 @@
         "exit_type": "min_profit",
         "regime": "trending_up",
         "timestamp": "2026-02-05T16:01:54.300630"
+      },
+      {
+        "value": -0.25,
+        "is_win": false,
+        "pnl_percent": -0.9146341463414642,
+        "exit_type": "max_delays_reached_loss",
+        "regime": "ranging",
+        "timestamp": "2026-02-05T18:12:52.425050"
       }
     ],
     "MIN_CONFLUENCE_BUY": [
@@ -1738,6 +1778,14 @@
         "exit_type": "min_profit",
         "regime": "trending_up",
         "timestamp": "2026-02-05T16:01:54.300641"
+      },
+      {
+        "value": 6,
+        "is_win": false,
+        "pnl_percent": -0.9146341463414642,
+        "exit_type": "max_delays_reached_loss",
+        "regime": "ranging",
+        "timestamp": "2026-02-05T18:12:52.425054"
       }
     ],
     "MIN_CONFIDENCE_BUY": [
@@ -2028,6 +2076,14 @@
         "exit_type": "min_profit",
         "regime": "trending_up",
         "timestamp": "2026-02-05T16:01:54.300651"
+      },
+      {
+        "value": 0.35,
+        "is_win": false,
+        "pnl_percent": -0.9146341463414642,
+        "exit_type": "max_delays_reached_loss",
+        "regime": "ranging",
+        "timestamp": "2026-02-05T18:12:52.425058"
       }
     ],
     "TRAILING_ACTIVATION": [
@@ -2318,6 +2374,14 @@
         "exit_type": "min_profit",
         "regime": "trending_up",
         "timestamp": "2026-02-05T16:01:54.300661"
+      },
+      {
+        "value": 0.005,
+        "is_win": false,
+        "pnl_percent": -0.9146341463414642,
+        "exit_type": "max_delays_reached_loss",
+        "regime": "ranging",
+        "timestamp": "2026-02-05T18:12:52.425061"
       }
     ]
   },
@@ -2492,5 +2556,5 @@
     }
   ],
   "last_optimization": "2026-02-05T12:47:51.309245",
-  "timestamp": "2026-02-05T16:01:54.300686"
+  "timestamp": "2026-02-05T18:12:52.425071"
 }

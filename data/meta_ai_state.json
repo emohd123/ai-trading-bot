@@ -2,38 +2,38 @@
   "version": 1,
   "state": "idle",
   "awareness": {
-    "timestamp": "2026-02-05T16:29:20.587160",
-    "total_trades": 73,
-    "win_rate": 53.4,
-    "total_profit": -1.432926700000014,
+    "timestamp": "2026-02-05T18:15:45.176011",
+    "total_trades": 75,
+    "win_rate": 53.3,
+    "total_profit": -1.2265067000000145,
     "trades_learned": 50,
-    "current_streak": 3,
+    "current_streak": -1,
     "indicator_accuracy": {
-      "momentum": 0.35653291627743433,
-      "bollinger": 0.8993975705770292,
-      "support_resistance": 0.6493886711199379,
-      "mfi": 0.382792403320119,
-      "cci": 0.758768965820119,
-      "ml_prediction": 0.719236768956073,
-      "williams_r": 0.364918270753934,
-      "macd": 0.10064312111943474,
-      "ichimoku": 0.10060603417988101,
-      "ema": 0.10060242942297092
+      "momentum": 0.2673996872080757,
+      "bollinger": 0.6745481779327719,
+      "support_resistance": 0.48704150333995344,
+      "mfi": 0.5370943024900893,
+      "cci": 0.5690767243650893,
+      "ml_prediction": 0.5394275767170548,
+      "williams_r": 0.5236887030654505,
+      "macd": 0.32548234083957606,
+      "ichimoku": 0.32545452563491073,
+      "ema": 0.32545182206722817
     },
     "best_indicator": "bollinger",
-    "worst_indicator": "ema",
+    "worst_indicator": "momentum",
     "recent_performance": {
       "trades": 10,
-      "wins": 3,
-      "win_rate": 30.0,
-      "total_pnl": -0.19
+      "wins": 4,
+      "win_rate": 40.0,
+      "total_pnl": 0.12
     },
     "system_health": "healthy",
     "ml_accuracy": {
-      "accuracy": 0.5,
-      "sample_size": 2,
+      "accuracy": 0.3333,
+      "sample_size": 3,
       "correct_count": 1,
-      "up_accuracy": 1.0,
+      "up_accuracy": 0.5,
       "down_accuracy": 0.0,
       "needs_retrain": false
     },
@@ -44,9 +44,9 @@
     {
       "name": "win_rate",
       "target": 65,
-      "current": 53.4,
+      "current": 53.3,
       "metric": "percentage",
-      "progress_percent": 82.2,
+      "progress_percent": 82.0,
       "achieved": false,
       "priority": 1,
       "deadline": null
@@ -93,96 +93,6 @@
     }
   ],
   "action_log": [
-    {
-      "timestamp": "2026-02-05T07:49:34.434899",
-      "action": "Started autonomous loop",
-      "details": {},
-      "state": "analyzing"
-    },
-    {
-      "timestamp": "2026-02-05T07:49:34.551236",
-      "action": "Updated awareness",
-      "details": {
-        "win_rate": 54.7
-      },
-      "state": "analyzing"
-    },
-    {
-      "timestamp": "2026-02-05T07:50:01.962216",
-      "action": "Updated awareness",
-      "details": {
-        "win_rate": 53.7
-      },
-      "state": "analyzing"
-    },
-    {
-      "timestamp": "2026-02-05T07:50:02.113403",
-      "action": "Updated awareness",
-      "details": {
-        "win_rate": 53.7
-      },
-      "state": "analyzing"
-    },
-    {
-      "timestamp": "2026-02-05T08:07:18.062859",
-      "action": "Started autonomous loop",
-      "details": {},
-      "state": "analyzing"
-    },
-    {
-      "timestamp": "2026-02-05T08:07:18.248577",
-      "action": "Updated awareness",
-      "details": {
-        "win_rate": 53.7
-      },
-      "state": "analyzing"
-    },
-    {
-      "timestamp": "2026-02-05T08:07:49.762968",
-      "action": "Updated awareness",
-      "details": {
-        "win_rate": 53.6
-      },
-      "state": "analyzing"
-    },
-    {
-      "timestamp": "2026-02-05T08:07:49.881652",
-      "action": "Updated awareness",
-      "details": {
-        "win_rate": 53.6
-      },
-      "state": "analyzing"
-    },
-    {
-      "timestamp": "2026-02-05T08:17:42.637095",
-      "action": "Started autonomous loop",
-      "details": {},
-      "state": "analyzing"
-    },
-    {
-      "timestamp": "2026-02-05T08:17:42.820701",
-      "action": "Updated awareness",
-      "details": {
-        "win_rate": 53.6
-      },
-      "state": "analyzing"
-    },
-    {
-      "timestamp": "2026-02-05T08:18:15.030217",
-      "action": "Updated awareness",
-      "details": {
-        "win_rate": 54.4
-      },
-      "state": "analyzing"
-    },
-    {
-      "timestamp": "2026-02-05T08:18:15.325761",
-      "action": "Updated awareness",
-      "details": {
-        "win_rate": 54.4
-      },
-      "state": "analyzing"
-    },
     {
       "timestamp": "2026-02-05T08:36:17.469455",
       "action": "Started autonomous loop",
@@ -834,6 +744,94 @@
         "win_rate": 53.4
       },
       "state": "analyzing"
+    },
+    {
+      "timestamp": "2026-02-05T17:10:11.575031",
+      "action": "Started autonomous loop",
+      "details": {},
+      "state": "analyzing"
+    },
+    {
+      "timestamp": "2026-02-05T17:10:11.904925",
+      "action": "Updated awareness",
+      "details": {
+        "win_rate": 53.4
+      },
+      "state": "analyzing"
+    },
+    {
+      "timestamp": "2026-02-05T17:10:11.937110",
+      "action": "Running health check",
+      "details": {},
+      "state": "analyzing"
+    },
+    {
+      "timestamp": "2026-02-05T17:10:12.198501",
+      "action": "Updated awareness",
+      "details": {
+        "win_rate": 53.4
+      },
+      "state": "analyzing"
+    },
+    {
+      "timestamp": "2026-02-05T17:40:16.612567",
+      "action": "Updated awareness",
+      "details": {
+        "win_rate": 54.1
+      },
+      "state": "analyzing"
+    },
+    {
+      "timestamp": "2026-02-05T18:10:18.751931",
+      "action": "Updated awareness",
+      "details": {
+        "win_rate": 54.1
+      },
+      "state": "analyzing"
+    },
+    {
+      "timestamp": "2026-02-05T18:10:18.758618",
+      "action": "Running health check",
+      "details": {},
+      "state": "analyzing"
+    },
+    {
+      "timestamp": "2026-02-05T18:10:18.935310",
+      "action": "Updated awareness",
+      "details": {
+        "win_rate": 54.1
+      },
+      "state": "analyzing"
+    },
+    {
+      "timestamp": "2026-02-05T18:15:03.337732",
+      "action": "Started autonomous loop",
+      "details": {},
+      "state": "analyzing"
+    },
+    {
+      "timestamp": "2026-02-05T18:15:03.589209",
+      "action": "Updated awareness",
+      "details": {
+        "win_rate": 53.3
+      },
+      "state": "analyzing"
+    },
+    {
+      "timestamp": "2026-02-05T18:15:45.100307",
+      "action": "Updated awareness",
+      "details": {
+        "win_rate": 53.3
+      },
+      "state": "analyzing"
+    },
+    {
+      "timestamp": "2026-02-05T18:15:46.388333",
+      "action": "Updated awareness",
+      "details": {
+        "win_rate": 53.3
+      },
+      "state": "analyzing"
     }
   ],
   "improvement_log": [
@@ -871,6 +869,6 @@
   "last_analysis": "2026-02-05T16:28:32.067920",
   "last_optimization": "2026-02-05T12:47:51.327721",
   "last_evolution": "2026-02-04T22:39:03.202566",
-  "last_health_check": "2026-02-05T15:54:15.678842",
-  "timestamp": "2026-02-05T16:29:20.854393"
+  "last_health_check": "2026-02-05T18:10:18.941162",
+  "timestamp": "2026-02-05T18:15:46.430670"
 }

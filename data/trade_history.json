@@ -1,5 +1,55 @@
 [
   {
+    "id": 157,
+    "time": "2026-02-05 18:12:52",
+    "type": "SELL",
+    "symbol": "ATOMUSDT",
+    "base_asset": "ATOM",
+    "price": 1.95,
+    "quantity": 21.71,
+    "amount": 42.3345,
+    "pnl": -0.39078000000000035,
+    "pnl_percent": -0.9146341463414642,
+    "exit_type": "max_delays_reached_loss",
+    "regime": "ranging",
+    "position_num": 1
+  },
+  {
+    "id": 157,
+    "time": "2026-02-05 18:11:03",
+    "type": "BUY",
+    "symbol": "ATOMUSDT",
+    "base_asset": "ATOM",
+    "price": 1.968,
+    "quantity": 21.71,
+    "amount": 42.734034056,
+    "pnl": 0,
+    "pnl_percent": 0,
+    "regime": "ranging",
+    "sizing_conditions": {
+      "regime": "ranging",
+      "volatility": "normal",
+      "volatility_ratio": 1.04,
+      "confidence": 0.8,
+      "confluence": 6,
+      "streak_multiplier": 1.3
+    }
+  },
+  {
+    "id": 156,
+    "time": "2026-02-05 17:10:17",
+    "type": "SELL",
+    "symbol": "ATOMUSDT",
+    "base_asset": "ATOM",
+    "price": 2.004,
+    "quantity": 21.33,
+    "amount": 42.74532,
+    "pnl": 0.5972,
+    "pnl_percent": 1.42,
+    "exit_type": "startup_cleanup",
+    "regime": "unknown"
+  },
+  {
     "id": 155,
     "time": "2026-02-05 16:29:25",
     "type": "BUY",
