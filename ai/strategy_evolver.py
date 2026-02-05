@@ -11,6 +11,7 @@ from typing import Dict, List, Tuple, Optional
 import copy
 
 from ai.backtester import Backtester, BacktestResult, save_backtest_result
+import config
 
 
 class Gene:
@@ -341,8 +342,10 @@ class StrategyEvolver:
             return self.best_strategy.to_params()
         return None
     
-    def save_state(self, filepath: str = os.path.join("data", "evolution_state.json")):
+    def save_state(self, filepath: str = None):
         """Save evolution state to file"""
+        if filepath is None:
+            filepath = os.path.join(config.DATA_DIR, "evolution_state.json")
         try:
             state = {
                 "generation": self.generation,
@@ -361,8 +364,10 @@ class StrategyEvolver:
         except Exception as e:
             print(f"[EVOLVER] Error saving state: {e}")
     
-    def load_state(self, filepath: str = os.path.join("data", "evolution_state.json")):
+    def load_state(self, filepath: str = None):
         """Load evolution state from file"""
+        if filepath is None:
+            filepath = os.path.join(config.DATA_DIR, "evolution_state.json")
         try:
             if not os.path.exists(filepath):
                 return False

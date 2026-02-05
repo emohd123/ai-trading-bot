@@ -234,42 +234,67 @@ class SelfHealer:
         return None
     
     def check_and_fix_ghost_positions(self) -> Optional[str]:
-        """Check for ghost positions (tracked but no actual BTC)"""
+        """
+        Check for ghost positions (tracked but no actual base asset balance).
+        
+        Previously this was hard-coded to BTC, which caused false positives
+        when trading other coins like BNB. Now we inspect the tracked
+        position's base asset (or config.BASE_ASSET as a fallback).
+        """
         try:
             position = self.bot_state.get("position")
-            actual_btc = self.client.get_balance("BTC")
-            if actual_btc is None:
+            if not position:
                 return None
-            min_btc = 0.00001
-            if position and actual_btc < min_btc:
-                self.log_issue(f"Ghost position detected: tracked {position.get('quantity', 0)} BTC but only {actual_btc} on Binance")
-                
-                # Clear the ghost position
+
+            base_asset = position.get("base_asset") or getattr(config, "BASE_ASSET", "BTC")
+            actual_balance = self.client.get_balance(base_asset)
+            if actual_balance is None:
+                return None
+
+            # Minimum balance considered a real position (very small amounts are dust)
+            min_balance = 0.00001
+            if actual_balance < min_balance:
+                qty = position.get("quantity", 0)
+                self.log_issue(
+                    f"Ghost position detected: tracked {qty} {base_asset} but only {actual_balance} on Binance"
+                )
+
+                # Clear the ghost position(s)
                 self.bot_state["position"] = None
                 self.bot_state["positions"] = []
-                
-                fix = f"Cleared ghost position (no BTC on exchange)"
+
+                fix = f"Cleared ghost position (no {base_asset} on exchange)"
                 self.log_fix(fix)
                 return fix
-                
+
         except Exception as e:
             self.log_issue(f"Ghost position check failed: {e}", "error")
-            
+
         return None
     
     def check_and_fix_orphan_btc(self) -> Optional[str]:
-        """Check for orphan BTC (BTC held but no position tracked)"""
+        """
+        Check for orphan base asset (held on exchange but no position tracked).
+        
+        Kept for backward compatibility, but now uses config.BASE_ASSET
+        instead of being hard-coded to BTC. Multi-coin orphan balances are
+        handled more generally by _sync_positions_with_balances in dashboard.py.
+        """
         try:
             position = self.bot_state.get("position")
-            actual_btc = self.client.get_balance("BTC")
-            if actual_btc is None:
+            base_asset = getattr(config, "BASE_ASSET", "BTC")
+            actual_balance = self.client.get_balance(base_asset)
+            if actual_balance is None:
                 return None
-            min_btc = 0.0001
-            if not position and actual_btc >= min_btc:
-                self.log_issue(f"Orphan BTC detected: {actual_btc} BTC on Binance but no position tracked")
+
+            min_balance = 0.0001  # About $8 at $80k BTC; still safe for most majors
+            if not position and actual_balance >= min_balance:
+                self.log_issue(
+                    f"Orphan {base_asset} detected: {actual_balance} {base_asset} on Binance but no position tracked"
+                )
                 
                 # Try to recover position from trade history
-                fix = self.recover_position_from_history(actual_btc)
+                fix = self.recover_position_from_history(actual_balance)
                 if fix:
                     return fix
                 else:
@@ -278,21 +303,24 @@ class SelfHealer:
                     if current_price:
                         self.bot_state["position"] = {
                             "entry_price": current_price,
-                            "quantity": actual_btc,
+                            "quantity": actual_balance,
                             "entry_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "amount_usdt": actual_btc * current_price,
+                            "amount_usdt": actual_balance * current_price,
                             "regime": "unknown",
                             "indicator_scores": {},
                             "recovered": True
                         }
                         self.bot_state["positions"] = [self.bot_state["position"]]
                         
-                        fix = f"Created recovery position for {actual_btc:.8f} BTC at ${current_price:,.2f}"
+                        fix = (
+                            f"Created recovery position for {actual_balance:.8f} {base_asset} "
+                            f"at ${current_price:,.2f}"
+                        )
                         self.log_fix(fix)
                         return fix
                         
         except Exception as e:
-            self.log_issue(f"Orphan BTC check failed: {e}", "error")
+            self.log_issue(f"Orphan base-asset check failed: {e}", "error")
             
         return None
     

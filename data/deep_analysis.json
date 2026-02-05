@@ -244,12 +244,174 @@
       }
     },
     {
-      "timestamp": "2026-02-05T08:37:01.401755",
+      "timestamp": "2026-02-05T11:35:16.665385",
       "summary": {
-        "win_rate": 55.9,
-        "total_profit": 5.53,
+        "win_rate": 57.1,
+        "total_profit": 6.14,
         "weaknesses_count": 2,
         "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T12:48:25.455986",
+      "summary": {
+        "win_rate": 56.2,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T13:12:03.137186",
+      "summary": {
+        "win_rate": 56.2,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T13:23:11.199654",
+      "summary": {
+        "win_rate": 56.2,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T13:50:30.808172",
+      "summary": {
+        "win_rate": 56.2,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T13:52:20.280763",
+      "summary": {
+        "win_rate": 56.2,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T13:55:30.224580",
+      "summary": {
+        "win_rate": 56.2,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T13:57:55.449437",
+      "summary": {
+        "win_rate": 55.4,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T14:00:09.592839",
+      "summary": {
+        "win_rate": 55.4,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T14:01:44.332401",
+      "summary": {
+        "win_rate": 55.4,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T14:21:29.154488",
+      "summary": {
+        "win_rate": 54.5,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T14:25:26.412955",
+      "summary": {
+        "win_rate": 53.7,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T14:31:16.658862",
+      "summary": {
+        "win_rate": 52.9,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T14:33:20.509652",
+      "summary": {
+        "win_rate": 52.2,
+        "total_profit": 6.14,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T14:39:21.417078",
+      "summary": {
+        "win_rate": 52.9,
+        "total_profit": 6.29,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T14:41:43.847616",
+      "summary": {
+        "win_rate": 52.9,
+        "total_profit": 6.29,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T14:47:04.033371",
+      "summary": {
+        "win_rate": 52.9,
+        "total_profit": 6.29,
+        "weaknesses_count": 2,
+        "strengths_count": 1
+      }
+    },
+    {
+      "timestamp": "2026-02-05T16:28:32.055382",
+      "summary": {
+        "win_rate": 54.2,
+        "total_profit": 6.76,
+        "weaknesses_count": 2,
+        "strengths_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-02-05T16:29:15.772269",
+      "summary": {
+        "win_rate": 53.4,
+        "total_profit": 6.76,
+        "weaknesses_count": 2,
+        "strengths_count": 2
       }
     }
   ],
@@ -260,17 +422,17 @@
       "severity": "high",
       "recommendation": "Consider reducing position size after 2 consecutive losses"
     },
-    "asymmetric_risk_reward": {
-      "pattern": "asymmetric_risk_reward",
-      "description": "Average loss (1.02%) is much larger than average win (0.62%)",
-      "severity": "high",
-      "recommendation": "Tighten stop loss or let winners run longer"
+    "weak_afternoon_performance": {
+      "pattern": "weak_afternoon_performance",
+      "description": "Afternoon win rate is only 38.5% (13 trades)",
+      "severity": "medium",
+      "recommendation": "Consider avoiding trades during afternoon hours"
     }
   },
   "weaknesses": [
     {
       "weakness": "poor_risk_reward",
-      "description": "Profit factor is 0.77 (should be > 1.5)",
+      "description": "Profit factor is 0.83 (should be > 1.5)",
       "impact": "high",
       "suggestion": "Adjust profit targets and stop losses"
     },
@@ -283,10 +445,15 @@
   ],
   "strengths": [
     {
+      "strength": "regime_expertise",
+      "description": "Excellent in ranging regime (100.0% win rate)",
+      "leverage": "Increase position size during ranging regime"
+    },
+    {
       "strength": "time_expertise",
       "description": "Strong performance at hour 3 (100.0%)",
       "leverage": "Focus trading around hour 3"
     }
   ],
-  "last_updated": "2026-02-05T08:37:01.414971"
+  "last_updated": "2026-02-05T16:29:15.795285"
 }

@@ -687,6 +687,12 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
         ai_sell_immediate = getattr(config, 'AI_SELL_IMMEDIATE', True)
         
         if decision == "SELL" and ai_sell_immediate:
+            # AI says SELL - but check if position is in loss and score is not bearish enough
+            sell_threshold_in_loss = getattr(config, 'SELL_THRESHOLD_IN_LOSS', -0.35)
+            if pnl_percent < 0 and ai_score > sell_threshold_in_loss:
+                # Position in loss but score not bearish enough - don't confirm SELL
+                add_log(f"🤖 AI SELL blocked: position in loss ({pnl_percent:.2f}%) but score {ai_score:.2f} > {sell_threshold_in_loss}", "info")
+                return _return(False, "ai_sell_blocked_loss", None)
             # AI says SELL - don't delay, execute stop
             add_log(f"🤖 AI confirms SELL - No delay", "warning")
             stop_delay_count = 0
@@ -766,7 +772,14 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
     # === 6. MAX DELAYS REACHED ===
     if stop_delay_count >= max_delays:
         if max_delays > 0:
-            add_log(f"⚠️ Max delay cycles ({max_delays}) reached - Allowing stop", "warning")
+            # If position is in loss and we've delayed enough, stop now
+            if pnl_percent < 0:
+                add_log(f"⚠️ Max delay cycles ({max_delays}) reached with loss {pnl_percent:.2f}% - Stopping now", "warning")
+                bot_state["ai_stop_override"] = None
+                stop_delay_count = 0
+                return _return(True, "max_delays_reached_loss", None)
+            else:
+                add_log(f"⚠️ Max delay cycles ({max_delays}) reached - Allowing regular stop logic", "warning")
         bot_state["ai_stop_override"] = None
         stop_delay_count = 0
         return _return(None, "max_delays_reached", None)
@@ -807,14 +820,15 @@ def update_trailing_stop(current_price, regime_data):
     win_streak = streak_info.get("win_streak", 0)
     
     # Use win streak to determine activation threshold
+    # NOTE: profit_percent is in PERCENT units (e.g. 0.5 = 0.5%), so config decimals must be *100
     if win_streak >= 3:
-        # Hot streak - activate very early at +0.5%
-        activation = getattr(config, 'TRAILING_ACTIVATION_HOT', 0.5)
+        # Hot streak - activate very early (e.g. TRAILING_ACTIVATION_HOT = 0.003 -> 0.3%)
+        activation = getattr(config, 'TRAILING_ACTIVATION_HOT', 0.003) * 100
     elif win_streak >= 2:
         # Good streak - activate at +0.75%
         activation = 0.75
     else:
-        # Normal - activate at +1% (was +2%)
+        # Normal - activate at +1% (TRAILING_ACTIVATION is a decimal, e.g. 0.01)
         activation = getattr(config, 'TRAILING_ACTIVATION', 1.0) * 100
         # Fall back to regime-based if not set
         if activation == 100:
@@ -878,8 +892,10 @@ def update_trailing_stop_for_position(position: dict, current_price: float, regi
     streak_info = bot_state.get("streak_info", {})
     win_streak = streak_info.get("win_streak", 0)
 
+    # Use win streak to determine activation threshold
+    # NOTE: profit_percent is in PERCENT units (e.g. 0.5 = 0.5%), so config decimals must be *100
     if win_streak >= 3:
-        activation = getattr(config, 'TRAILING_ACTIVATION_HOT', 0.5)
+        activation = getattr(config, 'TRAILING_ACTIVATION_HOT', 0.003) * 100
     elif win_streak >= 2:
         activation = 0.75
     else:
@@ -1112,17 +1128,26 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
         return (config.SYMBOL, config.BASE_ASSET)
 
     # SAFETY: When we have any position, always use that position's symbol.
+    # But still scan to show if better opportunities exist (for user info)
     positions = bot_state.get("positions", [])
+    current_pos_symbol = None
+    current_pos_base = None
     if positions:
         pos = positions[0]
-        sym = pos.get("symbol") or config.SYMBOL
-        base = pos.get("base_asset") or config.BASE_ASSET
-        return (sym, base)
-    if bot_state.get("position"):
+        current_pos_symbol = pos.get("symbol") or config.SYMBOL
+        current_pos_base = pos.get("base_asset") or config.BASE_ASSET
+    elif bot_state.get("position"):
         pos = bot_state["position"]
-        sym = pos.get("symbol") or "BTCUSDT"
-        base = pos.get("base_asset") or "BTC"
-        return (sym, base)
+        current_pos_symbol = pos.get("symbol") or "BTCUSDT"
+        current_pos_base = pos.get("base_asset") or "BTC"
+    
+    # If we have a position, still scan but return current position's symbol
+    # This allows us to show if better opportunities exist but can't be taken
+    if current_pos_symbol:
+        # Quick scan to see if better opportunities exist (for status display)
+        # But we'll return the current position symbol regardless
+        # The scan will update selection_status to show opportunities
+        pass  # Continue to scan below, but we'll return current_pos_symbol at the end
 
     # No position: run symbol selection (with cache and sticky).
     now_ts = time.time()
@@ -1134,19 +1159,23 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
     
     # Check if current coin is actually tradeable before applying sticky
     current_tradeable = False
+    buy_threshold_uptrend = getattr(config, 'BUY_THRESHOLD_UPTREND', 0.10)
     if current_sym:
         cached = _symbol_scan_cache.get(current_sym)
         if cached:
             c_regime = cached.get("regime", "unknown")
             c_score = cached.get("score", 0)
             # Tradeable = (uptrend + good score) OR (high score override)
-            if c_regime != "trending_down" and c_score >= buy_threshold:
+            # Use uptrend threshold for uptrending coins, regular threshold for others
+            threshold_to_use = buy_threshold_uptrend if c_regime == "trending_up" else buy_threshold
+            if c_regime != "trending_down" and c_score >= threshold_to_use:
                 current_tradeable = True
             elif c_score >= high_score_override:
                 current_tradeable = True
     
-    # Only apply sticky interval if current coin is tradeable
-    if current_sym and current_tradeable and (now_ts - _last_rotation_time) < interval_min:
+    # Only apply sticky interval if current coin is tradeable AND we don't have a position
+    # (If we have a position, always scan to show better opportunities)
+    if not current_pos_symbol and current_sym and current_tradeable and (now_ts - _last_rotation_time) < interval_min:
         # Sticky: keep current symbol until interval elapsed
         for s, b in symbols_config:
             if s == current_sym:
@@ -1179,6 +1208,13 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
                         regime_data = regime_detector.detect_regime(df)
                         regime = regime_data.get("regime_name", "unknown")
                         if ai_engine:
+                            # Set regime_data on ai_engine so regime-aware scoring works
+                            ai_engine.regime_data = regime_data
+                            from market.market_regime import MarketRegime
+                            try:
+                                ai_engine.current_regime = MarketRegime[regime.upper()]
+                            except (KeyError, AttributeError):
+                                ai_engine.current_regime = None
                             score, _ = ai_engine.calculate_score(analysis, df)
                         else:
                             score = analysis.get("momentum", {}).get("score", 0.0) or 0.0
@@ -1212,10 +1248,14 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
         if no_buy_downtrend and not ai_decides_all:
             # SMART SELECTION with 4 tiers:
             only_strict_uptrend = getattr(config, 'ONLY_BUY_STRICT_UPTREND', False)
+            buy_threshold_uptrend = getattr(config, 'BUY_THRESHOLD_UPTREND', 0.20)  # Lower threshold for uptrends
+            
             # Tier 1: Uptrend (or strict: only trending_up) + good score = READY TO TRADE
+            # Use uptrend threshold for uptrending coins, regular threshold for ranging
             tier1_uptrend_ready = [
                 (s, sym, base, reg) for s, sym, base, reg in candidates 
-                if (reg == "trending_up" if only_strict_uptrend else reg != "trending_down") and s >= buy_threshold
+                if (reg == "trending_up" if only_strict_uptrend else reg != "trending_down") 
+                and s >= (buy_threshold_uptrend if reg == "trending_up" else buy_threshold)
             ]
             
             # Tier 2: Downtrend but VERY HIGH score = AI confident, can trade
@@ -1225,9 +1265,11 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
             ]
             
             # Tier 3: Uptrend but weak score = monitor for better entry
+            # Check against uptrend threshold for uptrending coins
             tier3_uptrend_weak = [
                 (s, sym, base, reg) for s, sym, base, reg in candidates 
-                if reg != "trending_down" and s < buy_threshold
+                if reg != "trending_down" 
+                and s < (buy_threshold_uptrend if reg == "trending_up" else buy_threshold)
             ]
             
             if tier1_uptrend_ready:
@@ -1244,7 +1286,8 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
                 # Coins in uptrend but scores too low - monitor
                 tier3_uptrend_weak.sort(key=lambda x: -x[0])
                 best_score, best_symbol, best_base, best_regime = tier3_uptrend_weak[0]
-                bot_state["selection_status"] = f"WAITING: {best_symbol.replace('USDT','')} uptrend but weak score ({best_score:+.2f} < {buy_threshold})"
+                threshold_for_msg = buy_threshold_uptrend if best_regime == "trending_up" else buy_threshold
+                bot_state["selection_status"] = f"WAITING: {best_symbol.replace('USDT','')} {best_regime} but weak score ({best_score:+.2f} < {threshold_for_msg})"
                 # Reduce cache time to rescan sooner when waiting
                 if best_symbol in _symbol_scan_cache:
                     _symbol_scan_cache[best_symbol]["ts"] = now_ts - (cache_min * 0.7)
@@ -1267,9 +1310,48 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
         for s in scan_list:
             s["selected"] = s["symbol"] == best_symbol
         bot_state["symbol_scan"] = scan_list
+        
+        # If we have a position, show that we're holding but found better opportunity
+        if current_pos_symbol:
+            current_pos_short = current_pos_symbol.replace('USDT', '')
+            # Find current position's score from scan results
+            current_pos_score = None
+            for s in scan_list:
+                if s["symbol"] == current_pos_symbol:
+                    current_pos_score = s.get("score", 0.0)
+                    break
+            
+            # If current position not in scan (shouldn't happen, but safety check)
+            if current_pos_score is None:
+                bot_state["selection_status"] = f"HOLDING {current_pos_short} - Scanning for opportunities..."
+                return (current_pos_symbol, current_pos_base)
+            
+            best_short = best_symbol.replace('USDT', '')
+            if best_symbol != current_pos_symbol:
+                # Better opportunity exists but can't switch due to position
+                max_positions = getattr(config, 'MAX_POSITIONS', 1)
+                if max_positions == 1:
+                    bot_state["selection_status"] = f"HOLDING {current_pos_short} ({current_pos_score:+.2f}) - Better: {best_short} ({best_score:+.2f}) but MAX_POSITIONS=1"
+                else:
+                    bot_state["selection_status"] = f"HOLDING {current_pos_short} ({current_pos_score:+.2f}) - Also watching: {best_short} ({best_score:+.2f})"
+            else:
+                # Current position is still the best
+                bot_state["selection_status"] = f"HOLDING {current_pos_short} - Still best (score {best_score:+.2f})"
+            return (current_pos_symbol, current_pos_base)
+        
         return (best_symbol, best_base)
 
     bot_state["symbol_scan"] = scan_list
+    # If we have a position, return it even if scan found nothing
+    if current_pos_symbol:
+        bot_state["selection_status"] = f"HOLDING {current_pos_symbol.replace('USDT', '')} - Scan incomplete"
+        return (current_pos_symbol, current_pos_base)
+    # No position and no candidates - return first symbol as fallback
+    if candidates:
+        # Shouldn't reach here, but if we do, pick highest score
+        candidates.sort(key=lambda x: -x[0])
+        best_score, best_symbol, best_base, _ = candidates[0]
+        return (best_symbol, best_base)
     first = symbols_config[0]
     return (first[0], first[1])
 
@@ -1375,12 +1457,15 @@ def bot_loop():
                             "improvement_suggestions": report.get("improvement_suggestions", []),
                             "last_analysis": report.get("timestamp", ""),
                         }
-                        globals()["_last_deep_analysis_time"] = _now
                         logger.info("Deep analysis updated: %d weaknesses, %d strengths",
                                     len(bot_state["deep_insights"]["weaknesses"]),
                                     len(bot_state["deep_insights"].get("strengths", [])))
+                    # Always update timestamp to prevent repeated attempts when no data or on error
+                    globals()["_last_deep_analysis_time"] = _now
                 except Exception as e:
                     logger.warning("Deep analysis failed: %s", e)
+                    # Update timestamp even on exception to prevent repeated failed attempts
+                    globals()["_last_deep_analysis_time"] = _now
 
             # === META AI: Optional background awareness update (no heavy backtest in main loop) ===
             if _now - _last_meta_ai_time >= _META_AI_INTERVAL:
@@ -1515,6 +1600,9 @@ def bot_loop():
             positions_to_close = []
             for i, pos in enumerate(bot_state.get("positions", [])):
                 entry_price = pos["entry_price"]
+                if not entry_price or entry_price <= 0:
+                    logger.warning(f"Invalid entry_price {entry_price} for position {i}, skipping")
+                    continue
                 pos_symbol = pos.get("symbol") or config.SYMBOL
                 if pos_symbol == config.SYMBOL:
                     pos_price = current_price
@@ -1540,9 +1628,10 @@ def bot_loop():
                     pos["previous_rsi"] = None
                 
                 # PHASE 6: Track lowest price for max drawdown learning
+                # Use pos_price (position's symbol price) not current_price (config.SYMBOL price)
                 lowest_price = pos.get("lowest_price", entry_price)
-                if current_price < lowest_price:
-                    bot_state["positions"][i]["lowest_price"] = current_price
+                if pos_price < lowest_price:
+                    bot_state["positions"][i]["lowest_price"] = pos_price
 
                 # === IMMEDIATE MIN PROFIT CHECK (highest priority) ===
                 # In volatile markets: use lower profit target for faster sells
@@ -1559,14 +1648,14 @@ def bot_loop():
                 if pnl_percent >= profit_target_pct:
                     vol_msg = " (volatile - quick profit)" if volatility_high else ""
                     add_log(f"💰 POSITION #{i+1} PROFIT TARGET: +{pnl_percent:.2f}%{vol_msg} - SELLING!", "success")
-                    positions_to_close.append((i, pos, "profit_target"))
+                    positions_to_close.append((i, pos, "profit_target", pos_price))
                     continue
                 
                 # Check minimum profit (in volatile: 0.15%, normal: 0.25%)
                 if pnl_percent >= min_profit_pct:
                     vol_msg = " (volatile - quick profit)" if volatility_high else ""
                     add_log(f"💰 POSITION #{i+1} MIN PROFIT: +{pnl_percent:.2f}%{vol_msg} - SELLING!", "success")
-                    positions_to_close.append((i, pos, "min_profit"))
+                    positions_to_close.append((i, pos, "min_profit", pos_price))
                     continue
 
                 # === SMART STOP LOSS CHECK (second priority) ===
@@ -1577,7 +1666,7 @@ def bot_loop():
                 
                 if should_stop:
                     add_log(f"🛑 POSITION #{i+1} SMART STOP ({stop_reason}): {pnl_percent:.2f}% - SELLING!", "warning")
-                    positions_to_close.append((i, pos, stop_reason))
+                    positions_to_close.append((i, pos, stop_reason, pos_price))
                     continue
                 skip_regular_stop = stop_reason in ("protected_by_breakeven", "recovery_in_progress")
                 
@@ -1606,19 +1695,20 @@ def bot_loop():
                         stop_loss_pct = getattr(config, 'STOP_LOSS', 0.01) * 100
                     if pnl_percent <= -stop_loss_pct:
                         add_log(f"ðŸ›‘ POSITION #{i+1} STOP LOSS: {pnl_percent:.2f}% (limit: -{stop_loss_pct:.1f}%) - SELLING!", "warning")
-                        positions_to_close.append((i, pos, "stop_loss"))
+                        positions_to_close.append((i, pos, "stop_loss", pos_price))
                         continue
                 # Trailing stop (position-aware) — use this position's price
                 update_trailing_stop_for_position(pos, pos_price, regime_data)
                 trailing_stop = pos.get("trailing_stop")
                 if trailing_stop and pos_price <= trailing_stop:
                     add_log(f"Trailing stop hit at ${trailing_stop:,.2f} for POSITION #{i+1}", "warning")
-                    positions_to_close.append((i, pos, "trailing_stop"))
+                    positions_to_close.append((i, pos, "trailing_stop", pos_price))
                     continue
 
             # Close positions that hit targets (in reverse order to maintain indices)
-            for idx, pos, exit_type in reversed(positions_to_close):
-                execute_sell(current_price, exit_type, position_index=idx)
+            # Use position's price (pos_price) not current_price for accurate logging
+            for idx, pos, exit_type, pos_price in reversed(positions_to_close):
+                execute_sell(pos_price, exit_type, position_index=idx)
                 update_dashboard()
 
             # Legacy single position support (backward compatibility)
@@ -2010,8 +2100,11 @@ def bot_loop():
                 positions_info = []
                 for i, pos in enumerate(positions):
                     entry = pos["entry_price"]
-                    pos_pnl_pct = ((current_price - entry) / entry) * 100
-                    total_pnl_pct += pos_pnl_pct
+                    if entry and entry > 0:
+                        pos_pnl_pct = ((current_price - entry) / entry) * 100
+                        total_pnl_pct += pos_pnl_pct
+                    else:
+                        pos_pnl_pct = 0
                     positions_info.append({
                         "id": i + 1,
                         "entry": entry,
@@ -2019,13 +2112,16 @@ def bot_loop():
                         "quantity": pos["quantity"],
                         "amount": pos.get("amount_usdt", 0)
                     })
-                bot_state["pnl_percent"] = total_pnl_pct / len(positions)  # Average P/L
+                bot_state["pnl_percent"] = total_pnl_pct / len(positions) if positions else 0  # Average P/L
                 bot_state["positions_info"] = positions_info
                 bot_state["active_positions"] = len(positions)
             elif bot_state["position"]:
                 # Legacy single position
                 entry = bot_state["position"]["entry_price"]
-                bot_state["pnl_percent"] = ((current_price - entry) / entry) * 100
+                if entry and entry > 0:
+                    bot_state["pnl_percent"] = ((current_price - entry) / entry) * 100
+                else:
+                    bot_state["pnl_percent"] = 0
                 bot_state["active_positions"] = 1
 
                 # PHASE 2: Calculate position age
@@ -2106,6 +2202,7 @@ def bot_loop():
             if decision == Decision.BUY and can_open_new:
                 regime = bot_state.get("market_regime", "unknown")
                 ai_score = details.get("score", 0) if details else 0
+                confluence = details.get("confluence", {}) if details else {}
                 confluence_count = confluence.get("count", 0)
                 ai_decides_all = getattr(config, 'AI_DECIDES_ALL', False)
                 no_buy_downtrend = getattr(config, 'NO_BUY_IN_DOWNTREND', False)
@@ -2217,6 +2314,7 @@ def bot_loop():
                 if now_t - _last_idle_heartbeat >= _IDLE_HEARTBEAT_INTERVAL:
                     regime = bot_state.get("market_regime", "unknown")
                     ai_score = details.get("score", 0) if details else 0
+                    confluence = details.get("confluence", {}) if details else {}
                     confluence_count = confluence.get("count", 0)
                     decision_val = decision.value if decision else "UNKNOWN"
                     can_trade = bot_state.get("risk_status", {}).get("can_trade", True)
@@ -2498,10 +2596,35 @@ def execute_buy(price, regime_data=None, details=None):
             win_rate=bot_state.get("win_rate", 0)
         )
     else:
-        bot_state["activity_status"] = f"BUY failed: {result.get('message', 'Unknown error')}"
-        add_log(f"BUY failed: {result.get('message', 'Unknown error')}", "error")
-        # Notify error
-        get_notifier().notify_error(f"BUY failed: {result.get('message', 'Unknown error')}")
+        error_msg = result.get('message', 'Unknown error')
+        error_code = None
+        
+        # Extract error code if present (e.g., "APIError(code=-1013): Market is closed")
+        if 'code=' in error_msg:
+            try:
+                code_part = error_msg.split('code=')[1].split(')')[0]
+                error_code = int(code_part)
+            except (ValueError, IndexError):
+                pass
+        
+        # Handle specific error codes with better messages
+        if error_code == -1013:
+            # Market is closed (usually temporary - maintenance or suspension)
+            friendly_msg = "Market temporarily closed (maintenance/suspension) - will retry on next cycle"
+            bot_state["activity_status"] = friendly_msg
+            add_log(f"⚠️ {friendly_msg}", "warning")
+            # Don't send error notification for temporary market closure
+        elif error_code == -1021:
+            # Timestamp error - should be handled by binance_client, but log it here too
+            friendly_msg = "Time sync error - check system clock"
+            bot_state["activity_status"] = friendly_msg
+            add_log(f"⚠️ {friendly_msg}", "warning")
+            get_notifier().notify_error(f"BUY failed: {friendly_msg}")
+        else:
+            # Other errors - log and notify
+            bot_state["activity_status"] = f"BUY failed: {error_msg}"
+            add_log(f"BUY failed: {error_msg}", "error")
+            get_notifier().notify_error(f"BUY failed: {error_msg}")
 
 
 def execute_sell(price, exit_type="manual", position_index=None):
@@ -2580,6 +2703,10 @@ def execute_sell(price, exit_type="manual", position_index=None):
         exit_price = result["price"]
         quantity = result["quantity"]
 
+        if not entry_price or entry_price <= 0:
+            add_log(f"⚠️ Invalid entry_price {entry_price} in position - using exit_price", "warning")
+            entry_price = exit_price  # Fallback to prevent division by zero
+        
         pnl = (exit_price - entry_price) * quantity
         pnl_percent = ((exit_price - entry_price) / entry_price) * 100
 
@@ -2605,7 +2732,10 @@ def execute_sell(price, exit_type="manual", position_index=None):
             
             # Calculate max drawdown from lowest price
             lowest_price = position_to_sell.get("lowest_price", entry_price)
-            max_drawdown = ((entry_price - lowest_price) / entry_price) * 100 if lowest_price < entry_price else 0
+            if entry_price and entry_price > 0 and lowest_price < entry_price:
+                max_drawdown = ((entry_price - lowest_price) / entry_price) * 100
+            else:
+                max_drawdown = 0
             
             ai_engine.record_trade_result(
                 pnl_percent, exit_type,
@@ -2842,6 +2972,11 @@ def execute_sell(price, exit_type="manual", position_index=None):
                         entry_price = position_to_sell["entry_price"]
                         exit_price = result["price"]
                         quantity = result["quantity"]
+                        
+                        if not entry_price or entry_price <= 0:
+                            add_log(f"⚠️ Invalid entry_price {entry_price} in auto-fix - using exit_price", "warning")
+                            entry_price = exit_price  # Fallback to prevent division by zero
+                        
                         pnl = (exit_price - entry_price) * quantity
                         pnl_percent = ((exit_price - entry_price) / entry_price) * 100
                         
@@ -2881,10 +3016,34 @@ def execute_sell(price, exit_type="manual", position_index=None):
             except Exception as e:
                 add_log(f"🔧 Auto-fix failed: {e}", "error")
         
-        bot_state["activity_status"] = f"SELL failed: {error_msg}"
-        add_log(f"SELL failed: {error_msg}", "error")
-        # Notify error
-        get_notifier().notify_error(f"SELL failed: {error_msg}")
+        error_code = None
+        
+        # Extract error code if present (e.g., "APIError(code=-1013): Market is closed")
+        if 'code=' in error_msg:
+            try:
+                code_part = error_msg.split('code=')[1].split(')')[0]
+                error_code = int(code_part)
+            except (ValueError, IndexError):
+                pass
+        
+        # Handle specific error codes with better messages
+        if error_code == -1013:
+            # Market is closed (usually temporary - maintenance or suspension)
+            friendly_msg = "Market temporarily closed (maintenance/suspension) - will retry on next cycle"
+            bot_state["activity_status"] = friendly_msg
+            add_log(f"⚠️ {friendly_msg}", "warning")
+            # Don't send error notification for temporary market closure
+        elif error_code == -1021:
+            # Timestamp error - should be handled by binance_client, but log it here too
+            friendly_msg = "Time sync error - check system clock"
+            bot_state["activity_status"] = friendly_msg
+            add_log(f"⚠️ {friendly_msg}", "warning")
+            get_notifier().notify_error(f"SELL failed: {friendly_msg}")
+        else:
+            # Other errors - log and notify
+            bot_state["activity_status"] = f"SELL failed: {error_msg}"
+            add_log(f"SELL failed: {error_msg}", "error")
+            get_notifier().notify_error(f"SELL failed: {error_msg}")
 
 
 BOT_STATE_FILE = os.path.join(config.DATA_DIR, "bot_state.json")

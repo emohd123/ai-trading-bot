@@ -80,6 +80,8 @@ STOP_LOSS_HIGH_VOL = 0.0075      # 0.75% in high volatility (matches previous)
 # =============================================================================
 # AI score thresholds (stricter to reduce weak entries and losses)
 BUY_THRESHOLD = 0.35   # Buy when AI score > 0.35 (fewer weak entries, reduce losses)
+BUY_THRESHOLD_UPTREND = 0.10   # In uptrend: allow lower score (uptrends are safer, can enter earlier with moderate signals)
+UPTREND_SCORE_BOOST = 0.15     # Boost AI score by this amount when regime is trending_up (accounts for indicator lag/overbought)
 BUY_THRESHOLD_DOWNTREND = 0.40  # In downtrend: require stronger score to buy
 SELL_THRESHOLD = -0.25 # Sell when AI score < -0.25 (in profit)
 # Stricter threshold when position is in loss - avoid locking small losses on weak bearish flicker
@@ -119,7 +121,9 @@ INDICATOR_WEIGHTS = {
 
 # Entry rules (stricter to reduce weak entries and losses)
 MIN_CONFIDENCE_BUY = 0.35      # Require higher confidence for BUY (was 0.30)
+MIN_CONFIDENCE_BUY_UPTREND = 0.20  # Lower confidence required in uptrends (safer market conditions)
 MIN_CONFLUENCE_BUY = 6         # At least 6 indicators must agree for BUY (was 5 - reduces bad entries)
+MIN_CONFLUENCE_BUY_UPTREND = 4  # Lower confluence required in uptrends (4/10 indicators)
 MIN_CONFLUENCE_BUY_DOWNTREND = 6  # Even stricter in downtrend if allowed (was 4)
 MIN_CONFLUENCE_SELL = 4        # At least 4 indicators must agree for SELL
 MIN_CONFLUENCE = 5             # Default confluence requirement

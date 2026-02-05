@@ -1,158 +1,266 @@
 {
   "running": true,
-  "position": null,
-  "positions": [],
+  "position": {
+    "symbol": "ATOMUSDT",
+    "base_asset": "ATOM",
+    "entry_price": 1.976,
+    "quantity": 21.33,
+    "entry_time": "2026-02-05 16:29:25",
+    "time": "2026-02-05 16:29:25",
+    "amount_usdt": 42.148738856,
+    "regime": "trending_up",
+    "indicator_scores": {
+      "momentum": -0.053,
+      "macd": -0.35,
+      "bollinger": 0.7,
+      "ema": -0.7,
+      "support_resistance": 0.8,
+      "ml_prediction": 0.6614,
+      "ichimoku": -0.5,
+      "mfi": 0.079,
+      "williams_r": 0.3,
+      "cci": 0.6
+    },
+    "position_id": 1,
+    "trade_id": 155,
+    "entry_conditions": {
+      "rsi_state": "neutral",
+      "rsi_value": 43.66,
+      "volatility": "normal",
+      "trend": "sideways",
+      "sr_position": "at_support",
+      "bb_position": "near_lower",
+      "hour": 16,
+      "day_of_week": "Thursday",
+      "regime": "trending_up",
+      "fear_greed": "extreme_fear",
+      "confluence_count": 5
+    },
+    "indicator_combo_key": "bb_bullish+macd_bearish+sr_support+stoch_bearish",
+    "volatility": "normal",
+    "lowest_price": 1.976,
+    "highest_price": 1.976,
+    "trailing_stop": null,
+    "trailing_stop_enabled": true,
+    "breakeven_activated": false,
+    "stop_delay_count": 0,
+    "previous_rsi": null,
+    "sizing_conditions": {
+      "regime": "trending_up",
+      "volatility": "normal",
+      "volatility_ratio": 1.0,
+      "confidence": 0.59,
+      "confluence": 5,
+      "streak_multiplier": 1.3
+    }
+  },
+  "positions": [
+    {
+      "symbol": "ATOMUSDT",
+      "base_asset": "ATOM",
+      "entry_price": 1.976,
+      "quantity": 21.33,
+      "entry_time": "2026-02-05 16:29:25",
+      "time": "2026-02-05 16:29:25",
+      "amount_usdt": 42.148738856,
+      "regime": "trending_up",
+      "indicator_scores": {
+        "momentum": -0.053,
+        "macd": -0.35,
+        "bollinger": 0.7,
+        "ema": -0.7,
+        "support_resistance": 0.8,
+        "ml_prediction": 0.6614,
+        "ichimoku": -0.5,
+        "mfi": 0.079,
+        "williams_r": 0.3,
+        "cci": 0.6
+      },
+      "position_id": 1,
+      "trade_id": 155,
+      "entry_conditions": {
+        "rsi_state": "neutral",
+        "rsi_value": 43.66,
+        "volatility": "normal",
+        "trend": "sideways",
+        "sr_position": "at_support",
+        "bb_position": "near_lower",
+        "hour": 16,
+        "day_of_week": "Thursday",
+        "regime": "trending_up",
+        "fear_greed": "extreme_fear",
+        "confluence_count": 5
+      },
+      "indicator_combo_key": "bb_bullish+macd_bearish+sr_support+stoch_bearish",
+      "volatility": "normal",
+      "lowest_price": 1.976,
+      "highest_price": 1.976,
+      "trailing_stop": null,
+      "trailing_stop_enabled": true,
+      "breakeven_activated": false,
+      "stop_delay_count": 0,
+      "previous_rsi": null,
+      "sizing_conditions": {
+        "regime": "trending_up",
+        "volatility": "normal",
+        "volatility_ratio": 1.0,
+        "confidence": 0.59,
+        "confluence": 5,
+        "streak_multiplier": 1.3
+      }
+    }
+  ],
   "logs": [
     {
-      "time": "08:48:29",
-      "message": "\ud83d\udd0d No trade: Decision: HOLD (not BUY), Score 0.24 < 0.35, Confluence 5 < 6",
+      "time": "16:29:25",
+      "message": "BUY filled: 21.330000 ATOM @ $1.98",
+      "level": "success"
+    },
+    {
+      "time": "16:29:23",
+      "message": "Smart BUY #1: $42 ATOM (conf: High)",
       "level": "info"
     },
     {
-      "time": "08:48:08",
-      "message": "AI Think: check_goals",
+      "time": "16:29:23",
+      "message": "Using available balance: $42.15 USDT (had $43.01)",
       "level": "info"
     },
     {
-      "time": "08:43:18",
-      "message": "\ud83d\udd0d No trade: Decision: HOLD (not BUY), Confluence 4 < 6",
-      "level": "info"
+      "time": "16:28:36",
+      "message": "Sell all: ATOM \u2192 $42.17 | P/L: $-0.17 (-0.4%)",
+      "level": "warning"
     },
     {
-      "time": "08:42:10",
-      "message": "\ud83d\udd27 Auto-fix: Synced balances: USDT=42.38, BTC=0.00000903",
-      "level": "info"
-    },
-    {
-      "time": "08:41:31",
-      "message": "SELL #1: $27.96 | P/L: $+0.15 (+0.53%)",
-      "level": "success"
-    },
-    {
-      "time": "08:41:29",
-      "message": "SELL #1 (min_profit) BNB at $699.03",
-      "level": "info"
-    },
-    {
-      "time": "08:41:29",
-      "message": "\ud83d\udcb0 POSITION #1 MIN PROFIT: +0.52% - SELLING!",
-      "level": "success"
-    },
-    {
-      "time": "08:38:49",
-      "message": "BUY filled: 0.041000 BNB @ $695.41",
-      "level": "success"
-    },
-    {
-      "time": "08:38:47",
-      "message": "Smart BUY #1: $29 BNB (conf: High)",
-      "level": "info"
-    },
-    {
-      "time": "08:38:46",
-      "message": "HIGH SCORE OVERRIDE: BNB downtrend but score 0.78 >= 0.7",
-      "level": "success"
-    },
-    {
-      "time": "08:38:11",
-      "message": "\ud83d\udd0d No trade: Decision: HOLD (not BUY), Downtrend: score 0.39 < 0.4, Confluence 0 < 6",
-      "level": "info"
-    },
-    {
-      "time": "08:38:06",
-      "message": "SELL #1: $28.88 | P/L: $+0.13 (+0.46%)",
-      "level": "success"
-    },
-    {
-      "time": "08:38:03",
-      "message": "SELL #1 (min_profit) ADA at $0.28",
-      "level": "info"
-    },
-    {
-      "time": "08:38:02",
-      "message": "\ud83d\udcb0 POSITION #1 MIN PROFIT: +0.64% - SELLING!",
-      "level": "success"
-    },
-    {
-      "time": "08:37:10",
-      "message": "BUY filled: 101.700000 ADA @ $0.28",
-      "level": "success"
-    },
-    {
-      "time": "08:37:08",
-      "message": "Smart BUY #1: $29 ADA (conf: Very High)",
-      "level": "info"
-    },
-    {
-      "time": "08:37:08",
-      "message": "HIGH SCORE OVERRIDE: ADA downtrend but score 0.71 >= 0.7",
-      "level": "success"
-    },
-    {
-      "time": "08:36:26",
-      "message": "Sell all: LINK \u2192 $28.88 | P/L: $+0.06 (+0.2%)",
-      "level": "success"
-    },
-    {
-      "time": "08:36:21",
-      "message": "Sell all: DOGE \u2192 $13.75 | P/L: $+0.11 (+0.8%)",
-      "level": "success"
-    },
-    {
-      "time": "08:36:14",
+      "time": "16:28:29",
       "message": "Selling all coins to USDT so we start flat...",
       "level": "info"
     },
     {
-      "time": "08:36:14",
+      "time": "16:28:29",
       "message": "Self-healing system initialized",
       "level": "success"
     },
     {
-      "time": "08:36:14",
+      "time": "16:28:29",
       "message": "Smart bot started",
       "level": "success"
     },
     {
-      "time": "08:36:14",
+      "time": "16:28:29",
       "message": "Position size learner initialized",
       "level": "success"
     },
     {
-      "time": "08:36:14",
+      "time": "16:28:29",
       "message": "Bot auto-resumed for 24/7 live trading",
       "level": "success"
     },
     {
-      "time": "08:35:03",
-      "message": "HIGH SCORE OVERRIDE: ADA downtrend but score 0.82 >= 0.7",
-      "level": "success"
-    },
-    {
-      "time": "08:34:37",
-      "message": "HIGH SCORE OVERRIDE: ADA downtrend but score 0.82 >= 0.7",
-      "level": "success"
-    },
-    {
-      "time": "08:34:16",
-      "message": "\ud83d\udd0d No trade: Balance too small: $0.24 < $1.00",
+      "time": "16:28:12",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.51 is STRONG BULLISH - Delaying stop (2/3)",
       "level": "info"
     },
     {
-      "time": "08:34:15",
-      "message": "HIGH SCORE OVERRIDE: ADA downtrend but score 0.85 >= 0.7",
+      "time": "16:27:31",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.45 is STRONG BULLISH - Delaying stop (1/3)",
+      "level": "info"
+    },
+    {
+      "time": "16:27:03",
+      "message": "\u26a0\ufe0f Max delay cycles (3) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "16:26:29",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.40 is STRONG BULLISH - Delaying stop (3/3)",
+      "level": "info"
+    },
+    {
+      "time": "16:26:02",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.45 is STRONG BULLISH - Delaying stop (2/3)",
+      "level": "info"
+    },
+    {
+      "time": "16:25:36",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.32 is STRONG BULLISH - Delaying stop (1/3)",
+      "level": "info"
+    },
+    {
+      "time": "16:25:03",
+      "message": "\u26a0\ufe0f Max delay cycles (3) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "16:24:37",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.32 is STRONG BULLISH - Delaying stop (3/3)",
+      "level": "info"
+    },
+    {
+      "time": "16:24:13",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.39 is STRONG BULLISH - Delaying stop (2/3)",
+      "level": "info"
+    },
+    {
+      "time": "16:22:30",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.58 is STRONG BULLISH - Delaying stop (1/3)",
+      "level": "info"
+    },
+    {
+      "time": "16:17:57",
+      "message": "BUY filled: 21.350000 ATOM @ $1.98",
       "level": "success"
     },
     {
-      "time": "08:33:10",
-      "message": "HIGH SCORE OVERRIDE: DOGE downtrend but score 0.94 >= 0.7",
+      "time": "16:17:54",
+      "message": "Smart BUY #1: $42 ATOM (conf: High)",
+      "level": "info"
+    },
+    {
+      "time": "16:17:54",
+      "message": "Using available balance: $42.32 USDT (had $43.18)",
+      "level": "info"
+    },
+    {
+      "time": "16:01:57",
+      "message": "\ud83d\udd0d No trade: Decision: HOLD (not BUY), Confluence 4 < 6",
+      "level": "info"
+    },
+    {
+      "time": "16:01:54",
+      "message": "SELL #1: $42.33 | P/L: $+0.26 (+0.61%)",
       "level": "success"
     },
     {
-      "time": "08:31:08",
-      "message": "HIGH SCORE OVERRIDE: ADA downtrend but score 0.84 >= 0.7",
+      "time": "16:01:52",
+      "message": "SELL #1 (min_profit) ATOM at $1.99",
+      "level": "info"
+    },
+    {
+      "time": "16:01:52",
+      "message": "\ud83d\udcb0 POSITION #1 MIN PROFIT: +0.66% - SELLING!",
       "level": "success"
+    },
+    {
+      "time": "15:56:19",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.54 is STRONG BULLISH - Delaying stop (2/3)",
+      "level": "info"
+    },
+    {
+      "time": "15:55:38",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.74 is STRONG BULLISH - Delaying stop (1/3)",
+      "level": "info"
+    },
+    {
+      "time": "15:55:11",
+      "message": "\u26a0\ufe0f Max delay cycles (3) reached - Allowing stop",
+      "level": "warning"
+    },
+    {
+      "time": "15:54:44",
+      "message": "\ud83e\udd16 AI OVERRIDE: Score 0.59 is STRONG BULLISH - Delaying stop (3/3)",
+      "level": "info"
     }
   ],
-  "decision": "HOLD"
+  "decision": "BUY"
 }

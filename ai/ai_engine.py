@@ -186,6 +186,82 @@ class AIEngine:
         self._sentiment_data = None
         self._correlation_data = None
 
+    def _adjust_indicator_scores_for_regime(self, scores: Dict[str, float], analysis: Dict, regime_name: str = None) -> Dict[str, float]:
+        """
+        Adjust indicator scores based on regime context for accurate interpretation.
+        
+        In uptrends: Overbought conditions are less bearish (continuation signal)
+        In downtrends: Oversold conditions are less bullish (continuation signal)
+        This makes AI scores accurate for all coins all the time.
+        """
+        if not regime_name:
+            return scores
+        
+        adjusted = scores.copy()
+        
+        if regime_name == "trending_up":
+            # In uptrends: Overbought indicators are less bearish (trend continuation)
+            # Adjust bearish signals to be less negative
+            
+            # RSI/MFI/Williams: Overbought in uptrend = continuation, not reversal
+            rsi_data = analysis.get("rsi", {})
+            if rsi_data.get("signal") == "overbought":
+                # Reduce bearishness: -1.0 becomes -0.3 (still cautious but not blocking)
+                adjusted["momentum"] = max(adjusted.get("momentum", 0), -0.3)
+            
+            mfi_data = analysis.get("mfi", {})
+            if mfi_data.get("signal") == "overbought":
+                adjusted["mfi"] = max(adjusted.get("mfi", 0), -0.3)
+            
+            williams_data = analysis.get("williams_r", {})
+            if williams_data.get("signal") == "overbought":
+                adjusted["williams_r"] = max(adjusted.get("williams_r", 0), -0.3)
+            
+            # Bollinger: Above upper band in uptrend = strong momentum, not reversal
+            bb_data = analysis.get("bollinger", {})
+            if bb_data.get("signal") == "above_upper":
+                adjusted["bollinger"] = max(adjusted.get("bollinger", 0), -0.2)
+            
+            # MACD: Bearish crossover in uptrend might be pullback, not reversal
+            macd_data = analysis.get("macd", {})
+            if macd_data.get("signal") in ["bearish", "bearish_crossover"]:
+                # Reduce bearishness by 50%
+                adjusted["macd"] = adjusted.get("macd", 0) * 0.5
+            
+            # CCI: Overbought in uptrend = continuation
+            cci_data = analysis.get("cci", {})
+            if cci_data.get("signal") == "overbought":
+                adjusted["cci"] = max(adjusted.get("cci", 0), -0.3)
+        
+        elif regime_name == "trending_down":
+            # In downtrends: Oversold indicators are less bullish (trend continuation)
+            # Adjust bullish signals to be less positive
+            
+            rsi_data = analysis.get("rsi", {})
+            if rsi_data.get("signal") == "oversold":
+                # Reduce bullishness: +1.0 becomes +0.3
+                adjusted["momentum"] = min(adjusted.get("momentum", 0), 0.3)
+            
+            mfi_data = analysis.get("mfi", {})
+            if mfi_data.get("signal") == "oversold":
+                adjusted["mfi"] = min(adjusted.get("mfi", 0), 0.3)
+            
+            williams_data = analysis.get("williams_r", {})
+            if williams_data.get("signal") == "oversold":
+                adjusted["williams_r"] = min(adjusted.get("williams_r", 0), 0.3)
+            
+            # Bollinger: Below lower band in downtrend = strong down momentum
+            bb_data = analysis.get("bollinger", {})
+            if bb_data.get("signal") == "below_lower":
+                adjusted["bollinger"] = min(adjusted.get("bollinger", 0), 0.2)
+            
+            # MACD: Bullish crossover in downtrend might be dead cat bounce
+            macd_data = analysis.get("macd", {})
+            if macd_data.get("signal") in ["bullish", "bullish_crossover"]:
+                adjusted["macd"] = adjusted.get("macd", 0) * 0.5
+        
+        return adjusted
+    
     def _get_effective_weights(self, regime: str = None) -> Dict[str, float]:
         """
         Get effective indicator weights (config or adaptive).
@@ -1336,6 +1412,9 @@ class AIEngine:
         """
         if "error" in analysis:
             return 0.0, {"error": analysis["error"]}
+        
+        # Initialize enhanced_details early so we can add to it throughout the function
+        enhanced_details = {}
 
         # Get regime data if we have price data
         if df is not None and not df.empty:
@@ -1384,7 +1463,12 @@ class AIEngine:
             analysis["ml_prediction"] = {"score": 0, "direction": "HOLD", "confidence": 0, "models_loaded": False}
 
         # PHASE 4: Base indicator scores (10 indicators with ML prediction)
-        scores = {
+        # Get regime context for accurate interpretation
+        regime_name = None
+        if self.regime_data:
+            regime_name = self.regime_data.get("regime_name", "")
+        
+        base_scores = {
             "momentum": analysis.get("momentum", {}).get("score", 0),
             "macd": analysis.get("macd", {}).get("score", 0),
             "bollinger": analysis.get("bollinger", {}).get("score", 0),
@@ -1397,6 +1481,9 @@ class AIEngine:
             "williams_r": analysis.get("williams_r", {}).get("score", 0),
             "cci": analysis.get("cci", {}).get("score", 0),
         }
+        
+        # Regime-aware indicator adjustment: Make indicators interpret signals correctly based on market context
+        scores = self._adjust_indicator_scores_for_regime(base_scores, analysis, regime_name)
 
         # Calculate weighted average (use adaptive weights if enabled and have history)
         # PHASE 7: Pass current regime for regime-specific weights
@@ -1419,6 +1506,20 @@ class AIEngine:
         divergence = self.detect_divergence(df, analysis)
         if divergence.get("detected"):
             weighted_score += divergence.get("score_adjustment", 0)
+
+        # Regime-based boost: If market is trending up, boost score even if indicators are mixed
+        # This helps catch uptrends where indicators lag or show overbought conditions
+        if self.regime_data:
+            regime_name = self.regime_data.get("regime_name", "")
+            if regime_name == "trending_up":
+                # Boost score by 0.15-0.25 in uptrends to account for indicator lag/overbought conditions
+                uptrend_boost = getattr(config, "UPTREND_SCORE_BOOST", 0.15)
+                weighted_score += uptrend_boost
+                enhanced_details["regime_boost"] = {
+                    "regime": "trending_up",
+                    "boost": uptrend_boost,
+                    "reason": "Uptrend detected - boosting score to account for indicator lag"
+                }
 
         # Volume confirmation adjustment (PHASE 3: Now a modifier, not blocker)
         volume_data = analysis.get("volume", {})
@@ -1555,7 +1656,8 @@ class AIEngine:
         # Clamp score to -1 to 1
         weighted_score = max(-1, min(1, weighted_score))
 
-        enhanced_details = {
+        # Update enhanced_details with all calculated values
+        enhanced_details.update({
             "base_score": round(weighted_score, 4),
             "regime": self.regime_data,
             "confluence": confluence,
@@ -1583,7 +1685,7 @@ class AIEngine:
             "sentiment": sentiment_data,
             "correlation": correlation_data,
             "external_filters": external_filters
-        }
+        })
 
         return round(weighted_score, 4), enhanced_details
 
@@ -1681,6 +1783,14 @@ class AIEngine:
         sell_threshold = self.sell_threshold
         min_confluence = self.min_confluence
 
+        # Use lower threshold for uptrending markets (safer to enter earlier)
+        regime_name = None
+        if self.regime_data:
+            regime_name = self.regime_data.get("regime_name", "")
+            if regime_name == "trending_up":
+                buy_threshold_uptrend = getattr(config, "BUY_THRESHOLD_UPTREND", 0.20)
+                buy_threshold = min(buy_threshold, buy_threshold_uptrend)  # Use the lower of the two
+
         # Apply deep_insights: if we have identified weaknesses, require stronger signal for BUY
         if deep_insights and deep_insights.get("weaknesses"):
             weakness_types = {w.get("weakness") for w in deep_insights["weaknesses"]}
@@ -1697,7 +1807,9 @@ class AIEngine:
 
         if self.regime_data:
             params = self.regime_data.get("adjusted_params", {})
-            buy_threshold = params.get("buy_threshold", buy_threshold)
+            # Don't override uptrend threshold if regime is uptrend
+            if regime_name != "trending_up":
+                buy_threshold = params.get("buy_threshold", buy_threshold)
             sell_threshold = params.get("sell_threshold", sell_threshold)
             min_confluence = params.get("confluence_required", min_confluence)
 
@@ -1761,7 +1873,16 @@ class AIEngine:
                     return Decision.SELL, details
 
                 # Check AI bearish signal with confluence
-                if score < sell_threshold and confluence_direction == "bearish" and has_confluence:
+                # When position is in loss, require stronger bearish signal (SELL_THRESHOLD_IN_LOSS)
+                sell_threshold_to_use = sell_threshold
+                if pnl_percent < 0:
+                    sell_threshold_to_use = getattr(config, 'SELL_THRESHOLD_IN_LOSS', -0.35)
+                    if score >= sell_threshold_to_use:
+                        # Position in loss but score not bearish enough - don't sell
+                        details["reason"].append(f"Position in loss ({pnl_percent:.2f}%) but AI score {score:.2f} >= {sell_threshold_to_use} (need stronger bearish)")
+                        return Decision.HOLD, details
+                
+                if score < sell_threshold_to_use and confluence_direction == "bearish" and has_confluence:
                     details["reason"].append(f"AI bearish signal: {score:.2f} with {confluence.get('count')}/10 confluence")
                     details["exit_type"] = "ai_signal"
                     return Decision.SELL, details
@@ -1803,8 +1924,10 @@ class AIEngine:
                     return Decision.HOLD, details
                 details["reason"].append(f"ML bearish but score strong enough ({score:.2f} > {buy_threshold + ml_extra_required:.2f}) - allowing BUY")
 
-            # Confidence floor: require Medium+ confidence for BUY
+            # Confidence floor: require Medium+ confidence for BUY (lower for uptrends)
             min_confidence = getattr(config, 'MIN_CONFIDENCE_BUY', 0.4)
+            if regime_name == "trending_up":
+                min_confidence = getattr(config, 'MIN_CONFIDENCE_BUY_UPTREND', 0.20)
             if confidence["value"] < min_confidence:
                 details["reason"].append(f"Confidence too low: {confidence['value']:.2f} < {min_confidence} (need Medium+)")
                 return Decision.HOLD, details
@@ -1837,9 +1960,14 @@ class AIEngine:
                 elif has_bullish_divergence:
                     details["reason"].append(f"✅ Bullish divergence - buy allowed in downtrend")
             
-            # In trending_down, use same or slightly higher confluence (but don't add +1 automatically)
+            # Regime-based confluence requirements
             min_confluence_buy = getattr(config, 'MIN_CONFLUENCE_BUY', 5)
-            if regime == MarketRegime.TRENDING_DOWN:
+            if regime == MarketRegime.TRENDING_UP:
+                # Use lower confluence for uptrends (safer market conditions)
+                uptrend_confluence = getattr(config, 'MIN_CONFLUENCE_BUY_UPTREND', 4)
+                min_confluence_buy = uptrend_confluence
+                details["reason"].append(f"📈 Uptrend: requiring {min_confluence_buy} confluence")
+            elif regime == MarketRegime.TRENDING_DOWN:
                 # Use downtrend threshold if configured, otherwise same as normal
                 downtrend_confluence = getattr(config, 'MIN_CONFLUENCE_BUY_DOWNTREND', min_confluence_buy)
                 min_confluence_buy = downtrend_confluence
