@@ -4066,6 +4066,193 @@ def send_telegram_summary():
         return jsonify({"status": "error", "message": str(e)})
 
 
+# =============================================================================
+# AUTO-UPDATE / DEPLOY API
+# =============================================================================
+
+@app.route('/api/update', methods=['POST'])
+def auto_update():
+    """
+    Pull latest code from git and optionally restart the bot.
+    
+    POST /api/update
+    Body (optional): {"restart": true, "branch": "main"}
+    
+    This allows remote deployment after pushing code to GitHub.
+    """
+    import subprocess
+    
+    try:
+        data = request.get_json() or {}
+        branch = data.get('branch', 'main')
+        do_restart = data.get('restart', False)
+        
+        results = {
+            'git_fetch': None,
+            'git_pull': None,
+            'restart': None
+        }
+        
+        # Get current commit before pull
+        try:
+            old_commit = subprocess.check_output(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+        except:
+            old_commit = 'unknown'
+        
+        # Git fetch
+        try:
+            fetch_output = subprocess.check_output(
+                ['git', 'fetch', 'origin', branch],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT,
+                timeout=30
+            ).decode()
+            results['git_fetch'] = 'ok'
+        except subprocess.CalledProcessError as e:
+            results['git_fetch'] = f'error: {e.output.decode()}'
+            return jsonify({'status': 'error', 'message': 'Git fetch failed', 'details': results}), 500
+        except subprocess.TimeoutExpired:
+            results['git_fetch'] = 'timeout'
+            return jsonify({'status': 'error', 'message': 'Git fetch timeout', 'details': results}), 500
+        
+        # Git pull (merge)
+        try:
+            pull_output = subprocess.check_output(
+                ['git', 'pull', 'origin', branch],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT,
+                timeout=30
+            ).decode()
+            results['git_pull'] = pull_output.strip()
+        except subprocess.CalledProcessError as e:
+            results['git_pull'] = f'error: {e.output.decode()}'
+            return jsonify({'status': 'error', 'message': 'Git pull failed', 'details': results}), 500
+        
+        # Get new commit after pull
+        try:
+            new_commit = subprocess.check_output(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+        except:
+            new_commit = 'unknown'
+        
+        updated = old_commit != new_commit
+        
+        add_log(f"Code updated via API: {old_commit} → {new_commit}", "success" if updated else "info")
+        
+        # Restart if requested
+        if do_restart:
+            # Try systemd first (recommended for VPS deployment)
+            try:
+                subprocess.run(
+                    ['systemctl', 'restart', 'tradingbot'],
+                    check=True,
+                    timeout=10
+                )
+                results['restart'] = 'systemd restart initiated'
+                add_log("Bot restart initiated via systemd", "warning")
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                # Fallback: schedule a restart via os._exit (will be restarted by systemd/supervisor)
+                results['restart'] = 'process exit scheduled (will be restarted by service manager)'
+                add_log("Bot exit scheduled for restart", "warning")
+                
+                # Schedule exit after response is sent
+                import threading
+                def delayed_exit():
+                    time.sleep(2)
+                    os._exit(0)  # Exit with 0 so systemd restarts us
+                threading.Thread(target=delayed_exit, daemon=True).start()
+        
+        return jsonify({
+            'status': 'ok',
+            'message': 'Update successful' + (' - restart initiated' if do_restart else ' - restart not requested'),
+            'old_commit': old_commit,
+            'new_commit': new_commit,
+            'updated': updated,
+            'details': results
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
+@app.route('/api/update/status', methods=['GET'])
+def update_status():
+    """Get current git status and commit info"""
+    import subprocess
+    
+    try:
+        results = {}
+        
+        # Current commit
+        try:
+            results['commit'] = subprocess.check_output(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+        except:
+            results['commit'] = 'unknown'
+        
+        # Current branch
+        try:
+            results['branch'] = subprocess.check_output(
+                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+        except:
+            results['branch'] = 'unknown'
+        
+        # Last commit message
+        try:
+            results['last_commit_message'] = subprocess.check_output(
+                ['git', 'log', '-1', '--pretty=%s'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+        except:
+            results['last_commit_message'] = 'unknown'
+        
+        # Check if there are updates available
+        try:
+            subprocess.check_output(
+                ['git', 'fetch', 'origin'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT,
+                timeout=15
+            )
+            local = subprocess.check_output(
+                ['git', 'rev-parse', 'HEAD'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+            remote = subprocess.check_output(
+                ['git', 'rev-parse', f'origin/{results["branch"]}'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+            results['updates_available'] = local != remote
+        except:
+            results['updates_available'] = None  # Unknown
+        
+        return jsonify({'status': 'ok', **results})
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 _last_stopped_analysis = 0
 _last_stopped_balance = 0
 _ANALYSIS_THROTTLE = 10  # Run full analysis every 10 seconds for stable updates
