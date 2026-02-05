@@ -139,6 +139,7 @@ TRAILING_ACTIVATION_HOT = 0.003  # +0.3% during win streak (even earlier)
 # Daily limits
 MAX_DAILY_LOSS_PCT = 0.03      # 3% of total portfolio max daily loss
 MAX_DAILY_TRADES = 12          # Cap round-trips to reduce churn and fee drag
+MAX_CONSECUTIVE_LOSSES = 5     # Block trading after 5 consecutive losses (was 3, too restrictive)
 
 # =============================================================================
 # SMART STOP LOSS SYSTEM (Avoid premature stops)

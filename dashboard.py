@@ -398,6 +398,29 @@ def update_dashboard():
         add_log(f"Dashboard update error: {e}", "error")
 
 
+def _get_risk_block_reason():
+    """Get specific reason why trading is blocked by risk rules"""
+    reasons = []
+    risk_status = bot_state.get("risk_status", {})
+    
+    max_consecutive = getattr(config, 'MAX_CONSECUTIVE_LOSSES', 5)
+    if consecutive_losses >= max_consecutive:
+        reasons.append(f"consecutive_losses ({consecutive_losses}/{max_consecutive})")
+    
+    max_daily_loss = risk_status.get("max_daily_loss", 0)
+    if max_daily_loss > 0 and daily_losses >= max_daily_loss:
+        reasons.append(f"daily_loss_limit (${daily_losses:.2f}/${max_daily_loss:.2f})")
+    
+    max_trades = getattr(config, 'MAX_DAILY_TRADES', 20)
+    if daily_trades >= max_trades:
+        reasons.append(f"daily_trade_limit ({daily_trades}/{max_trades})")
+    
+    if not reasons:
+        reasons.append("unknown risk rule")
+    
+    return ", ".join(reasons)
+
+
 # === REAL-TIME PRICE TICKER ===
 _price_ticker_running = False
 _price_ticker_thread = None
@@ -2075,8 +2098,10 @@ def bot_loop():
             max_daily_trades = getattr(config, 'MAX_DAILY_TRADES', 20)
             daily_loss_pct = (daily_losses / total_value * 100) if total_value > 0 else 0
             
+            # MAX_CONSECUTIVE_LOSSES: configurable limit (default 5, was hardcoded 3)
+            max_consecutive_losses = getattr(config, 'MAX_CONSECUTIVE_LOSSES', 5)
             can_trade = (
-                consecutive_losses < 3 and 
+                consecutive_losses < max_consecutive_losses and 
                 daily_losses < max_daily_loss and
                 daily_trades < max_daily_trades
             )
@@ -2089,6 +2114,7 @@ def bot_loop():
                 "daily_trades": daily_trades,
                 "max_daily_trades": max_daily_trades,
                 "consecutive_losses": consecutive_losses,
+                "max_consecutive_losses": max_consecutive_losses,
                 "position_size_mult": bot_state["risk_status"].get("position_size_mult", 1.0)
             }
 
@@ -2249,7 +2275,9 @@ def bot_loop():
                             update_dashboard()
                             execute_buy(current_price, regime_data, details=details)
                         else:
-                            add_log("Trade blocked by risk rules", "warning")
+                            # Detailed risk block reason
+                            risk_reason = _get_risk_block_reason()
+                            add_log(f"Trade blocked: {risk_reason}", "warning")
                     elif no_buy_downtrend:
                         # Show detailed selection status if available
                         selection_info = bot_state.get("selection_status", "")
@@ -2263,7 +2291,8 @@ def bot_loop():
                         update_dashboard()
                         execute_buy(current_price, regime_data, details=details)
                     else:
-                        add_log("Trade blocked by risk rules", "warning")
+                        risk_reason = _get_risk_block_reason()
+                        add_log(f"Trade blocked: {risk_reason}", "warning")
                 elif not loss_avoid_block and bot_state["risk_status"]["can_trade"]:
                     bot_state["activity_status"] = f"Executing BUY #{current_positions+1}/{max_positions}..."
                     update_dashboard()
@@ -2272,7 +2301,8 @@ def bot_loop():
                     if loss_avoid_block:
                         pass  # Already logged above
                     else:
-                        add_log("Trade blocked by risk rules", "warning")
+                        risk_reason = _get_risk_block_reason()
+                        add_log(f"Trade blocked: {risk_reason}", "warning")
             elif decision == Decision.BUY and not can_open_new:
                 # At max positions - wait for one to close
                 bot_state["activity_status"] = f"Max positions ({current_positions}/{max_positions}) - waiting for exit"
@@ -3281,6 +3311,51 @@ def get_risk():
     try:
         risk_mgr = get_risk_manager()
         return jsonify(risk_mgr.get_status())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/risk/reset', methods=['POST'])
+def reset_risk_counters():
+    """Reset risk counters (consecutive losses, daily losses, etc.) - use after bot gets stuck"""
+    global consecutive_losses, daily_losses, daily_trades
+    try:
+        # Reset in-memory counters
+        old_consecutive = consecutive_losses
+        old_daily_losses = daily_losses
+        old_daily_trades = daily_trades
+        
+        consecutive_losses = 0
+        daily_losses = 0
+        daily_trades = 0
+        
+        # Also reset the RiskManager state
+        risk_mgr = get_risk_manager()
+        risk_mgr.reset_daily_stats()
+        
+        # Update bot_state
+        bot_state["risk_status"]["can_trade"] = True
+        bot_state["risk_status"]["consecutive_losses"] = 0
+        bot_state["risk_status"]["daily_losses"] = 0
+        bot_state["risk_status"]["daily_trades"] = 0
+        
+        add_log("Risk counters RESET via API", "success")
+        
+        return jsonify({
+            'status': 'ok',
+            'message': 'Risk counters reset successfully',
+            'previous': {
+                'consecutive_losses': old_consecutive,
+                'daily_losses': old_daily_losses,
+                'daily_trades': old_daily_trades
+            },
+            'current': {
+                'consecutive_losses': 0,
+                'daily_losses': 0,
+                'daily_trades': 0,
+                'can_trade': True
+            }
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
