@@ -4067,6 +4067,173 @@ def send_telegram_summary():
 
 
 # =============================================================================
+# AI CHAT ASSISTANT API
+# =============================================================================
+
+@app.route('/api/chat', methods=['POST'])
+def chat_with_assistant():
+    """
+    Chat with AI assistant.
+    
+    POST /api/chat
+    Body: {"message": "your message here"}
+    
+    Returns: {"response": "AI response", "command": null or {action, params}}
+    """
+    try:
+        from ai.chat_assistant import get_chat_assistant
+        
+        data = request.get_json() or {}
+        message = data.get('message', '').strip()
+        
+        if not message:
+            return jsonify({'status': 'error', 'message': 'No message provided'}), 400
+        
+        assistant = get_chat_assistant()
+        response, command = assistant.chat(message, bot_state)
+        
+        result = {
+            'status': 'ok',
+            'response': response,
+            'command': command,
+            'ai_available': assistant.is_available,
+            'provider': assistant.provider
+        }
+        
+        # If there's a command, execute it
+        if command:
+            cmd_result = assistant.execute_command(command, bot_state)
+            result['command_result'] = cmd_result
+            
+            # Handle pending commands that need dashboard to execute
+            if cmd_result.get('status') == 'pending':
+                action = cmd_result.get('action')
+                if action == 'start_bot':
+                    start_bot()
+                    result['command_result'] = {'status': 'ok', 'message': 'Bot started'}
+                elif action == 'stop_bot':
+                    stop_bot_route()
+                    result['command_result'] = {'status': 'ok', 'message': 'Bot stopped'}
+                elif action == 'pause_bot':
+                    pause_bot()
+                    result['command_result'] = {'status': 'ok', 'message': 'Bot paused'}
+                elif action == 'resume_bot':
+                    resume_bot()
+                    result['command_result'] = {'status': 'ok', 'message': 'Bot resumed'}
+        
+        # Handle fallback commands (basic mode)
+        if response.startswith("COMMAND:"):
+            cmd = response.split("COMMAND:")[1].strip()
+            if cmd == "reset_risk":
+                reset_risk_counters()
+                result['response'] = "Risk counters have been reset."
+                result['command_result'] = {'status': 'ok'}
+            elif cmd == "start_bot":
+                start_bot()
+                result['response'] = "Bot has been started."
+                result['command_result'] = {'status': 'ok'}
+            elif cmd == "stop_bot":
+                stop_bot_route()
+                result['response'] = "Bot has been stopped."
+                result['command_result'] = {'status': 'ok'}
+            elif cmd == "pause_bot":
+                pause_bot()
+                result['response'] = "Bot has been paused."
+                result['command_result'] = {'status': 'ok'}
+            elif cmd == "resume_bot":
+                resume_bot()
+                result['response'] = "Bot has been resumed."
+                result['command_result'] = {'status': 'ok'}
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"Chat error: {traceback.format_exc()}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/chat/status', methods=['GET'])
+def chat_status():
+    """Check if AI chat is available and configured"""
+    try:
+        from ai.chat_assistant import get_chat_assistant
+        assistant = get_chat_assistant()
+        
+        return jsonify({
+            'status': 'ok',
+            'available': assistant.is_available,
+            'provider': assistant.provider,
+            'message': 'AI chat is ready' if assistant.is_available else 'Set ANTHROPIC_API_KEY or OPENAI_API_KEY in .env'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'available': False,
+            'message': str(e)
+        })
+
+
+@app.route('/api/chat/clear', methods=['POST'])
+def chat_clear_history():
+    """Clear chat conversation history"""
+    try:
+        from ai.chat_assistant import get_chat_assistant
+        assistant = get_chat_assistant()
+        assistant.clear_history()
+        return jsonify({'status': 'ok', 'message': 'Chat history cleared'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/chat/execute', methods=['POST'])
+def chat_execute_command():
+    """Execute a command directly (for confirmed actions)"""
+    try:
+        from ai.chat_assistant import get_chat_assistant
+        
+        data = request.get_json() or {}
+        command = data.get('command', {})
+        
+        if not command or not command.get('action'):
+            return jsonify({'status': 'error', 'message': 'No command provided'}), 400
+        
+        assistant = get_chat_assistant()
+        result = assistant.execute_command(command, bot_state)
+        
+        # Handle pending commands
+        if result.get('status') == 'pending':
+            action = result.get('action')
+            if action == 'start_bot':
+                start_bot()
+                result = {'status': 'ok', 'message': 'Bot started'}
+            elif action == 'stop_bot':
+                stop_bot_route()
+                result = {'status': 'ok', 'message': 'Bot stopped'}
+            elif action == 'pause_bot':
+                pause_bot()
+                result = {'status': 'ok', 'message': 'Bot paused'}
+            elif action == 'resume_bot':
+                resume_bot()
+                result = {'status': 'ok', 'message': 'Bot resumed'}
+            elif action == 'sync_balance':
+                sync_balance()
+                result = {'status': 'ok', 'message': 'Balance synced'}
+            elif action == 'update_code':
+                return auto_update()
+            elif action == 'restart_bot':
+                # Pull and restart
+                request._cached_json = {'branch': 'main', 'restart': True}
+                return auto_update()
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        import traceback
+        return jsonify({'status': 'error', 'message': str(e), 'traceback': traceback.format_exc()}), 500
+
+
+# =============================================================================
 # AUTO-UPDATE / DEPLOY API
 # =============================================================================
 
