@@ -22,7 +22,7 @@ class BinanceClient:
         self._init_client()
 
     def _init_client(self):
-        """Initialize the Binance client"""
+        """Initialize the Binance client and sync time with Binance server"""
         try:
             if config.USE_TESTNET:
                 self.client = Client(
@@ -38,16 +38,38 @@ class BinanceClient:
                 )
                 print("[LIVE] Connected to Binance")
 
-            # Test connection
+            # Sync local time with Binance server to avoid -1021 timestamp errors
+            try:
+                server_time = self.client.get_server_time()
+                local_ms = int(time.time() * 1000)
+                offset_ms = server_time["serverTime"] - local_ms
+                self.client.timestamp_offset = offset_ms
+                if abs(offset_ms) > 500:
+                    logger.info("Time sync: offset %+d ms (Binance server vs local)", offset_ms)
+            except Exception as e:
+                logger.warning("Could not sync time with Binance: %s – check system clock if you see timestamp errors", e)
+
             self.client.ping()
             print("API connection successful!")
 
         except BinanceAPIException as e:
-            print(f"Binance API Error: {e}")
+            if e.code == -1021:
+                logger.warning("Binance timestamp error at init – sync Windows time (Settings > Time & language > Sync now)")
             raise
         except Exception as e:
             logger.error("Connection Error: %s", e)
             raise
+
+    def _sync_time(self):
+        """Re-sync local time with Binance server (call on -1021 timestamp errors)."""
+        try:
+            server_time = self.client.get_server_time()
+            local_ms = int(time.time() * 1000)
+            offset_ms = server_time["serverTime"] - local_ms
+            self.client.timestamp_offset = offset_ms
+            logger.info("Time re-synced with Binance: offset %+d ms", offset_ms)
+        except Exception as e:
+            logger.warning("Could not re-sync time with Binance: %s", e)
 
     def get_current_price(self, symbol: str = None) -> float:
         """
@@ -111,23 +133,32 @@ class BinanceClient:
             logger.error("Error fetching klines: %s", e)
             return pd.DataFrame()
 
-    def get_balance(self, asset: str = None) -> float:
+    def get_balance(self, asset: str = None) -> Optional[float]:
         """
-        Get account balance for an asset
-
-        Args:
-            asset: Asset symbol (BTC, USDT, etc.)
+        Get account balance for an asset.
 
         Returns:
-            Available balance
+            Available balance, or None if the API call failed (so callers can avoid
+            overwriting good state with zeros).
         """
         asset = asset or config.QUOTE_ASSET
-        try:
-            balance = self.client.get_asset_balance(asset=asset)
-            return float(balance['free'])
-        except Exception as e:
-            logger.error("Error getting balance: %s", e)
-            return 0.0
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                balance = self.client.get_asset_balance(asset=asset)
+                return float(balance['free'])
+            except BinanceAPIException as e:
+                if e.code == -1021 or "timestamp" in str(e).lower():
+                    self._sync_time()
+                    if attempt < max_retries - 1:
+                        time.sleep(0.5 * (attempt + 1))
+                        continue
+                logger.error("Error getting balance: %s", e)
+                return None
+            except Exception as e:
+                logger.error("Error getting balance: %s", e)
+                return None
+        return None
 
     def place_market_buy(
         self,
@@ -147,39 +178,39 @@ class BinanceClient:
         symbol = symbol or config.SYMBOL
         quote_amount = quote_amount or config.TRADE_AMOUNT_USDT
 
-        try:
-            # Get current price to calculate quantity
-            price = self.get_current_price(symbol)
-            quantity = quote_amount / price
-
-            # Round quantity to appropriate precision
-            info = self.client.get_symbol_info(symbol)
-            step_size = float([f['stepSize'] for f in info['filters']
-                             if f['filterType'] == 'LOT_SIZE'][0])
-            precision = len(str(step_size).split('.')[-1].rstrip('0'))
-            quantity = round(quantity, precision)
-
-            order = self.client.order_market_buy(
-                symbol=symbol,
-                quantity=quantity
-            )
-
-            return {
-                "status": "filled",
-                "symbol": symbol,
-                "side": "BUY",
-                "type": "MARKET",
-                "quantity": float(order['executedQty']),
-                "price": float(order['fills'][0]['price']) if order['fills'] else price,
-                "quote_amount": quote_amount,
-                "order_id": order['orderId'],
-                "timestamp": time.time(),
-            }
-
-        except BinanceAPIException as e:
-            return {"status": "error", "message": str(e)}
-        except Exception as e:
-            return {"status": "error", "message": str(e)}
+        for attempt in range(2):
+            try:
+                price = self.get_current_price(symbol)
+                quantity = quote_amount / price
+                info = self.client.get_symbol_info(symbol)
+                step_size = float([f['stepSize'] for f in info['filters']
+                                 if f['filterType'] == 'LOT_SIZE'][0])
+                precision = len(str(step_size).split('.')[-1].rstrip('0'))
+                quantity = round(quantity, precision)
+                order = self.client.order_market_buy(
+                    symbol=symbol,
+                    quantity=quantity
+                )
+                return {
+                    "status": "filled",
+                    "symbol": symbol,
+                    "side": "BUY",
+                    "type": "MARKET",
+                    "quantity": float(order['executedQty']),
+                    "price": float(order['fills'][0]['price']) if order['fills'] else self.get_current_price(symbol),
+                    "quote_amount": quote_amount,
+                    "order_id": order['orderId'],
+                    "timestamp": time.time(),
+                }
+            except BinanceAPIException as e:
+                if (e.code == -1021 or "timestamp" in str(e).lower()) and attempt == 0:
+                    self._sync_time()
+                    time.sleep(0.5)
+                    continue
+                return {"status": "error", "message": str(e)}
+            except Exception as e:
+                return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": "Timestamp error after retry"}
 
     def place_market_sell(
         self,
@@ -199,58 +230,51 @@ class BinanceClient:
         symbol = symbol or config.SYMBOL
         import math
 
-        try:
-            # ALWAYS get actual balance first - this is the source of truth
-            actual_balance = self.get_balance(config.BASE_ASSET)
-            
-            # If no quantity specified or quantity exceeds balance, use actual balance
-            if quantity is None or quantity > actual_balance:
-                if quantity is not None:
-                    logger.info("SELL: Adjusting quantity from %.8f to actual balance %.8f", quantity, actual_balance)
-                quantity = actual_balance
-
-            # Skip order when nothing to sell (avoids "below minimum" API error)
-            if quantity <= 0:
-                return {"status": "error", "message": "No BTC to sell (balance 0) - clear position"}
-
-            # Get symbol precision
-            info = self.client.get_symbol_info(symbol)
-            step_size = float([f['stepSize'] for f in info['filters']
-                             if f['filterType'] == 'LOT_SIZE'][0])
-            precision = len(str(step_size).split('.')[-1].rstrip('0'))
-            
-            # TRUNCATE (floor) instead of rounding to ensure we never exceed balance
-            # This prevents rounding 0.00043956 to 0.00044 which would fail
-            multiplier = 10 ** precision
-            quantity = math.floor(quantity * multiplier) / multiplier
-            
-            # Safety check - if quantity is 0 or too small, don't trade
-            min_qty = float([f['minQty'] for f in info['filters']
-                           if f['filterType'] == 'LOT_SIZE'][0])
-            if quantity < min_qty:
-                return {"status": "error", "message": f"Quantity {quantity} below minimum {min_qty}"}
-
-            order = self.client.order_market_sell(
-                symbol=symbol,
-                quantity=quantity
-            )
-
-            return {
-                "status": "filled",
-                "symbol": symbol,
-                "side": "SELL",
-                "type": "MARKET",
-                "quantity": float(order['executedQty']),
-                "price": float(order['fills'][0]['price']) if order['fills'] else self.get_current_price(symbol),
-                "quote_amount": float(order['cummulativeQuoteQty']),
-                "order_id": order['orderId'],
-                "timestamp": time.time(),
-            }
-
-        except BinanceAPIException as e:
-            return {"status": "error", "message": str(e)}
-        except Exception as e:
-            return {"status": "error", "message": str(e)}
+        for attempt in range(2):
+            try:
+                actual_balance = self.get_balance(config.BASE_ASSET)
+                if actual_balance is None:
+                    return {"status": "error", "message": "Could not get balance (API error)"}
+                if quantity is None or quantity > actual_balance:
+                    if quantity is not None:
+                        logger.info("SELL: Adjusting quantity from %.8f to actual balance %.8f", quantity, actual_balance)
+                    quantity = actual_balance
+                if quantity <= 0:
+                    return {"status": "error", "message": "No balance to sell - clear position"}
+                info = self.client.get_symbol_info(symbol)
+                step_size = float([f['stepSize'] for f in info['filters']
+                                 if f['filterType'] == 'LOT_SIZE'][0])
+                precision = len(str(step_size).split('.')[-1].rstrip('0'))
+                multiplier = 10 ** precision
+                quantity = math.floor(quantity * multiplier) / multiplier
+                min_qty = float([f['minQty'] for f in info['filters']
+                               if f['filterType'] == 'LOT_SIZE'][0])
+                if quantity < min_qty:
+                    return {"status": "error", "message": f"Quantity {quantity} below minimum {min_qty}"}
+                order = self.client.order_market_sell(
+                    symbol=symbol,
+                    quantity=quantity
+                )
+                return {
+                    "status": "filled",
+                    "symbol": symbol,
+                    "side": "SELL",
+                    "type": "MARKET",
+                    "quantity": float(order['executedQty']),
+                    "price": float(order['fills'][0]['price']) if order['fills'] else self.get_current_price(symbol),
+                    "quote_amount": float(order['cummulativeQuoteQty']),
+                    "order_id": order['orderId'],
+                    "timestamp": time.time(),
+                }
+            except BinanceAPIException as e:
+                if (e.code == -1021 or "timestamp" in str(e).lower()) and attempt == 0:
+                    self._sync_time()
+                    time.sleep(0.5)
+                    continue
+                return {"status": "error", "message": str(e)}
+            except Exception as e:
+                return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": "Timestamp error after retry"}
 
     def get_trade_history(self) -> List[Dict]:
         """Get trade history from Binance"""
@@ -262,12 +286,26 @@ class BinanceClient:
             return []
 
     def get_account_value(self) -> float:
-        """Get total account value in quote currency (USDT)"""
-        price = self.get_current_price()
-        base_balance = self.get_balance(config.BASE_ASSET)
-        quote_balance = self.get_balance(config.QUOTE_ASSET)
-        base_value = base_balance * price
-        return base_value + quote_balance
+        """Get total account value in quote currency (USDT) - includes all traded coins"""
+        total_value = 0.0
+        
+        # Add USDT balance
+        usdt_balance = self.get_balance(config.QUOTE_ASSET) or 0.0
+        total_value += usdt_balance
+        
+        # Add value of all traded coins (BTC, ETH, BNB, SOL, XRP, DOGE, ADA)
+        symbols = getattr(config, 'SYMBOLS', [("BTCUSDT", "BTC")])
+        for symbol, base_asset in symbols:
+            try:
+                balance = self.get_balance(base_asset) or 0.0
+                if balance > 0:
+                    price = self.get_current_price(symbol)
+                    total_value += balance * price
+            except Exception as e:
+                logger.warning(f"Could not get value for {base_asset}: {e}")
+                continue
+        
+        return total_value
 
 
 # Test the client (requires API keys in .env)
@@ -285,6 +323,5 @@ if __name__ == "__main__":
     df = client.get_historical_klines(limit=10)
     logger.info("Last 10 candles:\n%s", df.tail())
 
-    # Check balance
     usdt_balance = client.get_balance(config.QUOTE_ASSET)
-    logger.info("USDT balance: $%s | Total value: $%s", f"{usdt_balance:,.2f}", f"{client.get_account_value():,.2f}")
+    logger.info("USDT balance: $%s | Total value: $%s", f"{(usdt_balance or 0):,.2f}", f"{client.get_account_value():,.2f}")

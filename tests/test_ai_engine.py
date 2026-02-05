@@ -40,11 +40,16 @@ class TestConfluenceCalculation(unittest.TestCase):
     def test_bullish_confluence(self):
         """Test confluence counts bullish signals"""
         analysis = {
-            "rsi": 35,            # Oversold (bullish)
-            "macd_signal": "bullish",
-            "bb_position": "lower", # At lower band (bullish)
-            "trend": "bullish",
-            "volume_confirmed": True
+            "momentum": {"score": 0.6},
+            "macd": {"score": 0.6, "signal": "bullish"},
+            "bollinger": {"score": 0.6, "signal": "near_lower"},
+            "ema": {"score": 0.4, "trend": "uptrend"},
+            "support_resistance": {"score": 0.5, "signal": "near_support"},
+            "ml_prediction": {"score": 0.3},
+            "ichimoku": {"score": 0.4},
+            "mfi": {"score": 0.3},
+            "williams_r": {"score": 0.2},
+            "cci": {"score": 0.2}
         }
         
         confluence = self.ai.calculate_confluence(analysis)
@@ -52,15 +57,21 @@ class TestConfluenceCalculation(unittest.TestCase):
         self.assertIn("count", confluence)
         self.assertIn("direction", confluence)
         self.assertGreater(confluence["count"], 0)
+        self.assertEqual(confluence["direction"], "bullish")
     
     def test_bearish_confluence(self):
         """Test confluence counts bearish signals"""
         analysis = {
-            "rsi": 75,            # Overbought (bearish)
-            "macd_signal": "bearish",
-            "bb_position": "upper", # At upper band (bearish)
-            "trend": "bearish",
-            "volume_confirmed": True
+            "momentum": {"score": -0.6},
+            "macd": {"score": -0.6, "signal": "bearish"},
+            "bollinger": {"score": -0.6, "signal": "near_upper"},
+            "ema": {"score": -0.4, "trend": "downtrend"},
+            "support_resistance": {"score": -0.5, "signal": "near_resistance"},
+            "ml_prediction": {"score": -0.3},
+            "ichimoku": {"score": -0.4},
+            "mfi": {"score": -0.3},
+            "williams_r": {"score": -0.2},
+            "cci": {"score": -0.2}
         }
         
         confluence = self.ai.calculate_confluence(analysis)
@@ -104,29 +115,50 @@ class TestScoreCalculation(unittest.TestCase):
     def test_score_range(self):
         """Test score is within valid range"""
         analysis = {
-            "rsi": 50,
-            "macd_signal": "neutral",
-            "trend": "neutral"
+            "momentum": {"score": 0.0},
+            "macd": {"score": 0.0, "signal": "neutral"},
+            "bollinger": {"score": 0.0, "signal": "neutral"},
+            "ema": {"score": 0.0, "trend": "neutral"},
+            "support_resistance": {"score": 0.0, "signal": "middle_range"},
+            "ml_prediction": {"score": 0.0},
+            "ichimoku": {"score": 0.0},
+            "mfi": {"score": 0.0},
+            "williams_r": {"score": 0.0},
+            "cci": {"score": 0.0}
         }
         
         score, details = self.ai.calculate_score(analysis)
         
-        self.assertGreaterEqual(score, 0.0)
+        self.assertGreaterEqual(score, -1.0)
         self.assertLessEqual(score, 1.0)
         self.assertIsInstance(details, dict)
     
     def test_bullish_signals_increase_score(self):
         """Test bullish signals produce higher score"""
         bearish_analysis = {
-            "rsi": 75,
-            "macd_signal": "bearish",
-            "trend": "bearish"
+            "momentum": {"score": -0.6},
+            "macd": {"score": -0.6, "signal": "bearish"},
+            "bollinger": {"score": -0.5, "signal": "near_upper"},
+            "ema": {"score": -0.4, "trend": "downtrend"},
+            "support_resistance": {"score": -0.3, "signal": "near_resistance"},
+            "ml_prediction": {"score": -0.2},
+            "ichimoku": {"score": -0.4},
+            "mfi": {"score": -0.3},
+            "williams_r": {"score": -0.2},
+            "cci": {"score": -0.2}
         }
         
         bullish_analysis = {
-            "rsi": 30,
-            "macd_signal": "bullish",
-            "trend": "bullish"
+            "momentum": {"score": 0.6},
+            "macd": {"score": 0.6, "signal": "bullish"},
+            "bollinger": {"score": 0.5, "signal": "near_lower"},
+            "ema": {"score": 0.4, "trend": "uptrend"},
+            "support_resistance": {"score": 0.3, "signal": "near_support"},
+            "ml_prediction": {"score": 0.2},
+            "ichimoku": {"score": 0.4},
+            "mfi": {"score": 0.3},
+            "williams_r": {"score": 0.2},
+            "cci": {"score": 0.2}
         }
         
         bearish_score, _ = self.ai.calculate_score(bearish_analysis)

@@ -873,10 +873,10 @@
         <div class="grid">
             <!-- Price Card -->
             <div class="card price-card">
-                <div class="card-title">BTC/USDT Price</div>
+                <div id="priceCardTitle" class="card-title">BTC/USDT Price</div>
                 <div id="currentPrice" class="card-value">$0.00</div>
                 <div id="lastPriceDisplay" style="color: #888; font-size: 0.9em; margin-top: 6px; display: block;">Last recorded: --</div>
-                <div id="lastUpdate" style="color: #888; margin-top: 6px;">Fetching data...</div>
+                <div id="priceHistoryDisplay" style="color: #666; font-size: 0.8em; margin-top: 4px; line-height: 1.3;">10 min ago: -- | Now: --</div>
             </div>
 
             <!-- AI Score Card -->
@@ -897,6 +897,10 @@
                 <div id="activityStatus" class="activity-status" style="margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 0.9em; color: #aaa;">
                     <strong>Status:</strong> <span id="activityStatusText">Idle</span>
                 </div>
+                <div id="selectionStatusBox" style="margin-top: 8px; padding: 10px; background: rgba(0,100,255,0.1); border-radius: 8px; border-left: 3px solid #0066ff;">
+                    <strong style="color: #0088ff;">🔍 Coin Selection:</strong> <span id="selectionStatus" style="color: #00ff88;">Scanning...</span>
+                    <div id="lastTickTime" style="font-size: 0.75em; color: #666; margin-top: 4px;">Last tick: --</div>
+                </div>
                 <div id="decisionReasons" class="decision-reasons" style="margin-top: 8px; font-size: 0.8em; color: #888; max-height: 80px; overflow-y: auto;">
                     <strong>Why:</strong> <span id="decisionReasonsText">-</span>
                 </div>
@@ -909,7 +913,7 @@
             </div>
 
             <div class="card">
-                <div class="card-title">BTC Balance</div>
+                <div id="balanceBaseLabel" class="card-title">BTC Balance</div>
                 <div id="balanceBtc" class="card-value neutral">0.00000000</div>
             </div>
 
@@ -917,7 +921,29 @@
                 <div class="card-title">Total Value</div>
                 <div id="totalValue" class="card-value neutral">$0.00</div>
             </div>
+        </div>
 
+        <!-- Symbols (multi-coin rotation) -->
+        <div class="card" style="margin-top: 16px;">
+            <div class="card-title">Symbols</div>
+            <div id="symbolScanTable" style="overflow-x: auto;">
+                <table style="width: 100%; font-size: 0.85em; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #333;">
+                            <th style="text-align: left; padding: 6px 8px;">Symbol</th>
+                            <th style="text-align: left; padding: 6px 8px;">Regime</th>
+                            <th style="text-align: right; padding: 6px 8px;">AI Score</th>
+                            <th style="text-align: center; padding: 6px 8px;">Selected</th>
+                        </tr>
+                    </thead>
+                    <tbody id="symbolScanBody">
+                        <tr><td colspan="4" style="padding: 8px; color: #666;">No data</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid" style="margin-top: 0;">
             <!-- Position Card -->
             <div id="positionCard" class="card position-card no-position">
                 <div class="card-title">Current Position</div>
@@ -1246,6 +1272,45 @@
             </div>
         </div>
 
+        <!-- Performance Analytics: Sharpe, Sortino, Drawdown, Equity Curve -->
+        <div class="card" style="background: linear-gradient(135deg, rgba(255, 165, 0, 0.08), rgba(255, 69, 0, 0.08)); border: 1px solid rgba(255, 165, 0, 0.25);">
+            <div class="card-title" style="color: #ffa500;">📊 Performance Analytics</div>
+            <div class="smart-grid" style="margin-bottom: 15px;">
+                <div class="smart-item">
+                    <div class="smart-item-label">Sharpe Ratio</div>
+                    <div id="perfSharpe" class="smart-item-value">--</div>
+                </div>
+                <div class="smart-item">
+                    <div class="smart-item-label">Sortino Ratio</div>
+                    <div id="perfSortino" class="smart-item-value">--</div>
+                </div>
+                <div class="smart-item">
+                    <div class="smart-item-label">Max Drawdown</div>
+                    <div id="perfMaxDd" class="smart-item-value">--</div>
+                </div>
+                <div class="smart-item">
+                    <div class="smart-item-label">Profit Factor</div>
+                    <div id="perfPf" class="smart-item-value">--</div>
+                </div>
+                <div class="smart-item">
+                    <div class="smart-item-label">Expectancy</div>
+                    <div id="perfExpectancy" class="smart-item-value">--</div>
+                </div>
+            </div>
+            <div style="margin-top: 10px;">
+                <div class="smart-item-label" style="margin-bottom: 6px;">Equity Curve (last 100 points)</div>
+                <canvas id="equityCurveCanvas" width="600" height="120" style="max-width: 100%; height: auto; background: rgba(0,0,0,0.2); border-radius: 8px;"></canvas>
+                <div id="equityCurveEmpty" style="display: none; padding: 20px; color: #666; text-align: center;">No equity data yet. Trades will populate this chart.</div>
+            </div>
+        </div>
+
+        <!-- Deep Insights (loss-avoidance from periodic analysis) -->
+        <div id="deepInsightsCard" class="card" style="display: none; background: linear-gradient(135deg, rgba(255, 99, 71, 0.08), rgba(255, 165, 0, 0.08)); border: 1px solid rgba(255, 99, 71, 0.25);">
+            <div class="card-title" style="color: #ff6347;">Recent Analysis (loss-avoidance)</div>
+            <div id="deepInsightsContent" style="font-size: 0.9em; line-height: 1.5;"></div>
+            <div id="deepInsightsTime" style="margin-top: 8px; font-size: 0.8em; color: #888;"></div>
+        </div>
+
         <!-- PHASE 7: AI Learning Stats Panel -->
         <div class="card" style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.1), rgba(75, 0, 130, 0.1)); border: 1px solid rgba(138, 43, 226, 0.3);">
             <div class="card-title" style="color: #9370db;">🧠 AI Indicator Learning</div>
@@ -1463,6 +1528,7 @@
                 <thead>
                     <tr>
                         <th>#</th>
+                        <th>Symbol</th>
                         <th>Time</th>
                         <th>Type</th>
                         <th>Price</th>
@@ -1532,6 +1598,72 @@
             addLogEntry(log);
         });
 
+        // REAL-TIME PRICE TICKER - Updates every 5 seconds
+        socket.on('price_tick', function(tick) {
+            // Flash the live indicator
+            const liveIndicator = document.getElementById('liveIndicator');
+            if (liveIndicator) {
+                liveIndicator.style.background = '#00ff88';
+                setTimeout(function() { liveIndicator.style.background = '#ff4444'; }, 100);
+            }
+            
+            // Update price instantly
+            if (tick.price > 0) {
+                const priceEl = document.getElementById('currentPrice');
+                if (priceEl) {
+                    const oldPrice = parseFloat(priceEl.textContent.replace(/[$,]/g, '')) || 0;
+                    priceEl.textContent = '$' + formatNumber(tick.price);
+                    
+                    // Flash green/red based on price movement
+                    if (tick.price > oldPrice) {
+                        priceEl.style.color = '#00ff88';
+                    } else if (tick.price < oldPrice) {
+                        priceEl.style.color = '#ff4444';
+                    }
+                    setTimeout(function() { priceEl.style.color = ''; }, 500);
+                }
+            }
+            
+            // Update PnL in real-time
+            const pnlEl = document.getElementById('pnlPercent');
+            if (pnlEl && (tick.pnl_percent !== 0 || document.querySelector('.position-active'))) {
+                pnlEl.textContent = (tick.pnl_percent >= 0 ? '+' : '') + tick.pnl_percent.toFixed(2) + '%';
+                pnlEl.className = tick.pnl_percent >= 0 ? 'pnl-positive' : 'pnl-negative';
+            }
+            
+            // Update activity status
+            const activityEl = document.getElementById('activityStatusText');
+            if (activityEl && tick.activity) {
+                activityEl.textContent = tick.activity;
+            }
+            
+            // Update selection status  
+            const selectionEl = document.getElementById('selectionStatus');
+            if (selectionEl && tick.selection_status) {
+                selectionEl.textContent = tick.selection_status;
+                // Color code the selection status
+                if (tick.selection_status.includes('READY') || tick.selection_status.includes('HIGH SCORE')) {
+                    selectionEl.style.color = '#00ff88';
+                } else if (tick.selection_status.includes('WAITING')) {
+                    selectionEl.style.color = '#ffaa00';
+                } else if (tick.selection_status.includes('BEARISH')) {
+                    selectionEl.style.color = '#ff4444';
+                }
+            }
+            
+            // Update AI score display
+            const aiScoreEl = document.getElementById('aiScoreValue');
+            if (aiScoreEl && tick.ai_score !== undefined) {
+                aiScoreEl.textContent = (tick.ai_score >= 0 ? '+' : '') + tick.ai_score.toFixed(3);
+            }
+            
+            // Update timestamp
+            const timestampEl = document.getElementById('lastTickTime');
+            if (timestampEl) {
+                timestampEl.textContent = 'Last tick: ' + new Date(tick.timestamp * 1000).toLocaleTimeString();
+            }
+        });
+
         // Update all dashboard elements
         function updateDashboard(data) {
             // Status badge
@@ -1548,6 +1680,12 @@
             document.getElementById('btnStartLive').disabled = data.running;
             document.getElementById('btnStop').disabled = !data.running;
 
+            // Price card title (active pair for multi-coin)
+            const priceTitleEl = document.getElementById('priceCardTitle');
+            if (priceTitleEl) {
+                const base = data.current_base_asset || 'BTC';
+                priceTitleEl.textContent = base + '/USDT Price';
+            }
             // Price
             if (data.current_price > 0) {
                 document.getElementById('currentPrice').textContent = '$' + formatNumber(data.current_price);
@@ -1564,14 +1702,34 @@
             } else {
                 lastPriceEl.style.display = 'none';
             }
-
-            // Last update
-            if (data.last_update) {
-                document.getElementById('lastUpdate').textContent = 'Last update: ' + data.last_update;
-            } else if (data.running) {
-                document.getElementById('lastUpdate').textContent = 'Live - updating...';
+            // Last 10 min price comparison (newest first in array; oldest = last element)
+            const priceHistoryEl = document.getElementById('priceHistoryDisplay');
+            if (data.price_history && Array.isArray(data.price_history) && data.price_history.length > 0) {
+                const newest = data.price_history[0];
+                const oldest = data.price_history[data.price_history.length - 1];
+                const nowStr = '$' + formatNumber(typeof newest === 'object' && newest != null && 'p' in newest ? newest.p : data.current_price);
+                const oldStr = (typeof oldest === 'object' && oldest != null && 'p' in oldest) ? ('$' + formatNumber(oldest.p)) : '--';
+                priceHistoryEl.textContent = '10 min ago: ' + oldStr + ' | Now: ' + nowStr;
+                priceHistoryEl.style.display = 'block';
             } else {
-                document.getElementById('lastUpdate').textContent = 'Fetching data...';
+                const nowStr = data.current_price > 0 ? ('$' + formatNumber(data.current_price)) : '--';
+                priceHistoryEl.textContent = '10 min ago: -- | Now: ' + nowStr;
+                priceHistoryEl.style.display = 'block';
+            }
+            // Base asset balance label (multi-coin)
+            const balanceBaseLabel = document.getElementById('balanceBaseLabel');
+            if (balanceBaseLabel) balanceBaseLabel.textContent = (data.current_base_asset || 'BTC') + ' Balance';
+            // Symbols table (multi-coin rotation)
+            const symbolScanBody = document.getElementById('symbolScanBody');
+            if (symbolScanBody && data.symbol_scan && Array.isArray(data.symbol_scan) && data.symbol_scan.length > 0) {
+                symbolScanBody.innerHTML = data.symbol_scan.map(function(row) {
+                    const pair = (row.base_asset || (row.symbol || '').replace('USDT', '')) + '/USDT';
+                    const selected = row.selected ? '&#10003;' : '';
+                    const rowStyle = row.selected ? 'background: rgba(0,120,0,0.2);' : '';
+                    return '<tr style="' + rowStyle + '"><td style="padding: 6px 8px;">' + pair + '</td><td style="padding: 6px 8px;">' + (row.regime || '-') + '</td><td style="text-align: right; padding: 6px 8px;">' + (row.score != null ? row.score : '-') + '</td><td style="text-align: center; padding: 6px 8px;">' + selected + '</td></tr>';
+                }).join('');
+            } else if (symbolScanBody) {
+                symbolScanBody.innerHTML = '<tr><td colspan="4" style="padding: 8px; color: #666;">No data</td></tr>';
             }
 
             // AI Score
@@ -1591,6 +1749,22 @@
             // Activity status - what is the bot doing right now
             const activityEl = document.getElementById('activityStatusText');
             activityEl.textContent = data.activity_status || 'Idle';
+
+            // Selection status - which coin is being selected
+            const selectionEl = document.getElementById('selectionStatus');
+            if (selectionEl && data.selection_status) {
+                selectionEl.textContent = data.selection_status;
+                // Color code based on status
+                if (data.selection_status.includes('READY') || data.selection_status.includes('HIGH SCORE')) {
+                    selectionEl.style.color = '#00ff88';
+                } else if (data.selection_status.includes('WAITING')) {
+                    selectionEl.style.color = '#ffaa00';
+                } else if (data.selection_status.includes('BEARISH')) {
+                    selectionEl.style.color = '#ff4444';
+                } else {
+                    selectionEl.style.color = '#aaa';
+                }
+            }
 
             // Decision reasons - why BUY/SELL/HOLD
             const reasonsEl = document.getElementById('decisionReasonsText');
@@ -1612,8 +1786,8 @@
             // Indicators
             updateIndicators(data.indicators);
 
-            // Trade history
-            updateHistory(data.trade_history);
+            // Trade history (always refresh when we receive state)
+            updateHistory(Array.isArray(data.trade_history) ? data.trade_history : []);
 
             // Smart Analysis features
             updateSmartAnalysis(data);
@@ -1794,7 +1968,11 @@
                 probEl.textContent = (ml.probability != null ? Number(ml.probability).toFixed(2) : '0.50');
 
                 if (ml.models_loaded) {
-                    statusEl.textContent = ml.error || 'Models loaded';
+                    let statusText = ml.error || 'Models loaded';
+                    if (data.ml_status && data.ml_status.rolling_accuracy != null) {
+                        statusText += ' | Accuracy: ' + data.ml_status.rolling_accuracy + '%';
+                    }
+                    statusEl.textContent = statusText;
                 } else {
                     statusEl.textContent = ml.error || 'Run: python ml_training.py';
                 }
@@ -1825,6 +2003,19 @@
             
             // === PHASE 7: Update AI Learning Stats ===
             updateLearningStats(data);
+
+            // === Deep Insights (periodic analysis for loss-avoidance) ===
+            const diCard = document.getElementById('deepInsightsCard');
+            const diContent = document.getElementById('deepInsightsContent');
+            const diTime = document.getElementById('deepInsightsTime');
+            if (data.deep_insights && (data.deep_insights.weaknesses || []).length > 0) {
+                diCard.style.display = 'block';
+                const w = data.deep_insights.weaknesses.slice(0, 5);
+                diContent.innerHTML = w.map(x => '<div style="margin: 4px 0;">• ' + (x.description || x.weakness) + '</div>').join('');
+                diTime.textContent = 'Last analysis: ' + (data.deep_insights.last_analysis || '--');
+            } else if (diCard) {
+                diCard.style.display = 'none';
+            }
         }
 
         function updatePhase2Features(data) {
@@ -2342,23 +2533,38 @@
             const tbody = document.getElementById('historyBody');
 
             if (!history || history.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No trades yet</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No trades yet</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = history.map(trade => `
+            // Sort by time descending (newest first) and assign sequential numbers
+            const sorted = [...history].sort((a, b) => {
+                const timeA = new Date(a.time || 0).getTime();
+                const timeB = new Date(b.time || 0).getTime();
+                return timeB - timeA;
+            });
+
+            tbody.innerHTML = sorted.map((trade, index) => {
+                const tradeNum = history.length - index;
+                const symbol = trade.symbol || trade.base_asset || '?';
+                const displaySymbol = symbol.replace('USDT', '');
+                const pnlValue = trade.pnl || 0;
+                const pnlPercent = trade.pnl_percent || 0;
+                
+                return `
                 <tr>
-                    <td>${trade.id}</td>
-                    <td>${trade.time}</td>
-                    <td class="type-${trade.type.toLowerCase()}">${trade.type}</td>
-                    <td>$${formatNumber(trade.price)}</td>
-                    <td>${trade.quantity.toFixed(6)}</td>
-                    <td>$${formatNumber(trade.amount)}</td>
-                    <td class="${trade.pnl >= 0 ? 'positive' : 'negative'}">
-                        ${trade.type === 'SELL' ? (trade.pnl >= 0 ? '+' : '') + '$' + formatNumber(trade.pnl) + ' (' + trade.pnl_percent.toFixed(2) + '%)' : '-'}
+                    <td>${tradeNum}</td>
+                    <td><span style="color: #00d4ff; font-weight: 600;">${displaySymbol}</span></td>
+                    <td>${trade.time || '-'}</td>
+                    <td class="type-${(trade.type || 'buy').toLowerCase()}">${trade.type || '-'}</td>
+                    <td>$${formatNumber(trade.price || 0)}</td>
+                    <td>${(trade.quantity || 0).toFixed(6)}</td>
+                    <td>$${formatNumber(trade.amount || 0)}</td>
+                    <td class="${pnlValue >= 0 ? 'positive' : 'negative'}">
+                        ${trade.type === 'SELL' ? (pnlValue >= 0 ? '+' : '') + '$' + formatNumber(pnlValue) + ' (' + pnlPercent.toFixed(2) + '%)' : '-'}
                     </td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         function updateActivityLog(logs, data) {
@@ -2408,6 +2614,51 @@
         function formatNumber(num) {
             if (num === null || num === undefined || isNaN(num)) return '0.00';
             return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function updatePerformancePanel(metrics) {
+            if (!metrics) return;
+            const ratios = metrics.ratios || {};
+            const drawdown = metrics.drawdown || {};
+            const summary = metrics.summary || {};
+            const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+            set('perfSharpe', ratios.sharpe_ratio != null ? Number(ratios.sharpe_ratio).toFixed(2) : '--');
+            set('perfSortino', ratios.sortino_ratio != null ? (ratios.sortino_ratio === Infinity ? '∞' : Number(ratios.sortino_ratio).toFixed(2)) : '--');
+            set('perfMaxDd', drawdown.max_drawdown_pct != null ? drawdown.max_drawdown_pct + '%' : '--');
+            set('perfPf', ratios.profit_factor != null ? (ratios.profit_factor === Infinity ? '∞' : Number(ratios.profit_factor).toFixed(2)) : '--');
+            set('perfExpectancy', ratios.expectancy != null ? '$' + Number(ratios.expectancy).toFixed(2) : '--');
+            const curve = metrics.equity_curve || [];
+            const canvas = document.getElementById('equityCurveCanvas');
+            const emptyEl = document.getElementById('equityCurveEmpty');
+            if (canvas) {
+                if (curve.length < 2) {
+                    canvas.style.display = 'none';
+                    if (emptyEl) emptyEl.style.display = 'block';
+                } else {
+                    if (emptyEl) emptyEl.style.display = 'none';
+                    canvas.style.display = 'block';
+                    const ctx = canvas.getContext('2d');
+                    const w = canvas.width;
+                    const h = canvas.height;
+                    ctx.clearRect(0, 0, w, h);
+                    const values = curve.map(p => p.value);
+                    const minV = Math.min(...values);
+                    const maxV = Math.max(...values);
+                    const range = maxV - minV || 1;
+                    const padding = 4;
+                    const xStep = (w - 2 * padding) / (curve.length - 1) || 0;
+                    ctx.strokeStyle = '#00ff88';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    curve.forEach((p, i) => {
+                        const x = padding + i * xStep;
+                        const y = h - padding - ((p.value - minV) / range) * (h - 2 * padding);
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    });
+                    ctx.stroke();
+                }
+            }
         }
 
         // Tab switching
@@ -2639,6 +2890,18 @@
             .then(data => {
                 updateDashboard(data);
             });
+
+        // Fetch performance analytics (Sharpe, drawdown, equity curve) every 15s
+        function fetchPerformance() {
+            fetch('/api/performance')
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.error) updatePerformancePanel(data);
+                })
+                .catch(() => {});
+        }
+        fetchPerformance();
+        setInterval(fetchPerformance, 15000);
 
         // === TELEGRAM FUNCTIONS ===
         function toggleTelegramTokenVisibility() {

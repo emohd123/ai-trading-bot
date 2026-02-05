@@ -47,7 +47,7 @@ class Trader:
         # Position tracking
         self.current_position: Optional[Dict] = None
         self.trade_history = []
-        self.starting_balance = self.client.get_balance(config.QUOTE_ASSET)
+        self.starting_balance = self.client.get_balance(config.QUOTE_ASSET) or 0
 
         # === NEW: Smart Risk Management ===
         # Trailing stop tracking
@@ -627,8 +627,7 @@ class Trader:
 
         logger.info("EXECUTING BUY ORDER - Position size: $%s (risk-adjusted)", f"{position_size:,.2f}")
 
-        # Check balance before attempting buy
-        usdt_balance = self.client.get_balance(config.QUOTE_ASSET)
+        usdt_balance = self.client.get_balance(config.QUOTE_ASSET) or 0
         min_required = position_size * 1.02  # 2% buffer for fees
         if usdt_balance < min_required:
             logger.warning("Insufficient balance: $%s USDT (need $%s) - add USDT to Spot wallet",
@@ -720,9 +719,11 @@ class Trader:
 
             # PHASE 2: Record trade result in AI engine for streak tracking and adaptive weights
             indicator_scores = self.current_position.get("indicator_scores", {})
+            regime = self.current_position.get("entry_regime") or (self.current_regime_data.get("regime_name") if self.current_regime_data else None)
             self.ai_engine.record_trade_result(
                 profit_percent, exit_type,
-                indicator_scores_at_entry=indicator_scores if indicator_scores else None
+                indicator_scores_at_entry=indicator_scores if indicator_scores else None,
+                regime=regime
             )
 
             # ML outcome feedback: update prediction with actual direction so ML can learn

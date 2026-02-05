@@ -3,9 +3,9 @@
   "daily_losses": 0.0,
   "daily_trades": 0,
   "consecutive_losses": 0,
-  "consecutive_wins": 0,
+  "consecutive_wins": 3,
   "risk_mode": "normal",
-  "last_reset_date": "2026-02-04",
+  "last_reset_date": "2026-02-05",
   "blocked_until": null,
-  "last_updated": "2026-02-04T19:28:27.436423"
+  "last_updated": "2026-02-05T05:44:48.793903"
 }

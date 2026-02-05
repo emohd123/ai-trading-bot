@@ -90,6 +90,426 @@
         "confidence_tier": "high",
         "volatility_tier": "low"
       }
+    },
+    {
+      "trade_id": 80,
+      "timestamp": "2026-02-04T20:30:33.428668",
+      "position_size": 21.599999999999998,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 0.92,
+        "confidence": 1.0,
+        "confluence": 7,
+        "streak_multiplier": 0.75,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 82,
+      "timestamp": "2026-02-04T20:35:41.833716",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 0.92,
+        "confidence": 1.0,
+        "confluence": 7,
+        "streak_multiplier": 1.0,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 84,
+      "timestamp": "2026-02-04T21:10:57.889742",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 0.97,
+        "confidence": 0.89,
+        "confluence": 7,
+        "streak_multiplier": 1.2,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 86,
+      "timestamp": "2026-02-04T21:47:32.169196",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.07,
+        "confidence": 0.83,
+        "confluence": 6,
+        "streak_multiplier": 1.3,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 88,
+      "timestamp": "2026-02-04T22:42:41.062403",
+      "position_size": 21.599999999999998,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.1,
+        "confidence": 0.71,
+        "confluence": 6,
+        "streak_multiplier": 0.75,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 90,
+      "timestamp": "2026-02-04T22:49:29.072819",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.11,
+        "confidence": 0.71,
+        "confluence": 6,
+        "streak_multiplier": 1.0,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 92,
+      "timestamp": "2026-02-04T22:55:12.541270",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.11,
+        "confidence": 0.75,
+        "confluence": 6,
+        "streak_multiplier": 1.2,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 94,
+      "timestamp": "2026-02-05T00:34:45.790401",
+      "position_size": 24.0,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.14,
+        "confidence": 0.65,
+        "confluence": 6,
+        "streak_multiplier": 0.75,
+        "confidence_tier": "medium",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 96,
+      "timestamp": "2026-02-05T05:05:18.509362",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.28,
+        "confidence": 0.79,
+        "confluence": 6,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 97,
+      "timestamp": "2026-02-05T05:14:15.110272",
+      "position_size": 14.5340989654,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.37,
+        "confidence": 0.88,
+        "confluence": 7,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 98,
+      "timestamp": "2026-02-05T05:31:24.275591",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.39,
+        "confidence": 0.97,
+        "confluence": 7,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 99,
+      "timestamp": "2026-02-05T05:50:27.367638",
+      "position_size": 24.0,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.33,
+        "confidence": 0.68,
+        "confluence": 6,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "medium",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 100,
+      "timestamp": "2026-02-05T05:54:44.656744",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.41,
+        "confidence": 0.85,
+        "confluence": 7,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 101,
+      "timestamp": "2026-02-05T06:00:12.448689",
+      "position_size": 13.9393075654,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.3,
+        "confidence": 0.76,
+        "confluence": 6,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 102,
+      "timestamp": "2026-02-05T06:05:49.652918",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.25,
+        "confidence": 0.81,
+        "confluence": 6,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 104,
+      "timestamp": "2026-02-05T07:20:17.178760",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.23,
+        "confidence": 1.0,
+        "confluence": 7,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 106,
+      "timestamp": "2026-02-05T07:25:47.011357",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.31,
+        "confidence": 0.94,
+        "confluence": 7,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 108,
+      "timestamp": "2026-02-05T07:28:13.549808",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.3,
+        "confidence": 0.92,
+        "confluence": 6,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 110,
+      "timestamp": "2026-02-05T07:35:56.615117",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.3,
+        "confidence": 1.0,
+        "confluence": 6,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 112,
+      "timestamp": "2026-02-05T07:39:24.936407",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.3,
+        "confidence": 0.92,
+        "confluence": 6,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 114,
+      "timestamp": "2026-02-05T07:42:19.837095",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.3,
+        "confidence": 1.0,
+        "confluence": 6,
+        "streak_multiplier": 1.0,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 116,
+      "timestamp": "2026-02-05T07:50:49.855254",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.3,
+        "confidence": 1.0,
+        "confluence": 6,
+        "streak_multiplier": 1.0,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 117,
+      "timestamp": "2026-02-05T07:57:30.260064",
+      "position_size": 13.5544713654,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.23,
+        "confidence": 0.92,
+        "confluence": 6,
+        "streak_multiplier": 1.0,
+        "confidence_tier": "high",
+        "volatility_tier": "medium"
+      }
+    },
+    {
+      "trade_id": 120,
+      "timestamp": "2026-02-05T08:09:03.907514",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.14,
+        "confidence": 0.86,
+        "confluence": 7,
+        "streak_multiplier": 1.0,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 122,
+      "timestamp": "2026-02-05T08:19:31.055180",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.16,
+        "confidence": 0.86,
+        "confluence": 7,
+        "streak_multiplier": 1.0,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 123,
+      "timestamp": "2026-02-05T08:24:17.862374",
+      "position_size": 13.6070973654,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.12,
+        "confidence": 1.0,
+        "confluence": 7,
+        "streak_multiplier": 1.0,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 126,
+      "timestamp": "2026-02-05T08:37:10.526343",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.13,
+        "confidence": 0.91,
+        "confluence": 6,
+        "streak_multiplier": 1.0,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 128,
+      "timestamp": "2026-02-05T08:38:49.330984",
+      "position_size": 28.799999999999997,
+      "conditions": {
+        "regime": "trending_down",
+        "volatility": "normal",
+        "volatility_ratio": 1.19,
+        "confidence": 0.73,
+        "confluence": 6,
+        "streak_multiplier": 1.2,
+        "confidence_tier": "high",
+        "volatility_tier": "low"
+      }
     }
   ],
   "trade_outcomes": {
@@ -128,8 +548,80 @@
       "pnl_dollar": 0.07105019999999727,
       "exit_type": "min_profit",
       "timestamp": "2026-02-04T19:55:30.724495"
+    },
+    "78": {
+      "pnl_percent": -1.0741609962795833,
+      "pnl_dollar": -0.30927,
+      "exit_type": "stop_loss",
+      "timestamp": "2026-02-04T20:20:22.236464"
+    },
+    "80": {
+      "pnl_percent": 0.22256303196203767,
+      "pnl_dollar": 0.048447000000001565,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-04T20:35:24.998964"
+    },
+    "82": {
+      "pnl_percent": 0.5195664115378062,
+      "pnl_dollar": 0.15114800000000397,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-04T21:10:54.839032"
+    },
+    "84": {
+      "pnl_percent": 0.5176875909789287,
+      "pnl_dollar": 0.1476305999999975,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-04T21:29:41.316759"
+    },
+    "86": {
+      "pnl_percent": -0.8105932049961915,
+      "pnl_dollar": -0.23311080000000045,
+      "exit_type": "stop_loss",
+      "timestamp": "2026-02-04T22:26:10.996332"
+    },
+    "88": {
+      "pnl_percent": 0.3792590353347435,
+      "pnl_dollar": 0.08091579999999696,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-04T22:47:06.630745"
+    },
+    "90": {
+      "pnl_percent": 0.30845205880176485,
+      "pnl_dollar": 0.08634739999999845,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-04T22:53:28.111729"
+    },
+    "92": {
+      "pnl_percent": -0.8418615578340851,
+      "pnl_dollar": -0.24233040000000022,
+      "exit_type": "stop_loss",
+      "timestamp": "2026-02-05T00:23:28.195021"
+    },
+    "94": {
+      "pnl_percent": -1.0557208852497355,
+      "pnl_dollar": -0.2551857000000027,
+      "exit_type": "stop_loss",
+      "timestamp": "2026-02-05T00:55:11.394618"
+    },
+    "112": {
+      "pnl_percent": 0.4179728317659263,
+      "pnl_dollar": 0.12039999999999743,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-05T07:42:16.149145"
+    },
+    "126": {
+      "pnl_percent": 0.4590395480225875,
+      "pnl_dollar": 0.13194999999999674,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-05T08:38:06.094114"
+    },
+    "128": {
+      "pnl_percent": 0.5334982240692594,
+      "pnl_dollar": 0.14840000000000145,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-05T08:41:31.490435"
     }
   },
   "ml_model_trained": false,
-  "last_updated": "2026-02-04T19:55:33.697754"
+  "last_updated": "2026-02-05T08:41:31.491084"
 }

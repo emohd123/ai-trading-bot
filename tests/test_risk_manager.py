@@ -24,7 +24,7 @@ class TestRiskManagerBasics(unittest.TestCase):
         """Test risk manager initializes correctly"""
         self.assertEqual(self.rm.consecutive_losses, 0)
         self.assertEqual(self.rm.consecutive_wins, 0)
-        self.assertIn(self.rm.risk_mode, ["normal", "conservative", "aggressive"])
+        self.assertIn(self.rm.risk_mode, ["normal", "cautious", "recovery", "blocked"])
     
     def test_can_trade_initial(self):
         """Test can_trade returns True initially"""

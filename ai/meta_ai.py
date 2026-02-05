@@ -91,7 +91,7 @@ class MetaAI:
     - Drives continuous improvement
     """
     
-    STATE_FILE = os.path.join("data", "meta_ai_state.json")
+    STATE_FILE = os.path.join(config.DATA_DIR, "meta_ai_state.json")
     
     def __init__(self):
         # State

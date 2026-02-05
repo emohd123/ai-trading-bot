@@ -96,13 +96,14 @@ bot_state = {
     "paused": False,           # Pause trading but keep monitoring
     "current_price": 0,
     "last_price": 0,           # Previous recorded price (for comparison)
+    "price_history": [],       # Last 10 min of prices {ts, p} for comparison (newest first)
     "ai_score": 0,
     "decision": "WAITING",
     "activity_status": "Idle",
     "decision_reasons": [],
     "position": None,          # Legacy single position (for backward compat)
     "positions": [],           # NEW: Multiple positions list
-    "max_positions": 2,        # Maximum concurrent positions
+    "max_positions": getattr(config, 'MAX_POSITIONS', 1),  # From config
     "balance_usdt": 0,
     "balance_btc": 0,
     "total_value": 0,
@@ -124,6 +125,12 @@ bot_state = {
     "market_regime": "unknown",
     "regime_description": "Analyzing...",
     "regime_recommendation": "",
+    # Multi-coin: active pair and scan results for UI
+    "current_symbol": None,
+    "current_base_asset": None,
+    "symbol_scan": [],
+    # Deep analysis insights (weaknesses/strengths) for loss-avoidance
+    "deep_insights": None,
     "adx": {"value": 0, "trend_direction": "unknown", "trend_strength": "weak"},
     "atr": {"value": 0, "percent": 0, "volatility_level": "normal"},
 
@@ -339,6 +346,7 @@ health_check_interval = 300  # 5 minutes
 # Position size learner
 position_size_learner = None
 _last_idle_heartbeat = 0
+_last_insufficient_balance_log = 0.0  # Throttle "insufficient balance" log and Telegram (once per 15 min)
 
 
 def _get_activity_status(decision, details, position):
@@ -388,6 +396,81 @@ def update_dashboard():
             pass  # Non-critical
     except (TypeError, ValueError) as e:
         add_log(f"Dashboard update error: {e}", "error")
+
+
+# === REAL-TIME PRICE TICKER ===
+_price_ticker_running = False
+_price_ticker_thread = None
+
+def _price_ticker_loop():
+    """Background thread for real-time price updates every 5 seconds"""
+    global _price_ticker_running, client
+    
+    while _price_ticker_running and bot_state.get("running"):
+        try:
+            # Get current symbol
+            symbol = bot_state.get("current_symbol") or config.SYMBOL
+            
+            # Fetch live price
+            if client:
+                price = client.get_current_price(symbol)
+                if price:
+                    # Calculate PnL if in position
+                    pnl_percent = 0
+                    pnl_usd = 0
+                    if bot_state.get("positions"):
+                        for pos in bot_state["positions"]:
+                            if pos.get("symbol") == symbol:
+                                entry = pos.get("entry_price", price)
+                                pnl_percent = ((price - entry) / entry) * 100
+                                qty = pos.get("quantity", 0)
+                                pnl_usd = (price - entry) * qty
+                                break
+                    elif bot_state.get("position"):
+                        entry = bot_state["position"].get("entry_price", price)
+                        pnl_percent = ((price - entry) / entry) * 100
+                        qty = bot_state["position"].get("quantity", 0)
+                        pnl_usd = (price - entry) * qty
+                    
+                    # Emit real-time price tick
+                    socketio.emit('price_tick', {
+                        'symbol': symbol,
+                        'price': price,
+                        'pnl_percent': round(pnl_percent, 3),
+                        'pnl_usd': round(pnl_usd, 4),
+                        'timestamp': time.time(),
+                        'activity': bot_state.get("activity_status", ""),
+                        'selection_status': bot_state.get("selection_status", ""),
+                        'ai_score': bot_state.get("ai_score", 0),
+                        'regime': bot_state.get("market_regime", "unknown")
+                    })
+                    
+                    # Update bot_state price
+                    bot_state["current_price"] = price
+                    
+        except Exception as e:
+            logger.debug(f"Price ticker error: {e}")
+        
+        time.sleep(5)  # Update every 5 seconds
+
+
+def start_price_ticker():
+    """Start the real-time price ticker thread"""
+    global _price_ticker_running, _price_ticker_thread
+    
+    if _price_ticker_running:
+        return
+    
+    _price_ticker_running = True
+    _price_ticker_thread = threading.Thread(target=_price_ticker_loop, daemon=True)
+    _price_ticker_thread.start()
+    logger.info("Real-time price ticker started")
+
+
+def stop_price_ticker():
+    """Stop the real-time price ticker"""
+    global _price_ticker_running
+    _price_ticker_running = False
 
 
 def calculate_position_size(regime_data, confidence=None):
@@ -518,17 +601,36 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
     AI can override/delay stops if it sees recovery potential
     Returns: (should_stop, reason, adjusted_stop_level)
     """
-    global breakeven_activated, previous_rsi, stop_delay_count
+    use_position_state = position_data is not None
+    if use_position_state:
+        breakeven_activated = position_data.get("breakeven_activated", False)
+        previous_rsi = position_data.get("previous_rsi")
+        stop_delay_count = position_data.get("stop_delay_count", 0)
+    else:
+        breakeven_activated = globals().get("breakeven_activated", False)
+        previous_rsi = globals().get("previous_rsi")
+        stop_delay_count = globals().get("stop_delay_count", 0)
+
+    def _save_state():
+        if use_position_state:
+            position_data["breakeven_activated"] = breakeven_activated
+            position_data["previous_rsi"] = previous_rsi
+            position_data["stop_delay_count"] = stop_delay_count
+        else:
+            globals()["breakeven_activated"] = breakeven_activated
+            globals()["previous_rsi"] = previous_rsi
+            globals()["stop_delay_count"] = stop_delay_count
+
+    def _return(should_stop, reason, adjusted_level):
+        _save_state()
+        return should_stop, reason, adjusted_level
     
-    # Initialize delay counter if not exists
-    if 'stop_delay_count' not in globals():
-        global stop_delay_count
-        stop_delay_count = 0
-    
-    # Get current analysis data
-    rsi = bot_state.get("rsi", {}).get("value", 50)
-    support = bot_state.get("support_resistance", {}).get("support", 0)
-    momentum = bot_state.get("combined_momentum", {})
+    # Get current analysis data (use indicators dict populated in bot_loop)
+    indicators = bot_state.get("indicators", {}) or {}
+    rsi = (indicators.get("rsi", {}) or {}).get("value", 50)
+    sr_data = indicators.get("sr", {}) or {}
+    support = sr_data.get("support_1") or sr_data.get("recent_low") or 0
+    momentum = bot_state.get("momentum", {}) or {}
     ai_score = bot_state.get("ai_score", 0)
     decision = bot_state.get("decision", "HOLD")
     confluence = bot_state.get("confluence", {})
@@ -538,7 +640,7 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
     if pnl_percent <= -hard_stop:
         add_log(f"🚨 HARD STOP: {pnl_percent:.2f}% exceeds max {hard_stop:.1f}% - AI cannot override", "error")
         stop_delay_count = 0
-        return True, "hard_stop", None
+        return _return(True, "hard_stop", None)
     
     # === 1. BREAK-EVEN STOP ===
     breakeven_pct = getattr(config, 'BREAKEVEN_ACTIVATION', 0.005) * 100
@@ -551,8 +653,8 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
         
         if current_price <= breakeven_stop:
             stop_delay_count = 0
-            return True, "breakeven_stop", breakeven_stop
-        return False, "protected_by_breakeven", breakeven_stop
+            return _return(True, "breakeven_stop", breakeven_stop)
+        return _return(False, "protected_by_breakeven", breakeven_stop)
     
     # === 2. AI-ASSISTED STOP LOGIC ===
     ai_enabled = getattr(config, 'AI_STOP_ENABLED', True)
@@ -572,13 +674,13 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
             stop_delay_count += 1
             add_log(f"🤖 AI OVERRIDE: Score {ai_score:.2f} is STRONG BULLISH - Delaying stop ({stop_delay_count}/{max_delays})", "info")
             bot_state["ai_stop_override"] = f"Strong bullish ({ai_score:.2f})"
-            return False, "ai_strong_bullish", None
+            return _return(False, "ai_strong_bullish", None)
         
         elif ai_score > ai_bullish and stop_delay_count < max_delays:
             stop_delay_count += 1
             add_log(f"🤖 AI OVERRIDE: Score {ai_score:.2f} turning bullish - Delaying stop ({stop_delay_count}/{max_delays})", "info")
             bot_state["ai_stop_override"] = f"Turning bullish ({ai_score:.2f})"
-            return False, "ai_turning_bullish", None
+            return _return(False, "ai_turning_bullish", None)
         
         # === 2B. AI DECISION CHECK ===
         # If AI says HOLD (not SELL), give more tolerance
@@ -588,14 +690,14 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
             # AI says SELL - don't delay, execute stop
             add_log(f"🤖 AI confirms SELL - No delay", "warning")
             stop_delay_count = 0
-            return None, "ai_confirms_sell", None  # Let regular stop logic decide
+            return _return(None, "ai_confirms_sell", None)  # Let regular stop logic decide
         
         elif decision == "HOLD" and stop_delay_count < max_delays:
             # AI says HOLD - widen stop tolerance
             stop_delay_count += 1
             add_log(f"🤖 AI says HOLD - Giving more time ({stop_delay_count}/{max_delays})", "info")
             bot_state["ai_stop_override"] = "AI says HOLD"
-            return False, "ai_hold_override", None
+            return _return(False, "ai_hold_override", None)
         
         # === 2C. CONFLUENCE CHECK ===
         # Check if indicators are mostly bearish before stopping
@@ -610,13 +712,13 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
                 stop_delay_count += 1
                 add_log(f"🤖 Only {bearish_count} bearish signals (need {min_bearish}) - Delaying stop ({stop_delay_count}/{max_delays})", "info")
                 bot_state["ai_stop_override"] = f"Weak bearish ({bearish_count}/{min_bearish})"
-                return False, "weak_bearish_confluence", None
+                return _return(False, "weak_bearish_confluence", None)
             
             elif bullish_count > bearish_count and stop_delay_count < max_delays:
                 stop_delay_count += 1
                 add_log(f"🤖 More bullish ({bullish_count}) than bearish ({bearish_count}) - Delaying stop ({stop_delay_count}/{max_delays})", "info")
                 bot_state["ai_stop_override"] = f"Bullish confluence ({bullish_count}>{bearish_count})"
-                return False, "bullish_confluence_override", None
+                return _return(False, "bullish_confluence_override", None)
     
     # === 3. SUPPORT-BASED STOP ===
     use_support = getattr(config, 'USE_SUPPORT_STOP', True)
@@ -627,7 +729,7 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
         if current_price <= support_stop:
             add_log(f"📉 Support broken at ${support:.2f}", "warning")
             stop_delay_count = 0
-            return True, "support_broken", support_stop
+            return _return(True, "support_broken", support_stop)
     
     # === 4. RECOVERY CHECK (Momentum) ===
     recovery_enabled = getattr(config, 'RECOVERY_CHECK_ENABLED', True)
@@ -640,7 +742,7 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
             stop_delay_count += 1
             add_log(f"🔄 Recovery detected (RSI: {rsi:.1f}) - Delaying stop ({stop_delay_count}/{max_delays})", "info")
             bot_state["ai_stop_override"] = f"Momentum recovering"
-            return False, "recovery_in_progress", None
+            return _return(False, "recovery_in_progress", None)
     
     previous_rsi = rsi
     
@@ -657,20 +759,21 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
             if age_hours > max_hours and pnl_percent < stale_threshold:
                 add_log(f"⏰ Position stale ({age_hours:.1f}h) with loss {pnl_percent:.2f}%", "warning")
                 stop_delay_count = 0
-                return True, "time_exit", None
+                return _return(True, "time_exit", None)
         except:
             pass
     
     # === 6. MAX DELAYS REACHED ===
     if stop_delay_count >= max_delays:
-        add_log(f"⚠️ Max delay cycles ({max_delays}) reached - Allowing stop", "warning")
+        if max_delays > 0:
+            add_log(f"⚠️ Max delay cycles ({max_delays}) reached - Allowing stop", "warning")
         bot_state["ai_stop_override"] = None
         stop_delay_count = 0
-        return None, "max_delays_reached", None
+        return _return(None, "max_delays_reached", None)
     
     # Clear override status if no delay
     bot_state["ai_stop_override"] = None
-    return None, "check_regular", None
+    return _return(None, "check_regular", None)
 
 
 def update_trailing_stop(current_price, regime_data):
@@ -753,17 +856,429 @@ def update_trailing_stop(current_price, regime_data):
     bot_state["trailing_stop"] = trailing_stop_price
 
 
+def update_trailing_stop_for_position(position: dict, current_price: float, regime_data: dict):
+    """Update trailing stop for a specific position (position-aware)."""
+    if not position:
+        return None
+    if not position.get("trailing_stop_enabled", True):
+        return position.get("trailing_stop")
+
+    entry_price = position.get("entry_price", current_price)
+    if not entry_price:
+        return position.get("trailing_stop")
+
+    profit_percent = ((current_price - entry_price) / entry_price) * 100
+
+    highest_price = position.get("highest_price", entry_price)
+    if current_price > highest_price:
+        highest_price = current_price
+    position["highest_price"] = highest_price
+
+    params = regime_data.get("adjusted_params", {}) if regime_data else {}
+    streak_info = bot_state.get("streak_info", {})
+    win_streak = streak_info.get("win_streak", 0)
+
+    if win_streak >= 3:
+        activation = getattr(config, 'TRAILING_ACTIVATION_HOT', 0.5)
+    elif win_streak >= 2:
+        activation = 0.75
+    else:
+        activation = getattr(config, 'TRAILING_ACTIVATION', 1.0) * 100
+        if activation == 100:
+            activation = params.get("trailing_stop_activation", 1.0)
+
+    if profit_percent < activation:
+        current_main = bot_state.get("position")
+        if current_main and (current_main is position or current_main.get("trade_id") == position.get("trade_id")):
+            bot_state["highest_price"] = highest_price
+        return position.get("trailing_stop")
+
+    atr_data = regime_data.get("atr", {}) if regime_data else {}
+    adx_data = regime_data.get("adx", {}) if regime_data else {}
+    atr_value = atr_data.get("value", current_price * 0.02)
+    adx_value = adx_data.get("value", 25)
+
+    if adx_value > getattr(config, 'TRAIL_ADX_STRONG', 40):
+        trail_mult = getattr(config, 'TRAIL_ATR_STRONG', 2.5)
+    elif adx_value > getattr(config, 'TRAIL_ADX_MODERATE', 30):
+        trail_mult = getattr(config, 'TRAIL_ATR_MODERATE', 2.0)
+    else:
+        trail_mult = params.get("trailing_stop_distance", 1.5)
+
+    if atr_data.get("volatility_level") == "high":
+        trail_mult = getattr(config, 'TRAIL_ATR_HIGH_VOL', 3.0)
+
+    trail_distance = atr_value * trail_mult
+    new_stop = highest_price - trail_distance
+
+    if profit_percent > 5:
+        min_stop = entry_price * 1.01
+        new_stop = max(new_stop, min_stop)
+
+    trailing_stop = position.get("trailing_stop")
+    if trailing_stop is None:
+        trailing_stop = new_stop
+    else:
+        trailing_stop = max(trailing_stop, new_stop)
+
+    position["trailing_stop"] = trailing_stop
+
+    current_main = bot_state.get("position")
+    if current_main and (current_main is position or current_main.get("trade_id") == position.get("trade_id")):
+        bot_state["highest_price"] = highest_price
+        bot_state["trailing_stop"] = trailing_stop
+
+    return trailing_stop
+
+
 _last_state_save = 0
 _STATE_SAVE_INTERVAL = 60  # Save state every 60 seconds when running
 _last_idle_heartbeat = 0
 _IDLE_HEARTBEAT_INTERVAL = 300  # Log once per 5 min when idle in downtrend (so activity log doesn't look dead)
+
+# Multi-coin symbol selection cache and sticky
+_symbol_scan_cache = {}  # symbol -> {"regime": str, "score": float, "ts": float}
+_last_rotation_time = 0.0
+_sold_all_to_usdt_done = False  # One-time at startup: sell any non-USDT to USDT
+_last_deep_analysis_time = 0.0
+_DEEP_ANALYSIS_INTERVAL = 6 * 3600  # Run DeepAnalyzer every 6 hours
+_last_meta_ai_time = 0.0
+_META_AI_INTERVAL = 12 * 3600  # Optional: run Meta AI awareness every 12 hours (background)
+
+
+def _sync_positions_with_balances(client):
+    """
+    Ensure we don't have 'forgotten' positions: if we hold any base asset (from SYMBOLS)
+    that isn't in bot_state['positions'], add it so we manage/sell it before opening new.
+    Prevents buying a second coin while still holding the first.
+    """
+    symbols_config = getattr(config, "SYMBOLS", [("BTCUSDT", "BTC")])
+    positions = bot_state.get("positions", [])
+    tracked_symbols = {pos.get("symbol") for pos in positions if pos.get("symbol")}
+    min_notional = getattr(config, "TRADE_AMOUNT_MIN", 10) * 0.5  # $5 min to count as position
+    recovered_any = False
+
+    for symbol, base_asset in symbols_config:
+        if symbol in tracked_symbols:
+            continue
+        try:
+            balance = client.get_balance(base_asset)
+            if balance is None or balance <= 0:
+                continue
+            price = client.get_current_price(symbol=symbol)
+            if not price or price <= 0:
+                continue
+            notional = balance * price
+            if notional < min_notional:
+                continue
+            # We have balance in this asset but no position tracked - recover it
+            entry_price = price  # fallback
+            entry_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            for t in bot_state.get("trade_history", []):
+                if t.get("type") == "BUY" and t.get("symbol") == symbol:
+                    entry_price = t.get("price", price)
+                    entry_time_str = t.get("time", entry_time_str)
+                    break
+            recovered = {
+                "symbol": symbol,
+                "base_asset": base_asset,
+                "entry_price": entry_price,
+                "quantity": balance,
+                "amount_usdt": notional,
+                "entry_time": entry_time_str,
+                "time": entry_time_str,
+                "regime": bot_state.get("market_regime", "unknown"),
+                "recovered": True,
+                "highest_price": price,
+                "trailing_stop": None,
+                "breakeven_activated": False,
+            }
+            if "positions" not in bot_state:
+                bot_state["positions"] = []
+            bot_state["positions"].append(recovered)
+            bot_state["position"] = recovered
+            tracked_symbols.add(symbol)
+            recovered_any = True
+            add_log(f"Recovered position: {base_asset} {balance:.6f} @ ${entry_price:,.2f} (was not tracked - will sell before new BUY)", "warning")
+        except Exception as e:
+            logger.debug("Sync balance for %s: %s", symbol, e)
+    if recovered_any:
+        save_bot_state()
+        update_dashboard()
+
+
+def _sell_all_to_usdt(client):
+    """
+    Sell all traded coins (BTC, ETH, BNB, SOL, XRP, DOGE, ADA) to USDT so we start flat.
+    Skips dust (below exchange min). Called once at startup when no position.
+    NOW RECORDS SELL TRADES IN HISTORY so P/L is tracked.
+    """
+    global _sold_all_to_usdt_done, _last_rotation_time
+    symbols_config = getattr(config, "SYMBOLS", [("BTCUSDT", "BTC")])
+    saved_symbol = config.SYMBOL
+    saved_base = config.BASE_ASSET
+    sold_any = False
+    for symbol, base_asset in symbols_config:
+        try:
+            balance = client.get_balance(base_asset)
+            if balance is None or balance <= 0:
+                continue
+            info = client.client.get_symbol_info(symbol)
+            min_qty = float([f["minQty"] for f in info["filters"] if f["filterType"] == "LOT_SIZE"][0])
+            if balance < min_qty:
+                continue
+            config.SYMBOL = symbol
+            config.BASE_ASSET = base_asset
+            
+            # Find entry price from most recent BUY for this symbol (for P/L calc)
+            entry_price = None
+            for t in bot_state.get("trade_history", []):
+                if t.get("type") == "BUY" and t.get("symbol") == symbol:
+                    entry_price = t.get("price")
+                    break
+                # Fallback: match by price range (same order of magnitude)
+                if t.get("type") == "BUY" and entry_price is None:
+                    t_price = t.get("price", 0)
+                    # Check if this BUY could be for this symbol (rough price match)
+                    try:
+                        current_price = client.get_current_price(symbol=symbol)
+                        if t_price > 0 and abs(t_price - current_price) / current_price < 0.1:
+                            entry_price = t_price
+                            break
+                    except Exception:
+                        pass
+            
+            result = client.place_market_sell(symbol=symbol, quantity=balance)
+            if result.get("status") == "filled":
+                exit_price = result.get("price", 0)
+                quantity = result.get("quantity", balance)
+                quote_amount = result.get("quote_amount", 0)
+                
+                # Calculate P/L if we have entry price
+                pnl = 0
+                pnl_percent = 0
+                if entry_price and entry_price > 0:
+                    pnl = (exit_price - entry_price) * quantity
+                    pnl_percent = ((exit_price - entry_price) / entry_price) * 100
+                
+                # Record in trade history
+                trade_id = len(bot_state.get("trade_history", [])) + 1
+                sell_trade = {
+                    "id": trade_id,
+                    "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "type": "SELL",
+                    "symbol": symbol,
+                    "base_asset": base_asset,
+                    "price": exit_price,
+                    "quantity": quantity,
+                    "amount": quote_amount,
+                    "pnl": round(pnl, 4),
+                    "pnl_percent": round(pnl_percent, 2),
+                    "exit_type": "startup_cleanup",
+                    "regime": bot_state.get("market_regime", "unknown"),
+                }
+                bot_state["trade_history"].insert(0, sell_trade)
+                save_trades()
+                
+                level = "success" if pnl >= 0 else "warning"
+                add_log(f"Sell all: {base_asset} → ${quote_amount:,.2f} | P/L: ${pnl:+,.2f} ({pnl_percent:+.1f}%)", level)
+                sold_any = True
+            else:
+                add_log(f"Sell all to USDT: {base_asset} sell failed: {result.get('message', 'Unknown')}", "warning")
+        except Exception as e:
+            logger.warning("Sell all to USDT failed for %s: %s", base_asset, e)
+            add_log(f"Sell all to USDT: {base_asset} error - {e}", "warning")
+        finally:
+            config.SYMBOL = saved_symbol
+            config.BASE_ASSET = saved_base
+    _sold_all_to_usdt_done = True
+    if sold_any:
+        _last_rotation_time = 0.0  # Force fresh symbol scan so we pick best coin for next trade
+    return sold_any
+
+
+def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
+    """
+    Pick which symbol to trade this cycle. Always chooses the coin with the
+    best profit potential (highest AI score). SAFETY: When any position exists,
+    always return that position's symbol (never run selection). When no position,
+    run score-based selection with cache and sticky interval.
+    Returns (symbol, base_asset) and optionally populates bot_state["symbol_scan"].
+    On error returns (config.SYMBOL, config.BASE_ASSET) or first in SYMBOLS.
+    """
+    global _symbol_scan_cache, _last_rotation_time
+    symbols_config = getattr(config, "SYMBOLS", [("BTCUSDT", "BTC")])
+    if not symbols_config:
+        return (config.SYMBOL, config.BASE_ASSET)
+
+    # SAFETY: When we have any position, always use that position's symbol.
+    positions = bot_state.get("positions", [])
+    if positions:
+        pos = positions[0]
+        sym = pos.get("symbol") or config.SYMBOL
+        base = pos.get("base_asset") or config.BASE_ASSET
+        return (sym, base)
+    if bot_state.get("position"):
+        pos = bot_state["position"]
+        sym = pos.get("symbol") or "BTCUSDT"
+        base = pos.get("base_asset") or "BTC"
+        return (sym, base)
+
+    # No position: run symbol selection (with cache and sticky).
+    now_ts = time.time()
+    cache_min = getattr(config, "SYMBOL_SCAN_CACHE_MINUTES", 5) * 60
+    interval_min = getattr(config, "SYMBOL_ROTATION_INTERVAL_MINUTES", 15) * 60
+    current_sym = bot_state.get("current_symbol") or config.SYMBOL
+    buy_threshold = getattr(config, 'BUY_THRESHOLD', 0.30)
+    high_score_override = getattr(config, 'HIGH_SCORE_DOWNTREND_OVERRIDE', 0.60)
+    
+    # Check if current coin is actually tradeable before applying sticky
+    current_tradeable = False
+    if current_sym:
+        cached = _symbol_scan_cache.get(current_sym)
+        if cached:
+            c_regime = cached.get("regime", "unknown")
+            c_score = cached.get("score", 0)
+            # Tradeable = (uptrend + good score) OR (high score override)
+            if c_regime != "trending_down" and c_score >= buy_threshold:
+                current_tradeable = True
+            elif c_score >= high_score_override:
+                current_tradeable = True
+    
+    # Only apply sticky interval if current coin is tradeable
+    if current_sym and current_tradeable and (now_ts - _last_rotation_time) < interval_min:
+        # Sticky: keep current symbol until interval elapsed
+        for s, b in symbols_config:
+            if s == current_sym:
+                return (s, b)
+        return (current_sym, bot_state.get("current_base_asset") or config.BASE_ASSET)
+    
+    # If current coin NOT tradeable, force immediate rescan (don't wait for interval)
+
+    # Full scan: get regime + score for each symbol; AI decides - pick best score always (even if all downtrend)
+    min_score = getattr(config, "ROTATION_MIN_SCORE", None)
+    if min_score is None:
+        min_score = getattr(config, "BUY_THRESHOLD", 0.30)
+    scan_list = []
+    candidates = []  # (score, symbol, base_asset) - include all symbols, AI decides by score
+
+    for symbol, base_asset in symbols_config:
+        entry = _symbol_scan_cache.get(symbol)
+        if entry and (now_ts - entry.get("ts", 0)) < cache_min:
+            regime = entry.get("regime", "unknown")
+            score = entry.get("score", 0.0)
+        else:
+            try:
+                df = client.get_historical_klines(symbol=symbol, interval=config.CANDLE_INTERVAL, limit=100)
+                if df is None or df.empty or len(df) < 20:
+                    _symbol_scan_cache[symbol] = {"regime": "unknown", "score": 0.0, "ts": now_ts}
+                    regime, score = "unknown", 0.0
+                else:
+                    if analyzer:
+                        analysis = analyzer.analyze(df)
+                        regime_data = regime_detector.detect_regime(df)
+                        regime = regime_data.get("regime_name", "unknown")
+                        if ai_engine:
+                            score, _ = ai_engine.calculate_score(analysis, df)
+                        else:
+                            score = analysis.get("momentum", {}).get("score", 0.0) or 0.0
+                        _symbol_scan_cache[symbol] = {"regime": regime, "score": score, "ts": now_ts}
+                    else:
+                        regime_data = regime_detector.detect_regime(df)
+                        regime = regime_data.get("regime_name", "unknown")
+                        score = 0.0
+                        _symbol_scan_cache[symbol] = {"regime": regime, "score": score, "ts": now_ts}
+            except Exception as e:
+                logger.warning("Symbol scan failed for %s: %s", symbol, e)
+                _symbol_scan_cache[symbol] = {"regime": "unknown", "score": 0.0, "ts": now_ts}
+                regime, score = "unknown", 0.0
+
+        candidates.append((score, symbol, base_asset, regime))
+        scan_list.append({
+            "symbol": symbol,
+            "base_asset": base_asset,
+            "regime": regime,
+            "score": round(score, 3),
+            "selected": False,
+        })
+
+    if candidates:
+        # PRIORITY: When NO_BUY_IN_DOWNTREND is enabled, prefer non-downtrend coins
+        no_buy_downtrend = getattr(config, 'NO_BUY_IN_DOWNTREND', False)
+        ai_decides_all = getattr(config, 'AI_DECIDES_ALL', False)
+        buy_threshold = getattr(config, 'BUY_THRESHOLD', 0.30)
+        high_score_override = getattr(config, 'HIGH_SCORE_DOWNTREND_OVERRIDE', 0.60)
+        
+        if no_buy_downtrend and not ai_decides_all:
+            # SMART SELECTION with 4 tiers:
+            only_strict_uptrend = getattr(config, 'ONLY_BUY_STRICT_UPTREND', False)
+            # Tier 1: Uptrend (or strict: only trending_up) + good score = READY TO TRADE
+            tier1_uptrend_ready = [
+                (s, sym, base, reg) for s, sym, base, reg in candidates 
+                if (reg == "trending_up" if only_strict_uptrend else reg != "trending_down") and s >= buy_threshold
+            ]
+            
+            # Tier 2: Downtrend but VERY HIGH score = AI confident, can trade
+            tier2_high_score = [
+                (s, sym, base, reg) for s, sym, base, reg in candidates 
+                if reg == "trending_down" and s >= high_score_override
+            ]
+            
+            # Tier 3: Uptrend but weak score = monitor for better entry
+            tier3_uptrend_weak = [
+                (s, sym, base, reg) for s, sym, base, reg in candidates 
+                if reg != "trending_down" and s < buy_threshold
+            ]
+            
+            if tier1_uptrend_ready:
+                # BEST: Uptrend + good score - ready to trade!
+                tier1_uptrend_ready.sort(key=lambda x: -x[0])
+                best_score, best_symbol, best_base, best_regime = tier1_uptrend_ready[0]
+                bot_state["selection_status"] = f"READY: {best_symbol.replace('USDT','')} ({best_regime}, score {best_score:+.2f})"
+            elif tier2_high_score:
+                # HIGH SCORE OVERRIDE: Downtrend but AI very confident
+                tier2_high_score.sort(key=lambda x: -x[0])
+                best_score, best_symbol, best_base, best_regime = tier2_high_score[0]
+                bot_state["selection_status"] = f"HIGH SCORE: {best_symbol.replace('USDT','')} (downtrend but score {best_score:+.2f} > {high_score_override})"
+            elif tier3_uptrend_weak:
+                # Coins in uptrend but scores too low - monitor
+                tier3_uptrend_weak.sort(key=lambda x: -x[0])
+                best_score, best_symbol, best_base, best_regime = tier3_uptrend_weak[0]
+                bot_state["selection_status"] = f"WAITING: {best_symbol.replace('USDT','')} uptrend but weak score ({best_score:+.2f} < {buy_threshold})"
+                # Reduce cache time to rescan sooner when waiting
+                if best_symbol in _symbol_scan_cache:
+                    _symbol_scan_cache[best_symbol]["ts"] = now_ts - (cache_min * 0.7)
+            else:
+                # All coins in downtrend with low scores - pick highest, show status
+                candidates.sort(key=lambda x: -x[0])
+                best_score, best_symbol, best_base, best_regime = candidates[0]
+                down_count = sum(1 for _, _, _, r in candidates if r == "trending_down")
+                bot_state["selection_status"] = f"BEARISH: {down_count}/{len(candidates)} downtrend. Best: {best_symbol.replace('USDT','')} ({best_score:+.2f} < {high_score_override})"
+                # Reduce cache time significantly to catch trend changes faster
+                for sym_key in _symbol_scan_cache:
+                    _symbol_scan_cache[sym_key]["ts"] = now_ts - (cache_min * 0.5)
+        else:
+            # AI decides all - just pick highest score regardless of regime
+            candidates.sort(key=lambda x: -x[0])
+            best_score, best_symbol, best_base, _ = candidates[0]
+            bot_state["selection_status"] = f"AI MODE: {best_symbol.replace('USDT','')} (score {best_score:+.2f})"
+        
+        _last_rotation_time = now_ts
+        for s in scan_list:
+            s["selected"] = s["symbol"] == best_symbol
+        bot_state["symbol_scan"] = scan_list
+        return (best_symbol, best_base)
+
+    bot_state["symbol_scan"] = scan_list
+    first = symbols_config[0]
+    return (first[0], first[1])
 
 
 def bot_loop():
     """Main bot trading loop with smart features"""
     global client, analyzer, ai_engine, regime_detector, self_healer
     global trailing_stop_price, highest_price_since_entry, consecutive_losses, daily_losses, daily_trades
-    global last_health_check, position_size_learner
+    global last_health_check, position_size_learner, _last_idle_heartbeat
     
     # Initialize position size learner
     global position_size_learner
@@ -790,6 +1305,51 @@ def bot_loop():
 
     while not stop_bot.is_set():
         try:
+            # === SELL ALL TO USDT (once at startup - even if we have positions) ===
+            # Consolidates multiple open positions into USDT so we start flat and trade one coin at a time
+            if not _sold_all_to_usdt_done and client:
+                try:
+                    add_log("Selling all coins to USDT so we start flat...", "info")
+                    _sell_all_to_usdt(client)
+                    # Clear position state so bot knows we have no open positions
+                    bot_state["positions"] = []
+                    bot_state["position"] = None
+                    save_bot_state()
+                except Exception as e:
+                    logger.warning("Sell all to USDT failed: %s", e)
+                # Refresh balance after sell-all
+                try:
+                    _usdt = client.get_balance(config.QUOTE_ASSET)
+                    if _usdt is not None:
+                        bot_state["balance_usdt"] = _usdt
+                    bot_state["total_value"] = client.get_account_value()
+                except Exception:
+                    pass
+
+            # === SYNC: Recover any held coin not in positions (so we never open 2nd position by mistake) ===
+            if client and _sold_all_to_usdt_done:
+                try:
+                    _sync_positions_with_balances(client)
+                except Exception as e:
+                    logger.debug("Sync positions with balances: %s", e)
+
+            # === MULTI-COIN: Set active symbol (always pick the coin with best profit potential) ===
+            try:
+                symbol, base_asset = _pick_active_symbol(
+                    client, regime_detector, analyzer=analyzer, ai_engine=ai_engine
+                )
+                if symbol and base_asset:
+                    config.SYMBOL = symbol
+                    config.BASE_ASSET = base_asset
+                    bot_state["current_symbol"] = symbol
+                    bot_state["current_base_asset"] = base_asset
+            except Exception as e:
+                logger.warning("Symbol selection error (keeping current config): %s", e)
+                # Do not overwrite config on error
+                if not bot_state.get("current_symbol"):
+                    bot_state["current_symbol"] = config.SYMBOL
+                    bot_state["current_base_asset"] = config.BASE_ASSET
+
             # === SELF-HEALING: Periodic health check ===
             if self_healer and self_healer.should_run_health_check():
                 try:
@@ -799,6 +1359,44 @@ def bot_loop():
                             add_log(f"🔧 Auto-fix: {fix}", "info")
                 except Exception as e:
                     add_log(f"Health check error: {e}", "warning")
+
+            # === DEEP ANALYZER: Periodic analysis for loss-avoidance insights ===
+            _now = time.time()
+            if _now - _last_deep_analysis_time >= _DEEP_ANALYSIS_INTERVAL:
+                try:
+                    from ai.deep_analyzer import DeepAnalyzer
+                    deep = DeepAnalyzer()
+                    deep.load_trade_history()
+                    report = deep.analyze_all()
+                    if report.get("status") != "no_data":
+                        bot_state["deep_insights"] = {
+                            "weaknesses": report.get("identified_weaknesses", []),
+                            "strengths": report.get("identified_strengths", []),
+                            "improvement_suggestions": report.get("improvement_suggestions", []),
+                            "last_analysis": report.get("timestamp", ""),
+                        }
+                        globals()["_last_deep_analysis_time"] = _now
+                        logger.info("Deep analysis updated: %d weaknesses, %d strengths",
+                                    len(bot_state["deep_insights"]["weaknesses"]),
+                                    len(bot_state["deep_insights"].get("strengths", [])))
+                except Exception as e:
+                    logger.warning("Deep analysis failed: %s", e)
+
+            # === META AI: Optional background awareness update (no heavy backtest in main loop) ===
+            if _now - _last_meta_ai_time >= _META_AI_INTERVAL:
+                def _run_meta_awareness():
+                    try:
+                        from ai.meta_ai import MetaAI
+                        meta = MetaAI()
+                        meta.update_awareness()
+                        meta.think()
+                        globals()["_last_meta_ai_time"] = time.time()
+                        logger.info("Meta AI awareness updated in background")
+                    except Exception as e:
+                        logger.warning("Meta AI awareness update failed: %s", e)
+                _t = threading.Thread(target=_run_meta_awareness, daemon=True)
+                _t.start()
+                globals()["_last_meta_ai_time"] = _now  # throttle immediately so we don't spawn again next cycle
             
             bot_state["activity_status"] = "Fetching 4h/1h/15m data..."
             update_dashboard()
@@ -871,11 +1469,15 @@ def bot_loop():
                 }
 
             # Update state
-            # Save previous price before updating
             if bot_state.get("current_price", 0) > 0:
                 bot_state["last_price"] = bot_state["current_price"]
             bot_state["current_price"] = current_price
-            bot_state["last_update"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            # Keep last 10 min of prices for comparison in price card
+            if "price_history" not in bot_state:
+                bot_state["price_history"] = []
+            cutoff_ts = time.time() - 600  # 10 minutes
+            bot_state["price_history"].insert(0, {"ts": time.time(), "p": round(current_price, 2)})
+            bot_state["price_history"] = [e for e in bot_state["price_history"] if e["ts"] >= cutoff_ts][:60]
 
             # Update regime info
             bot_state["market_regime"] = regime_data.get("regime_name", "unknown")
@@ -885,17 +1487,57 @@ def bot_loop():
             bot_state["atr"] = _to_json_serializable(regime_data.get("atr", {}))
             bot_state["adjusted_params"] = _to_json_serializable(regime_data.get("adjusted_params", {}))
 
-            # Get balances
-            bot_state["balance_usdt"] = client.get_balance(config.QUOTE_ASSET)
-            bot_state["balance_btc"] = client.get_balance(config.BASE_ASSET)
-            bot_state["total_value"] = client.get_account_value()
+            # Get balances (keep previous if API fails so we don't show 0)
+            _usdt = client.get_balance(config.QUOTE_ASSET)
+            _btc = client.get_balance(config.BASE_ASSET)
+            if _usdt is not None:
+                bot_state["balance_usdt"] = _usdt
+            if _btc is not None:
+                bot_state["balance_btc"] = _btc
+            if _usdt is not None or _btc is not None:
+                bot_state["total_value"] = client.get_account_value()
+
+            # Performance Tracker: set initial capital once, then update equity each cycle
+            if PHASE_ENHANCEMENTS_AVAILABLE:
+                try:
+                    perf_tracker = get_performance_tracker()
+                    total_val = bot_state.get("total_value", 0)
+                    if total_val and perf_tracker.initial_capital == 0:
+                        perf_tracker.set_initial_capital(total_val)
+                    if total_val:
+                        perf_tracker.update_equity(total_val)
+                except Exception as e:
+                    logger.debug("Performance tracker update_equity failed: %s", e)
 
             # === MULTI-POSITION MANAGEMENT ===
             # Check all positions for exits (MIN_PROFIT, STOP_LOSS, TRAILING)
+            # Use each position's symbol price so multi-coin PnL is correct (fix: was using one price for all)
             positions_to_close = []
             for i, pos in enumerate(bot_state.get("positions", [])):
                 entry_price = pos["entry_price"]
-                pnl_percent = ((current_price - entry_price) / entry_price) * 100
+                pos_symbol = pos.get("symbol") or config.SYMBOL
+                if pos_symbol == config.SYMBOL:
+                    pos_price = current_price
+                else:
+                    try:
+                        pos_price = client.get_current_price(symbol=pos_symbol)
+                    except Exception:
+                        pos_price = current_price  # fallback
+                pnl_percent = ((pos_price - entry_price) / entry_price) * 100
+
+                # Ensure per-position state is initialized
+                if "highest_price" not in pos:
+                    pos["highest_price"] = entry_price
+                if "trailing_stop" not in pos:
+                    pos["trailing_stop"] = None
+                if "trailing_stop_enabled" not in pos:
+                    pos["trailing_stop_enabled"] = bot_state.get("trailing_stop_enabled", True)
+                if "breakeven_activated" not in pos:
+                    pos["breakeven_activated"] = False
+                if "stop_delay_count" not in pos:
+                    pos["stop_delay_count"] = 0
+                if "previous_rsi" not in pos:
+                    pos["previous_rsi"] = None
                 
                 # PHASE 6: Track lowest price for max drawdown learning
                 lowest_price = pos.get("lowest_price", entry_price)
@@ -928,50 +1570,50 @@ def bot_loop():
                     continue
 
                 # === SMART STOP LOSS CHECK (second priority) ===
-                # Use smart stop system to avoid premature stops
+                # Use smart stop system to avoid premature stops (use pos_price for this position)
                 should_stop, stop_reason, stop_level = check_smart_stop(
-                    current_price, entry_price, pnl_percent, pos
+                    pos_price, entry_price, pnl_percent, pos
                 )
                 
                 if should_stop:
                     add_log(f"🛑 POSITION #{i+1} SMART STOP ({stop_reason}): {pnl_percent:.2f}% - SELLING!", "warning")
                     positions_to_close.append((i, pos, stop_reason))
                     continue
-                elif stop_reason == "protected_by_breakeven":
-                    # Position is protected - don't check regular stop
-                    continue
-                elif stop_reason == "recovery_in_progress":
-                    # Momentum recovering - skip this cycle
-                    continue
+                skip_regular_stop = stop_reason in ("protected_by_breakeven", "recovery_in_progress")
                 
-                # Fallback to regime-based stop if smart stop didn't trigger
-                # Min-hold: skip regular stop in first N minutes (hard stop & breakeven still apply)
-                if getattr(config, 'MIN_HOLD_ENABLED', False):
-                    entry_time_str = pos.get("entry_time") or pos.get("time")
-                    if entry_time_str:
-                        try:
-                            entry_dt = datetime.strptime(entry_time_str, "%Y-%m-%d %H:%M:%S")
-                            age_min = (datetime.now() - entry_dt).total_seconds() / 60
-                            if age_min < getattr(config, 'MIN_HOLD_MINUTES', 20):
-                                continue  # Skip regular stop during min-hold
-                        except Exception:
-                            pass
-
-                current_regime = bot_state.get("market_regime", "unknown")
-                atr_data = bot_state.get("atr", {})
-                volatility_high = atr_data.get("volatility_level") == "high"
-                
-                # Select stop loss based on regime
-                if current_regime == "trending_down":
-                    stop_loss_pct = getattr(config, 'STOP_LOSS_TRENDING_DOWN', 0.008) * 100
-                elif volatility_high:
-                    stop_loss_pct = getattr(config, 'STOP_LOSS_HIGH_VOL', 0.0075) * 100
-                else:
-                    stop_loss_pct = getattr(config, 'STOP_LOSS', 0.01) * 100
-                    
-                if pnl_percent <= -stop_loss_pct:
-                    add_log(f"🛑 POSITION #{i+1} STOP LOSS: {pnl_percent:.2f}% (limit: -{stop_loss_pct:.1f}%) - SELLING!", "warning")
-                    positions_to_close.append((i, pos, "stop_loss"))
+                if not skip_regular_stop:
+                    # Fallback to regime-based stop if smart stop didn't trigger
+                    # Min-hold: skip regular stop in first N minutes (hard stop & breakeven still apply)
+                    if getattr(config, 'MIN_HOLD_ENABLED', False):
+                        entry_time_str = pos.get("entry_time") or pos.get("time")
+                        if entry_time_str:
+                            try:
+                                entry_dt = datetime.strptime(entry_time_str, "%Y-%m-%d %H:%M:%S")
+                                age_min = (datetime.now() - entry_dt).total_seconds() / 60
+                                if age_min < getattr(config, 'MIN_HOLD_MINUTES', 20):
+                                    continue  # Skip regular stop during min-hold
+                            except Exception:
+                                pass
+                    current_regime = bot_state.get("market_regime", "unknown")
+                    atr_data = bot_state.get("atr", {})
+                    volatility_high = atr_data.get("volatility_level") == "high"
+                    # Select stop loss based on regime
+                    if current_regime == "trending_down":
+                        stop_loss_pct = getattr(config, 'STOP_LOSS_TRENDING_DOWN', 0.008) * 100
+                    elif volatility_high:
+                        stop_loss_pct = getattr(config, 'STOP_LOSS_HIGH_VOL', 0.0075) * 100
+                    else:
+                        stop_loss_pct = getattr(config, 'STOP_LOSS', 0.01) * 100
+                    if pnl_percent <= -stop_loss_pct:
+                        add_log(f"ðŸ›‘ POSITION #{i+1} STOP LOSS: {pnl_percent:.2f}% (limit: -{stop_loss_pct:.1f}%) - SELLING!", "warning")
+                        positions_to_close.append((i, pos, "stop_loss"))
+                        continue
+                # Trailing stop (position-aware) — use this position's price
+                update_trailing_stop_for_position(pos, pos_price, regime_data)
+                trailing_stop = pos.get("trailing_stop")
+                if trailing_stop and pos_price <= trailing_stop:
+                    add_log(f"Trailing stop hit at ${trailing_stop:,.2f} for POSITION #{i+1}", "warning")
+                    positions_to_close.append((i, pos, "trailing_stop"))
                     continue
 
             # Close positions that hit targets (in reverse order to maintain indices)
@@ -1075,8 +1717,18 @@ def bot_loop():
                     "quantity": bot_state["position"]["quantity"]
                 }
 
+            # Recent performance for adaptive threshold (avoid overtrading after losses)
+            recent_sells = [t for t in bot_state.get("trade_history", []) if t.get("type") == "SELL"][:10]
+            recent_win_rate = None
+            if len(recent_sells) >= 5:
+                wins = sum(1 for t in recent_sells if t.get("pnl", 0) > 0)
+                recent_win_rate = 100.0 * wins / len(recent_sells)
+            performance_context = {"recent_win_rate": recent_win_rate, "recent_trades": len(recent_sells)} if recent_win_rate is not None else None
+
             decision, details = ai_engine.get_decision(
-                analysis, current_position, df, mtf_trend_4h=mtf_trend_4h
+                analysis, current_position, df, mtf_trend_4h=mtf_trend_4h,
+                deep_insights=bot_state.get("deep_insights"),
+                performance_context=performance_context,
             )
 
             # Update smart features in state
@@ -1121,6 +1773,27 @@ def bot_loop():
                 "models_loaded": ml_pred.get("models_loaded", False),
                 "error": ml_pred.get("error", "")
             }
+            # ML status: rolling accuracy from performance file (for dashboard)
+            try:
+                import json as _json
+                _perf_path = os.path.join(config.MODEL_DIR, "ml_performance.json")
+                if os.path.exists(_perf_path):
+                    with open(_perf_path, "r", encoding="utf-8") as _f:
+                        _data = _json.load(_f)
+                    _preds = _data.get("predictions", [])
+                    _with_outcome = [p for p in _preds if p.get("actual_direction")]
+                    _correct = sum(1 for p in _with_outcome if p.get("predicted_direction") == p.get("actual_direction"))
+                    _acc = (100.0 * _correct / len(_with_outcome)) if _with_outcome else None
+                    bot_state["ml_status"] = {
+                        "rolling_accuracy": round(_acc, 1) if _acc is not None else None,
+                        "predictions_with_outcome": len(_with_outcome),
+                        "last_retrain_date": _data.get("last_retrain_date"),
+                        "updated_at": _data.get("updated_at"),
+                    }
+                else:
+                    bot_state["ml_status"] = {"rolling_accuracy": None, "predictions_with_outcome": 0}
+            except Exception:
+                bot_state["ml_status"] = bot_state.get("ml_status") or {"rolling_accuracy": None}
 
             # Volume
             volume = analysis.get("volume", {})
@@ -1415,7 +2088,7 @@ def bot_loop():
                 }
 
             # Execute trades (MULTI-POSITION: allow up to MAX_POSITIONS concurrent trades)
-            max_positions = getattr(config, 'MAX_POSITIONS', 2)
+            max_positions = getattr(config, 'MAX_POSITIONS', 1)
             current_positions = len(bot_state.get("positions", []))
             # Also count legacy position if exists
             if bot_state["position"] and current_positions == 0:
@@ -1433,13 +2106,58 @@ def bot_loop():
             if decision == Decision.BUY and can_open_new:
                 regime = bot_state.get("market_regime", "unknown")
                 ai_score = details.get("score", 0) if details else 0
+                confluence_count = confluence.get("count", 0)
+                ai_decides_all = getattr(config, 'AI_DECIDES_ALL', False)
                 no_buy_downtrend = getattr(config, 'NO_BUY_IN_DOWNTREND', False)
                 downtrend_threshold = getattr(config, 'BUY_THRESHOLD_DOWNTREND', 0.50)
-                # Best loss avoidance: no new buys in downtrend (or require very strong signal)
-                if regime == "trending_down":
-                    if no_buy_downtrend:
-                        add_log("BUY skipped: Downtrend - no new buys (NO_BUY_IN_DOWNTREND)", "info")
-                        bot_state["activity_status"] = "Downtrend - no new buys (avoiding losses)"
+                high_score_override = getattr(config, 'HIGH_SCORE_DOWNTREND_OVERRIDE', 0.70)
+                
+                # === LOSS AVOIDANCE: Stricter after losses (reduce losing streaks) ===
+                loss_avoid_block = False
+                only_uptrend = getattr(config, 'ONLY_BUY_STRICT_UPTREND', False)
+                if only_uptrend and regime != "trending_up":
+                    add_log(f"BUY skipped: Only buying in strict uptrend (current: {regime})", "info")
+                    bot_state["activity_status"] = f"Waiting for trending_up (now: {regime})"
+                    loss_avoid_block = True
+                elif consecutive_losses >= 2:
+                    need_score = getattr(config, 'BUY_THRESHOLD_AFTER_TWO_LOSSES', 0.55)
+                    need_confluence = getattr(config, 'MIN_CONFLUENCE_AFTER_LOSS', 6)
+                    if ai_score < need_score:
+                        add_log(f"BUY skipped: 2+ losses - need score >= {need_score} (got {ai_score:.2f})", "info")
+                        bot_state["activity_status"] = f"Loss avoidance: need score >= {need_score} after 2 losses"
+                        loss_avoid_block = True
+                    elif confluence_count < need_confluence:
+                        add_log(f"BUY skipped: 2+ losses - need {need_confluence}+ confluence (got {confluence_count})", "info")
+                        bot_state["activity_status"] = f"Loss avoidance: need {need_confluence}+ indicators"
+                        loss_avoid_block = True
+                elif consecutive_losses >= 1:
+                    need_score = getattr(config, 'BUY_THRESHOLD_AFTER_LOSS', 0.45)
+                    need_confluence = getattr(config, 'MIN_CONFLUENCE_AFTER_LOSS', 6)
+                    if ai_score < need_score:
+                        add_log(f"BUY skipped: After loss - need score >= {need_score} (got {ai_score:.2f})", "info")
+                        bot_state["activity_status"] = f"Loss avoidance: need score >= {need_score} after loss"
+                        loss_avoid_block = True
+                    elif confluence_count < need_confluence:
+                        add_log(f"BUY skipped: After loss - need {need_confluence}+ confluence (got {confluence_count})", "info")
+                        bot_state["activity_status"] = f"Loss avoidance: need {need_confluence}+ indicators"
+                        loss_avoid_block = True
+                
+                # When AI_DECIDES_ALL: no hard block on downtrend - if AI says BUY we allow it
+                if not loss_avoid_block and regime == "trending_down" and not ai_decides_all:
+                    # HIGH SCORE OVERRIDE: If AI is VERY confident, allow trading even in downtrend
+                    if ai_score >= high_score_override:
+                        if bot_state["risk_status"]["can_trade"]:
+                            add_log(f"HIGH SCORE OVERRIDE: {base_asset} downtrend but score {ai_score:.2f} >= {high_score_override}", "success")
+                            bot_state["activity_status"] = f"Executing BUY #{current_positions+1}/{max_positions} (HIGH SCORE)..."
+                            update_dashboard()
+                            execute_buy(current_price, regime_data, details=details)
+                        else:
+                            add_log("Trade blocked by risk rules", "warning")
+                    elif no_buy_downtrend:
+                        # Show detailed selection status if available
+                        selection_info = bot_state.get("selection_status", "")
+                        add_log(f"BUY skipped: {base_asset} in downtrend (score {ai_score:.2f} < {high_score_override})", "info")
+                        bot_state["activity_status"] = selection_info if selection_info else "Downtrend - scanning for better coins..."
                     elif ai_score < downtrend_threshold:
                         add_log(f"BUY blocked: Downtrend - need score > {downtrend_threshold} (got {ai_score:.2f})", "info")
                         bot_state["activity_status"] = f"Downtrend - waiting for stronger signal (score {ai_score:.2f} < {downtrend_threshold})"
@@ -1449,12 +2167,15 @@ def bot_loop():
                         execute_buy(current_price, regime_data, details=details)
                     else:
                         add_log("Trade blocked by risk rules", "warning")
-                elif bot_state["risk_status"]["can_trade"]:
+                elif not loss_avoid_block and bot_state["risk_status"]["can_trade"]:
                     bot_state["activity_status"] = f"Executing BUY #{current_positions+1}/{max_positions}..."
                     update_dashboard()
                     execute_buy(current_price, regime_data, details=details)
                 else:
-                    add_log("Trade blocked by risk rules", "warning")
+                    if loss_avoid_block:
+                        pass  # Already logged above
+                    else:
+                        add_log("Trade blocked by risk rules", "warning")
             elif decision == Decision.BUY and not can_open_new:
                 # At max positions - wait for one to close
                 bot_state["activity_status"] = f"Max positions ({current_positions}/{max_positions}) - waiting for exit"
@@ -1485,6 +2206,13 @@ def bot_loop():
             # Diagnostic heartbeat: log periodically why no trade is happening (so we can debug)
             has_position = bool(bot_state.get("position") or bot_state.get("positions"))
             if not has_position:
+                # Update activity status to show current search status
+                selection_status = bot_state.get("selection_status", "")
+                if selection_status:
+                    bot_state["activity_status"] = selection_status
+                else:
+                    bot_state["activity_status"] = f"Scanning {len(config.SYMBOLS)} coins for opportunity..."
+                
                 now_t = time.time()
                 if now_t - _last_idle_heartbeat >= _IDLE_HEARTBEAT_INTERVAL:
                     regime = bot_state.get("market_regime", "unknown")
@@ -1495,6 +2223,16 @@ def bot_loop():
                     
                     # Build diagnostic message
                     reasons = []
+                    # Check balance first (most critical blocker)
+                    usdt_balance = client.get_balance(config.QUOTE_ASSET) or 0
+                    trade_min = getattr(config, "TRADE_AMOUNT_MIN", 10)
+                    # Use lower minimum ($1) for small balances to allow using proceeds from sales
+                    effective_min = 1.0 if usdt_balance < trade_min and usdt_balance > 0 else trade_min
+                    if usdt_balance < effective_min:
+                        if usdt_balance > 0:
+                            reasons.append(f"Balance too small: ${usdt_balance:.2f} < ${effective_min:.2f}")
+                        else:
+                            reasons.append(f"Insufficient balance: ${usdt_balance:.2f} < ${trade_min}")
                     if decision_val != "BUY":
                         reasons.append(f"Decision: {decision_val} (not BUY)")
                     if regime == "trending_down":
@@ -1560,8 +2298,21 @@ def execute_buy(price, regime_data=None, details=None):
     """Execute a buy order with smart sizing - supports multiple positions"""
     global trailing_stop_price, highest_price_since_entry, breakeven_activated, previous_rsi, stop_delay_count
 
+    # Capture symbol at start so trade history always matches the pair we actually trade
+    trade_symbol = bot_state.get("current_symbol") or config.SYMBOL
+    trade_base = bot_state.get("current_base_asset") or config.BASE_ASSET
+
     current_positions = len(bot_state.get("positions", []))
-    max_positions = getattr(config, 'MAX_POSITIONS', 2)
+    # Also count legacy position if exists
+    if bot_state.get("position") and current_positions == 0:
+        current_positions = 1
+    max_positions = getattr(config, 'MAX_POSITIONS', 1)
+    
+    # SAFETY: Never open a second position if MAX_POSITIONS = 1 (single position mode)
+    if current_positions >= max_positions:
+        add_log(f"BUY blocked: Already have {current_positions} position(s) (max {max_positions}) - wait for exit", "warning")
+        bot_state["activity_status"] = f"Max positions ({current_positions}/{max_positions}) - waiting for exit"
+        return
 
     bot_state["activity_status"] = f"Placing BUY order #{current_positions+1}..."
     update_dashboard()
@@ -1570,32 +2321,64 @@ def execute_buy(price, regime_data=None, details=None):
     confidence = (details or {}).get("confidence")
     position_size = calculate_position_size(regime_data, confidence)
     conf_level = confidence.get("level", "Medium") if confidence else "Medium"
-    add_log(f"Smart BUY #{current_positions+1}: ${position_size:.0f} (conf: {conf_level})", "info")
-
-    # Check balance before attempting buy
-    usdt_balance = client.get_balance(config.QUOTE_ASSET)
+    # Check balance: use available balance if below desired size (trade with what we have)
+    usdt_balance = client.get_balance(config.QUOTE_ASSET) or 0
+    trade_min = getattr(config, "TRADE_AMOUNT_MIN", 10)
+    # Lower minimum for small balances (proceeds from sales) - allow trading with $1+ to use all proceeds
+    effective_min = 1.0 if usdt_balance < trade_min and usdt_balance > 0 else trade_min
     min_required = position_size * 1.02  # 2% buffer for fees
-    if usdt_balance < min_required:
-        add_log(f"Insufficient balance: ${usdt_balance:,.2f} USDT (need ${min_required:,.2f})", "error")
-        add_log("Add USDT to your Spot wallet to start trading", "warning")
+    
+    if usdt_balance < effective_min:
+        global _last_insufficient_balance_log
+        now_ts = time.time()
+        if now_ts - _last_insufficient_balance_log >= 900:  # 15 min throttle
+            _last_insufficient_balance_log = now_ts
+            if usdt_balance > 0:
+                add_log(f"Balance too small: ${usdt_balance:,.2f} USDT (need ${effective_min:.2f} for fees)", "warning")
+            else:
+                add_log(f"Insufficient balance: ${usdt_balance:,.2f} USDT (min ${trade_min})", "error")
+                add_log("Add USDT to your Spot wallet to start trading", "warning")
+                try:
+                    get_notifier().notify_error(f"Insufficient balance: ${usdt_balance:,.2f} USDT. Add USDT to Spot wallet (min ${trade_min}).")
+                except Exception:
+                    pass
         return
+    
+    if usdt_balance < min_required:
+        # Use available balance (minus 2% buffer) so we can still trade with proceeds
+        position_size = max(effective_min, (usdt_balance * 0.98))
+        add_log(f"Using available balance: ${position_size:.2f} USDT (had ${usdt_balance:,.2f})", "info")
 
-    result = client.place_market_buy(quote_amount=position_size)
+    add_log(f"Smart BUY #{current_positions+1}: ${position_size:.0f} {trade_base} (conf: {conf_level})", "info")
+    result = client.place_market_buy(symbol=trade_symbol, quote_amount=position_size)
 
     if result.get("status") == "filled":
+        # Use symbol from order result so trade history always matches the filled order
+        trade_symbol = result.get("symbol", trade_symbol)
+        trade_base = trade_symbol.replace("USDT", "") if trade_symbol else trade_base
+
         # PHASE 6: Capture entry conditions for learning
         entry_conditions = {}
         indicator_combo_key = ""
         if ai_engine:
             # Get current analysis for entry conditions
             try:
+                indicators = bot_state.get("indicators", {}) or {}
+                ema_data = dict(indicators.get("ema", {}) or {})
+                if "signal" not in ema_data and "trend" in ema_data:
+                    ema_data["signal"] = ema_data.get("trend")
+                bb_data = dict(indicators.get("bollinger", {}) or {})
+                if "position" not in bb_data:
+                    percent_b = bb_data.get("percent_b")
+                    if percent_b is not None:
+                        bb_data["position"] = percent_b * 100
                 current_analysis = {
-                    "rsi": bot_state.get("rsi", {}),
-                    "macd": bot_state.get("macd", {}),
-                    "bollinger": bot_state.get("bollinger", {}),
-                    "ema": bot_state.get("ema", {}),
-                    "support_resistance": bot_state.get("support_resistance", {}),
-                    "stochastic": bot_state.get("stochastic", {}),
+                    "rsi": indicators.get("rsi", {}),
+                    "macd": indicators.get("macd", {}),
+                    "bollinger": bb_data,
+                    "ema": ema_data,
+                    "support_resistance": indicators.get("sr", {}),
+                    "stochastic": indicators.get("stochastic") or bot_state.get("stochastic", {}),
                     "atr": bot_state.get("atr", {}),
                 }
                 entry_conditions = ai_engine.capture_entry_conditions(current_analysis, bot_state)
@@ -1629,8 +2412,11 @@ def execute_buy(price, regime_data=None, details=None):
             except Exception as e:
                 logger.warning(f"Could not record trade entry for sizing: {e}")
         
+        params = regime_data.get("adjusted_params", {}) if regime_data else {}
         entry_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         new_position = {
+            "symbol": trade_symbol,
+            "base_asset": trade_base,
             "entry_price": result["price"],
             "quantity": result["quantity"],
             "entry_time": entry_time_str,
@@ -1645,6 +2431,12 @@ def execute_buy(price, regime_data=None, details=None):
             "indicator_combo_key": indicator_combo_key,
             "volatility": bot_state.get("atr", {}).get("volatility_level", "medium"),
             "lowest_price": result["price"],  # Track lowest price for drawdown
+            "highest_price": result["price"],  # Track highest price for trailing stop
+            "trailing_stop": None,
+            "trailing_stop_enabled": params.get("trailing_stop_enabled", True),
+            "breakeven_activated": False,
+            "stop_delay_count": 0,
+            "previous_rsi": None,
             # Position size learning: store conditions used for sizing
             "sizing_conditions": entry_conditions_for_sizing
         }
@@ -1668,13 +2460,14 @@ def execute_buy(price, regime_data=None, details=None):
         bot_state["ai_stop_override"] = None
 
         # Check if trailing stop enabled
-        params = regime_data.get("adjusted_params", {}) if regime_data else {}
         bot_state["trailing_stop_enabled"] = params.get("trailing_stop_enabled", True)
 
         trade = {
             "id": trade_id,
             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "type": "BUY",
+            "symbol": trade_symbol,
+            "base_asset": trade_base,
             "price": result["price"],
             "quantity": result["quantity"],
             "amount": position_size,
@@ -1685,8 +2478,9 @@ def execute_buy(price, regime_data=None, details=None):
         }
         bot_state["trade_history"].insert(0, trade)
         save_trades()
+        update_dashboard()  # Push updated trade history to UI immediately
 
-        add_log(f"BUY filled: {result['quantity']:.6f} BTC @ ${result['price']:,.2f}", "success")
+        add_log(f"BUY filled: {result['quantity']:.6f} {trade_base} @ ${result['price']:,.2f}", "success")
         bot_state["activity_status"] = "Position opened - Monitoring"
         save_bot_state()
 
@@ -1732,19 +2526,42 @@ def execute_sell(price, exit_type="manual", position_index=None):
         add_log("No position to sell", "error")
         return
 
-    # Proactive check: if actual BTC is dust (below Binance min), clear position and skip sell
+    # SAFETY: Ensure config matches position so we sell the correct asset
+    pos_symbol = position_to_sell.get("symbol")
+    pos_base = position_to_sell.get("base_asset")
+    if pos_symbol and pos_symbol != config.SYMBOL:
+        logger.warning("execute_sell: config.SYMBOL was %s but position is %s - aligning config", config.SYMBOL, pos_symbol)
+        config.SYMBOL = pos_symbol
+        config.BASE_ASSET = pos_base or config.BASE_ASSET
+
+    # Sell specific quantity when closing a single position; otherwise sell all
+    sell_quantity = None
+    sell_all = True
+    if position_index is not None and positions:
+        sell_quantity = position_to_sell.get("quantity")
+        sell_all = False
+
+    # Always try to sell what we have - let Binance reject if it's truly dust
+    base_asset = config.BASE_ASSET
+    actual_balance = None
     try:
-        actual_btc = client.get_balance(config.BASE_ASSET)
-        min_qty = 0.00001  # BTCUSDT minimum order size
-        if actual_btc < min_qty:
-            add_log(f"🔧 Clearing position (BTC {actual_btc:.8f} below min {min_qty} - dust)", "info")
-            if position_index is not None and bot_state.get("positions") and 0 <= position_index < len(bot_state["positions"]):
-                bot_state["positions"].pop(position_index)
-            if not bot_state.get("positions"):
+        actual_balance = client.get_balance(base_asset)
+        if actual_balance is None:
+            add_log(f"Could not get {base_asset} balance (API error) - skipping sell", "error")
+            return
+        if actual_balance <= 0:
+            add_log(f"No {base_asset} balance to sell - clearing position", "info")
+            if sell_all:
+                bot_state["positions"] = []
                 bot_state["position"] = None
             else:
-                bot_state["position"] = bot_state["positions"][0]
-            bot_state["activity_status"] = "Position cleared (dust - nothing to sell)"
+                if position_index is not None and bot_state.get("positions") and 0 <= position_index < len(bot_state["positions"]):
+                    bot_state["positions"].pop(position_index)
+                if not bot_state.get("positions"):
+                    bot_state["position"] = None
+                else:
+                    bot_state["position"] = bot_state["positions"][-1]
+            bot_state["activity_status"] = "Position cleared (zero balance)"
             save_bot_state()
             return
     except Exception:
@@ -1753,10 +2570,10 @@ def execute_sell(price, exit_type="manual", position_index=None):
     bot_state["activity_status"] = f"Placing SELL order #{pos_num} ({exit_type})..."
     update_dashboard()
 
-    add_log(f"SELL #{pos_num} ({exit_type}) at ${price:,.2f}", "info")
+    add_log(f"SELL #{pos_num} ({exit_type}) {pos_base or base_asset} at ${price:,.2f}", "info")
 
     # Sell total balance (position + any dust) so we clear the account in one order
-    result = client.place_market_sell(quantity=None)
+    result = client.place_market_sell(symbol=pos_symbol or config.SYMBOL, quantity=sell_quantity)
 
     if result.get("status") == "filled":
         entry_price = position_to_sell["entry_price"]
@@ -1812,6 +2629,36 @@ def execute_sell(price, exit_type="manual", position_index=None):
             except Exception:
                 pass
 
+            # Performance Tracker: record completed trade for Sharpe, drawdown, MAE/MFE
+            if PHASE_ENHANCEMENTS_AVAILABLE:
+                try:
+                    perf_tracker = get_performance_tracker()
+                    entry_time_str = position_to_sell.get("entry_time")
+                    highest_price = position_to_sell.get("highest_price", entry_price)
+                    lowest_price = position_to_sell.get("lowest_price", entry_price)
+                    duration_minutes = 0.0
+                    if entry_time_str:
+                        try:
+                            entry_dt = datetime.strptime(entry_time_str, "%Y-%m-%d %H:%M:%S")
+                            duration_minutes = (datetime.now() - entry_dt).total_seconds() / 60.0
+                        except Exception:
+                            pass
+                    perf_tracker.record_trade(
+                        entry_price=entry_price,
+                        exit_price=exit_price,
+                        quantity=quantity,
+                        pnl_dollar=pnl,
+                        pnl_percent=pnl_percent,
+                        exit_type=exit_type,
+                        regime=regime,
+                        duration_minutes=duration_minutes,
+                        highest_price=highest_price,
+                        lowest_price=lowest_price,
+                        entry_time=entry_time_str,
+                    )
+                except Exception as e:
+                    logger.warning("Performance tracker record_trade failed: %s", e)
+
             # ML outcome feedback: update prediction with actual direction so ML can learn
             try:
                 ml = ai_engine.ml_predictor if ai_engine else None
@@ -1846,10 +2693,16 @@ def execute_sell(price, exit_type="manual", position_index=None):
         if not sell_trade_id:
             sell_trade_id = len(bot_state["trade_history"]) + 1
         
+        # Use symbol from order result so trade history matches the filled order
+        sell_symbol = result.get("symbol", position_to_sell.get("symbol") or config.SYMBOL)
+        sell_base = sell_symbol.replace("USDT", "") if sell_symbol else (position_to_sell.get("base_asset") or config.BASE_ASSET)
+
         trade = {
             "id": sell_trade_id,
             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "type": "SELL",
+            "symbol": sell_symbol,
+            "base_asset": sell_base,
             "price": result["price"],
             "quantity": result["quantity"],
             "amount": result["quote_amount"],
@@ -1861,7 +2714,8 @@ def execute_sell(price, exit_type="manual", position_index=None):
         }
         bot_state["trade_history"].insert(0, trade)
         save_trades()
-        
+        update_dashboard()  # Push updated trade history to UI immediately
+
         # Record outcome for position size learning
         if position_size_learner:
             try:
@@ -1886,9 +2740,17 @@ def execute_sell(price, exit_type="manual", position_index=None):
             except Exception as e:
                 logger.warning(f"Could not record trade outcome for sizing: {e}")
 
-        # We sold total balance (position + dust), so clear all positions
-        bot_state["positions"] = []
-        bot_state["position"] = None
+        # Clear position(s)
+        if sell_all:
+            bot_state["positions"] = []
+            bot_state["position"] = None
+        else:
+            if position_index is not None and bot_state.get("positions"):
+                bot_state["positions"].pop(position_index)
+            if not bot_state.get("positions"):
+                bot_state["position"] = None
+            else:
+                bot_state["position"] = bot_state["positions"][-1]
 
         # Only clear trailing stop if no positions left
         if not bot_state.get("positions") and not bot_state["position"]:
@@ -1902,9 +2764,16 @@ def execute_sell(price, exit_type="manual", position_index=None):
             bot_state["ai_stop_override"] = None
 
         level = "success" if pnl >= 0 else "warning"
-        add_log(f"SELL #{pos_num}: ${result['quote_amount']:,.2f} | P/L: ${pnl:+,.2f} ({pnl_percent:+.2f}%) | All closed", level)
-        bot_state["activity_status"] = "Position closed (sold total balance)"
+        if sell_all:
+            add_log(f"SELL #{pos_num}: ${result['quote_amount']:,.2f} | P/L: ${pnl:+,.2f} ({pnl_percent:+.2f}%) | All closed", level)
+            bot_state["activity_status"] = "Position closed (sold total balance)"
+        else:
+            add_log(f"SELL #{pos_num}: ${result['quote_amount']:,.2f} | P/L: ${pnl:+,.2f} ({pnl_percent:+.2f}%)", level)
+            bot_state["activity_status"] = f"Position #{pos_num} closed"
         save_bot_state()
+
+        # Recalculate total profit after each trade
+        calculate_total_profit()
 
         # Send Telegram notification with total profit
         notifier = get_notifier()
@@ -1936,33 +2805,37 @@ def execute_sell(price, exit_type="manual", position_index=None):
         if "below minimum" in error_msg.lower() or "quantity 0" in error_msg.lower() or "no btc to sell" in error_msg.lower():
             # No BTC or dust - clear ghost position so we stop retrying
             add_log("🔧 Clearing position (no balance or dust - nothing to sell)", "info")
-            if position_index is not None and bot_state.get("positions") and 0 <= position_index < len(bot_state["positions"]):
-                bot_state["positions"].pop(position_index)
-            if not bot_state.get("positions"):
+            if sell_all:
+                bot_state["positions"] = []
                 bot_state["position"] = None
             else:
-                bot_state["position"] = bot_state["positions"][0]
+                if position_index is not None and bot_state.get("positions") and 0 <= position_index < len(bot_state["positions"]):
+                    bot_state["positions"].pop(position_index)
+                if not bot_state.get("positions"):
+                    bot_state["position"] = None
+                else:
+                    bot_state["position"] = bot_state["positions"][-1]
             bot_state["activity_status"] = "Position cleared (balance too small to sell)"
             save_bot_state()
             return
         if "insufficient balance" in error_msg.lower():
             add_log("🔧 Auto-fixing: Insufficient balance - syncing with Binance...", "info")
             try:
-                # Get actual balance and retry
-                actual_btc = client.get_balance("BTC")
-                if actual_btc > 0.00001:  # More than dust
-                    add_log(f"🔧 Retrying with actual balance: {actual_btc:.8f} BTC", "info")
+                base = config.BASE_ASSET
+                actual_balance = client.get_balance(base)
+                if actual_balance is not None and actual_balance > 0:
+                    add_log(f"🔧 Retrying with actual balance: {actual_balance:.8f} {base}", "info")
                     
                     # Update position quantity
-                    position_to_sell["quantity"] = actual_btc
+                    position_to_sell["quantity"] = actual_balance
                     if bot_state["position"]:
-                        bot_state["position"]["quantity"] = actual_btc
+                        bot_state["position"]["quantity"] = actual_balance
                     for pos in bot_state.get("positions", []):
                         if pos.get("entry_price") == position_to_sell.get("entry_price"):
-                            pos["quantity"] = actual_btc
+                            pos["quantity"] = actual_balance
                     
                     # Retry the sell
-                    result = client.place_market_sell(quantity=actual_btc)
+                    result = client.place_market_sell(quantity=actual_balance)
                     if result.get("status") == "filled":
                         add_log(f"🔧 Auto-fix successful! SELL completed at ${result['price']:,.2f}", "success")
                         # Process the successful sell...
@@ -1973,12 +2846,16 @@ def execute_sell(price, exit_type="manual", position_index=None):
                         pnl_percent = ((exit_price - entry_price) / entry_price) * 100
                         
                         # Clear position
-                        if position_index is not None and bot_state.get("positions"):
-                            bot_state["positions"].pop(position_index)
-                        if not bot_state.get("positions"):
+                        if sell_all:
+                            bot_state["positions"] = []
                             bot_state["position"] = None
                         else:
-                            bot_state["position"] = bot_state["positions"][0]
+                            if position_index is not None and bot_state.get("positions"):
+                                bot_state["positions"].pop(position_index)
+                            if not bot_state.get("positions"):
+                                bot_state["position"] = None
+                            else:
+                                bot_state["position"] = bot_state["positions"][-1]
                         
                         # Notify success
                         get_notifier().notify_sell(
@@ -2058,10 +2935,9 @@ def recover_position_from_binance():
         if client is None:
             client = BinanceClient()
         
-        # Get actual BTC balance from Binance
         btc_balance = client.get_balance(config.BASE_ASSET)
-        
-        # If we have significant BTC but no position tracked
+        if btc_balance is None:
+            return  # API error, skip recovery
         min_btc = 0.00001  # Minimum BTC to consider as position
         
         if btc_balance > min_btc and not bot_state.get("position") and not bot_state.get("positions"):
@@ -2199,10 +3075,13 @@ def index():
 
 @app.route('/api/performance')
 def get_performance():
-    """Get detailed performance analytics"""
+    """Get detailed performance analytics including equity curve for charting"""
     try:
         tracker = get_performance_tracker()
         metrics = tracker.get_full_metrics()
+        
+        # Add equity curve for charting (last 100 points)
+        metrics['equity_curve'] = tracker.get_equity_curve_data(limit=100)
         
         # Add risk status
         risk_mgr = get_risk_manager()
@@ -2302,6 +3181,9 @@ def start_bot():
     # Start bot thread
     bot_thread = threading.Thread(target=bot_loop, daemon=True)
     bot_thread.start()
+    
+    # Start real-time price ticker
+    start_price_ticker()
 
     add_log("Smart bot started in LIVE mode", "success")
     calculate_total_profit()  # Refresh totals before notifying
@@ -2329,6 +3211,9 @@ def stop_bot_route():
     bot_state["decision"] = "STOPPED"
     bot_state["activity_status"] = "Stopped"
     bot_state["decision_reasons"] = []
+    
+    # Stop real-time price ticker
+    stop_price_ticker()
 
     add_log("Bot stop requested", "warning")
     save_bot_state()
@@ -2414,30 +3299,32 @@ def sync_balance_endpoint():
     global client
     
     try:
-        actual_btc = client.get_balance("BTC")
+        base = config.BASE_ASSET
+        actual_balance = client.get_balance(base)
+        if actual_balance is None:
+            return jsonify({"status": "error", "message": "Could not get balance (API error)"})
         position = bot_state.get("position")
-        
         if position:
             old_qty = position.get("quantity", 0)
-            position["quantity"] = actual_btc
+            position["quantity"] = actual_balance
             
             # Also update in positions list
             for pos in bot_state.get("positions", []):
-                pos["quantity"] = actual_btc
+                pos["quantity"] = actual_balance
             
             save_bot_state()
-            add_log(f"Balance synced: {old_qty:.8f} -> {actual_btc:.8f} BTC", "success")
+            add_log(f"Balance synced: {old_qty:.8f} -> {actual_balance:.8f} {base}", "success")
             
             return jsonify({
                 "status": "ok",
                 "old_quantity": old_qty,
-                "new_quantity": actual_btc,
-                "message": f"Position synced to {actual_btc:.8f} BTC"
+                "new_quantity": actual_balance,
+                "message": f"Position synced to {actual_balance:.8f} {base}"
             })
         else:
             return jsonify({
                 "status": "ok",
-                "btc_balance": actual_btc,
+                "base_balance": actual_balance,
                 "message": "No position to sync"
             })
             
@@ -2755,6 +3642,17 @@ def test_api_connection():
         else:
             test_client = Client(api_key, api_secret)
 
+        # Sync time with Binance to avoid -1021 timestamp errors (same as BinanceClient)
+        try:
+            server_time = test_client.get_server_time()
+            local_ms = int(time.time() * 1000)
+            offset_ms = server_time["serverTime"] - local_ms
+            test_client.timestamp_offset = offset_ms
+            if abs(offset_ms) > 500:
+                logger.info("Test connection: time sync offset %+d ms", offset_ms)
+        except Exception as sync_err:
+            logger.warning("Test connection: could not sync time with Binance: %s", sync_err)
+
         # Try to get account info - this verifies the API keys work
         account = test_client.get_account()
 
@@ -2778,8 +3676,8 @@ def test_api_connection():
             error_msg = "Invalid API Key - check your key"
         elif 'Signature' in error_msg:
             error_msg = "Invalid API Secret - check your secret"
-        elif 'timestamp' in error_msg.lower():
-            error_msg = "Time sync error - check your computer time"
+        elif 'timestamp' in error_msg.lower() or '-1021' in error_msg:
+            error_msg = "Time sync error: your PC clock is out of sync with Binance. Sync Windows time (Settings > Time & language > Sync now) or restart the bot to auto-sync."
 
         return jsonify({
             "status": "error",
@@ -2983,6 +3881,15 @@ def _refresh_data_when_stopped():
         from binance.client import Client
         import pandas as pd
 
+        # When stopped, use last active pair or first in SYMBOLS for price/balance display
+        sym = bot_state.get("current_symbol") or config.SYMBOL
+        base = bot_state.get("current_base_asset") or config.BASE_ASSET
+        symbols_list = getattr(config, "SYMBOLS", None)
+        if symbols_list and not bot_state.get("current_symbol"):
+            sym, base = symbols_list[0][0], symbols_list[0][1]
+        config.SYMBOL = sym
+        config.BASE_ASSET = base
+
         # Show live status
         bot_state["activity_status"] = "Live - Fetching data..."
 
@@ -2993,16 +3900,25 @@ def _refresh_data_when_stopped():
         if bot_state.get("current_price", 0) > 0:
             bot_state["last_price"] = bot_state["current_price"]
         bot_state["current_price"] = new_price
-        bot_state["last_update"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if "price_history" not in bot_state:
+            bot_state["price_history"] = []
+        cutoff_ts = time.time() - 600  # 10 minutes
+        bot_state["price_history"].insert(0, {"ts": time.time(), "p": round(new_price, 2)})
+        bot_state["price_history"] = [e for e in bot_state["price_history"] if e["ts"] >= cutoff_ts][:60]
 
         # Balance (requires API keys - use bot's BinanceClient or create if configured)
         now = time.time()
         if now - _last_stopped_balance > _BALANCE_THROTTLE:
             try:
                 _balance_client = client if client else BinanceClient()
-                bot_state["balance_usdt"] = _balance_client.get_balance(config.QUOTE_ASSET)
-                bot_state["balance_btc"] = _balance_client.get_balance(config.BASE_ASSET)
-                bot_state["total_value"] = _balance_client.get_account_value()
+                _usdt = _balance_client.get_balance(config.QUOTE_ASSET)
+                _btc = _balance_client.get_balance(config.BASE_ASSET)
+                if _usdt is not None:
+                    bot_state["balance_usdt"] = _usdt
+                if _btc is not None:
+                    bot_state["balance_btc"] = _btc
+                if _usdt is not None or _btc is not None:
+                    bot_state["total_value"] = _balance_client.get_account_value()
                 globals()["_last_stopped_balance"] = now
             except Exception:
                 pass  # Keep existing values if keys not configured or API fails

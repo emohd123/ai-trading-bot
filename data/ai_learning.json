@@ -1,66 +1,6 @@
 {
   "trade_history": [
     {
-      "profit_percent": 0.47467116779104185,
-      "is_win": true,
-      "exit_type": "min_profit",
-      "timestamp": "2026-01-31T19:24:32.993289"
-    },
-    {
-      "profit_percent": -1.9478156915145661,
-      "is_win": false,
-      "exit_type": "stop_loss",
-      "timestamp": "2026-01-31T20:11:54.390210"
-    },
-    {
-      "profit_percent": -1.8786107399993763,
-      "is_win": false,
-      "exit_type": "stop_loss",
-      "timestamp": "2026-01-31T21:38:31.558297"
-    },
-    {
-      "profit_percent": 0.8290050719275321,
-      "is_win": true,
-      "exit_type": "min_profit",
-      "timestamp": "2026-01-31T22:10:16.333142"
-    },
-    {
-      "profit_percent": -1.5404354733847005,
-      "is_win": false,
-      "exit_type": "stop_loss",
-      "timestamp": "2026-01-31T23:32:49.647573"
-    },
-    {
-      "profit_percent": 0.479949106743107,
-      "is_win": true,
-      "exit_type": "min_profit",
-      "timestamp": "2026-01-31T23:57:02.627652"
-    },
-    {
-      "profit_percent": 0.36129259438728367,
-      "is_win": true,
-      "exit_type": "min_profit",
-      "timestamp": "2026-02-01T00:42:40.377665"
-    },
-    {
-      "profit_percent": 0.45298679131755204,
-      "is_win": true,
-      "exit_type": "min_profit",
-      "timestamp": "2026-02-01T02:20:08.701486"
-    },
-    {
-      "profit_percent": 0.4533298358733813,
-      "is_win": true,
-      "exit_type": "min_profit",
-      "timestamp": "2026-02-01T02:23:29.287598"
-    },
-    {
-      "profit_percent": 0.40800153267192707,
-      "is_win": true,
-      "exit_type": "min_profit",
-      "timestamp": "2026-02-01T03:08:58.097665"
-    },
-    {
       "profit_percent": -1.0092786769488806,
       "is_win": false,
       "exit_type": "stop_loss",
@@ -261,106 +201,263 @@
       "exit_type": "min_profit",
       "timestamp": "2026-02-04T19:55:30.706324",
       "regime": "trending_down"
+    },
+    {
+      "profit_percent": -1.0741609962795833,
+      "is_win": false,
+      "exit_type": "stop_loss",
+      "timestamp": "2026-02-04T20:20:22.185885",
+      "regime": "trending_down",
+      "loss_reason": "wrong_regime"
+    },
+    {
+      "profit_percent": 0.22256303196203767,
+      "is_win": true,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-04T20:35:24.882637",
+      "regime": "trending_down"
+    },
+    {
+      "profit_percent": 0.5195664115378062,
+      "is_win": true,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-04T21:10:54.817703",
+      "regime": "trending_down"
+    },
+    {
+      "profit_percent": 0.5176875909789287,
+      "is_win": true,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-04T21:29:41.281842",
+      "regime": "trending_down"
+    },
+    {
+      "profit_percent": -0.8105932049961915,
+      "is_win": false,
+      "exit_type": "stop_loss",
+      "timestamp": "2026-02-04T22:26:10.838208",
+      "regime": "trending_down",
+      "loss_reason": "wrong_regime"
+    },
+    {
+      "profit_percent": 0.3792590353347435,
+      "is_win": true,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-04T22:47:06.578158",
+      "regime": "trending_down"
+    },
+    {
+      "profit_percent": 0.30845205880176485,
+      "is_win": true,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-04T22:53:28.078442",
+      "regime": "trending_down"
+    },
+    {
+      "profit_percent": -1.0,
+      "is_win": false,
+      "exit_type": "unknown",
+      "timestamp": "2026-02-04T23:35:03.932551",
+      "regime": "unknown"
+    },
+    {
+      "profit_percent": -1.0,
+      "is_win": false,
+      "exit_type": "unknown",
+      "timestamp": "2026-02-04T23:35:03.940276",
+      "regime": "unknown"
+    },
+    {
+      "profit_percent": -1.0,
+      "is_win": false,
+      "exit_type": "unknown",
+      "timestamp": "2026-02-04T23:35:03.949148",
+      "regime": "unknown"
+    },
+    {
+      "profit_percent": 1.0,
+      "is_win": true,
+      "exit_type": "unknown",
+      "timestamp": "2026-02-04T23:35:04.609043",
+      "regime": "unknown"
+    },
+    {
+      "profit_percent": 1.0,
+      "is_win": true,
+      "exit_type": "unknown",
+      "timestamp": "2026-02-04T23:35:04.611928",
+      "regime": "unknown"
+    },
+    {
+      "profit_percent": 1.0,
+      "is_win": true,
+      "exit_type": "unknown",
+      "timestamp": "2026-02-04T23:35:04.616310",
+      "regime": "unknown"
+    },
+    {
+      "profit_percent": -1.0,
+      "is_win": false,
+      "exit_type": "unknown",
+      "timestamp": "2026-02-04T23:35:04.618783",
+      "regime": "unknown"
+    },
+    {
+      "profit_percent": 1.0,
+      "is_win": true,
+      "exit_type": "unknown",
+      "timestamp": "2026-02-04T23:35:05.467424",
+      "regime": "unknown"
+    },
+    {
+      "profit_percent": 1.0,
+      "is_win": true,
+      "exit_type": "unknown",
+      "timestamp": "2026-02-04T23:35:05.470826",
+      "regime": "unknown"
+    },
+    {
+      "profit_percent": 1.0,
+      "is_win": true,
+      "exit_type": "unknown",
+      "timestamp": "2026-02-04T23:35:05.473848",
+      "regime": "unknown"
+    },
+    {
+      "profit_percent": -0.8418615578340851,
+      "is_win": false,
+      "exit_type": "stop_loss",
+      "timestamp": "2026-02-05T00:23:28.150018",
+      "regime": "trending_down"
+    },
+    {
+      "profit_percent": -1.0557208852497355,
+      "is_win": false,
+      "exit_type": "stop_loss",
+      "timestamp": "2026-02-05T00:55:11.338357",
+      "regime": "trending_down",
+      "loss_reason": "wrong_regime"
+    },
+    {
+      "profit_percent": 0.4179728317659263,
+      "is_win": true,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-05T07:42:16.121486",
+      "regime": "trending_down"
+    },
+    {
+      "profit_percent": 0.4590395480225875,
+      "is_win": true,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-05T08:38:05.927279",
+      "regime": "trending_down"
+    },
+    {
+      "profit_percent": 0.5334982240692594,
+      "is_win": true,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-05T08:41:31.381043",
+      "regime": "trending_down"
     }
   ],
   "indicator_accuracy": {
-    "macd": 0.35229782656317044,
-    "ml_prediction": 0.3518769481921313,
-    "ichimoku": 0.35073674867450677,
-    "ema": 0.35058501584418744,
-    "momentum": 0.6537966208765282,
-    "bollinger": 0.6494149841558126,
-    "support_resistance": 0.649040384745526,
-    "mfi": 0.6492632513254932,
-    "williams_r": 0.7336271277156072,
-    "cci": 0.6492632513254932
+    "momentum": 0.6338362956043277,
+    "bollinger": 0.8211512365813851,
+    "support_resistance": 0.821135415324334,
+    "mfi": 0.6805198281246561,
+    "cci": 0.5711448281246561,
+    "ml_prediction": 0.834198700366352,
+    "williams_r": 0.6487435924514382,
+    "macd": 0.17892110421232843,
+    "ichimoku": 0.178855171875344,
+    "ema": 0.17884876341861494
   },
   "directional_accuracy": {
-    "macd": {
-      "bullish": 0.548828125,
-      "bearish": 0.35065967060654657,
-      "bullish_samples": 4,
-      "bearish_samples": 18
-    },
-    "ml_prediction": {
-      "bullish": 0.7031494140625001,
-      "bearish": 0.873931884765625,
-      "bullish_samples": 15,
-      "bearish_samples": 7
-    },
-    "ichimoku": {
-      "bullish": 0.5,
-      "bearish": 0.35073674867450677,
-      "bullish_samples": 0,
-      "bearish_samples": 22
-    },
-    "ema": {
-      "bullish": 0.5,
-      "bearish": 0.35073674867450677,
-      "bullish_samples": 0,
-      "bearish_samples": 22
-    },
     "momentum": {
-      "bullish": 0.6468871231450066,
-      "bearish": 0.53125,
-      "bullish_samples": 20,
-      "bearish_samples": 2
+      "bullish": 0.761392629370298,
+      "bearish": 0.3984375,
+      "bullish_samples": 30,
+      "bearish_samples": 3
     },
     "bollinger": {
-      "bullish": 0.6492632513254932,
+      "bullish": 0.8211448281246561,
       "bearish": 0.5,
-      "bullish_samples": 22,
+      "bullish_samples": 33,
       "bearish_samples": 0
     },
     "support_resistance": {
-      "bullish": 0.6492632513254932,
+      "bullish": 0.8211448281246561,
       "bearish": 0.5,
-      "bullish_samples": 22,
+      "bullish_samples": 33,
       "bearish_samples": 0
     },
     "mfi": {
-      "bullish": 0.6492632513254932,
+      "bullish": 0.8211448281246561,
       "bearish": 0.5,
-      "bullish_samples": 22,
-      "bearish_samples": 0
-    },
-    "williams_r": {
-      "bullish": 0.6492632513254932,
-      "bearish": 0.5,
-      "bullish_samples": 22,
+      "bullish_samples": 33,
       "bearish_samples": 0
     },
     "cci": {
-      "bullish": 0.6492632513254932,
-      "bearish": 0.5,
+      "bullish": 0.7615264374995414,
+      "bearish": 0.375,
+      "bullish_samples": 32,
+      "bearish_samples": 1
+    },
+    "ml_prediction": {
+      "bullish": 0.9,
+      "bearish": 0.6296875000000001,
       "bullish_samples": 22,
+      "bearish_samples": 11
+    },
+    "williams_r": {
+      "bullish": 0.8211448281246561,
+      "bearish": 0.5,
+      "bullish_samples": 33,
       "bearish_samples": 0
+    },
+    "macd": {
+      "bullish": 0.548828125,
+      "bearish": 0.17885191647265863,
+      "bullish_samples": 4,
+      "bearish_samples": 29
+    },
+    "ichimoku": {
+      "bullish": 0.5,
+      "bearish": 0.178855171875344,
+      "bullish_samples": 0,
+      "bearish_samples": 33
+    },
+    "ema": {
+      "bullish": 0.5,
+      "bearish": 0.178855171875344,
+      "bullish_samples": 0,
+      "bearish_samples": 33
     }
   },
   "indicator_samples": {
-    "macd": 22,
-    "ml_prediction": 22,
-    "ichimoku": 22,
-    "ema": 22,
-    "momentum": 22,
-    "bollinger": 22,
-    "support_resistance": 22,
-    "mfi": 22,
-    "williams_r": 22,
-    "cci": 22
+    "momentum": 33,
+    "bollinger": 33,
+    "support_resistance": 33,
+    "mfi": 33,
+    "cci": 33,
+    "ml_prediction": 33,
+    "williams_r": 33,
+    "macd": 33,
+    "ichimoku": 33,
+    "ema": 33
   },
   "regime_indicator_accuracy": {
     "trending_down": {
-      "momentum": 0.6502536538988353,
-      "macd": 0.3558838809772169,
-      "bollinger": 0.6468871231450066,
-      "ema": 0.3531128768549934,
-      "support_resistance": 0.6468871231450066,
-      "ml_prediction": 0.35534447044165063,
-      "ichimoku": 0.3531128768549934,
-      "mfi": 0.6468871231450066,
-      "williams_r": 0.7282211552878834,
-      "cci": 0.6468871231450066
+      "momentum": 0.6336866579120677,
+      "macd": 0.17907256170832422,
+      "bollinger": 0.8210444720277235,
+      "ema": 0.1789555279722766,
+      "support_resistance": 0.8210444720277235,
+      "ml_prediction": 0.8343451516402547,
+      "ichimoku": 0.1789555279722766,
+      "mfi": 0.6804194720277235,
+      "williams_r": 0.6485152704705675,
+      "cci": 0.5710444720277235
     },
     "ranging": {
       "macd": 0.53125,
@@ -377,49 +474,49 @@
   },
   "regime_accuracy": {
     "regime_trending_down": {
-      "wins": 12,
-      "losses": 10
+      "wins": 20,
+      "losses": 13
     },
     "regime_ranging": {
       "wins": 1,
       "losses": 1
     }
   },
-  "win_streak": 2,
+  "win_streak": 3,
   "loss_streak": 0,
-  "streak_multiplier": 1.2,
+  "streak_multiplier": 1.3,
   "condition_performance": {
     "rsi_neutral": {
-      "wins": 12,
-      "losses": 9
+      "wins": 16,
+      "losses": 10
     },
     "vol_normal": {
-      "wins": 12,
-      "losses": 9
+      "wins": 20,
+      "losses": 12
     },
     "trend_sideways": {
-      "wins": 12,
-      "losses": 9
+      "wins": 20,
+      "losses": 12
     },
     "sr_middle": {
-      "wins": 12,
-      "losses": 9
+      "wins": 14,
+      "losses": 10
     },
     "bb_middle": {
-      "wins": 12,
-      "losses": 9
+      "wins": 16,
+      "losses": 10
     },
     "fg_extreme_fear": {
-      "wins": 12,
-      "losses": 9
+      "wins": 20,
+      "losses": 12
     },
     "regime_trending_down": {
-      "wins": 11,
-      "losses": 8
+      "wins": 19,
+      "losses": 11
     },
     "hour_0": {
       "wins": 2,
-      "losses": 0
+      "losses": 1
     },
     "hour_1": {
       "wins": 0,
@@ -430,12 +527,12 @@
       "losses": 0
     },
     "hour_20": {
-      "wins": 0,
+      "wins": 2,
       "losses": 2
     },
     "hour_21": {
-      "wins": 0,
-      "losses": 1
+      "wins": 1,
+      "losses": 2
     },
     "regime_ranging": {
       "wins": 1,
@@ -451,17 +548,41 @@
     },
     "hour_19": {
       "wins": 3,
+      "losses": 3
+    },
+    "rsi_oversold": {
+      "wins": 4,
       "losses": 2
+    },
+    "sr_at_support": {
+      "wins": 6,
+      "losses": 2
+    },
+    "bb_near_lower": {
+      "wins": 4,
+      "losses": 2
+    },
+    "hour_22": {
+      "wins": 2,
+      "losses": 0
+    },
+    "hour_7": {
+      "wins": 1,
+      "losses": 0
+    },
+    "hour_8": {
+      "wins": 2,
+      "losses": 0
     }
   },
   "stop_loss_learning": {
     "trending_down_medium": {
-      "avg_optimal": 1.1241058331378455,
-      "samples": 1
+      "avg_optimal": 1.1329836954859653,
+      "samples": 2
     },
     "trending_down_normal": {
-      "avg_optimal": 0.6817355429706049,
-      "samples": 19
+      "avg_optimal": 0.6186378159783463,
+      "samples": 30
     },
     "ranging_normal": {
       "avg_optimal": 0.9846145254391727,
@@ -469,13 +590,13 @@
     }
   },
   "loss_reasons": {
-    "wrong_regime": 8,
+    "wrong_regime": 11,
     "normal_stop": 1
   },
   "indicator_combos": {
     "no_signals": {
-      "wins": 10,
-      "losses": 7
+      "wins": 12,
+      "losses": 8
     },
     "stoch_bearish": {
       "wins": 1,
@@ -484,7 +605,27 @@
     "stoch_bullish": {
       "wins": 1,
       "losses": 0
+    },
+    "bb_bullish+macd_bearish+rsi_bullish+sr_support": {
+      "wins": 1,
+      "losses": 1
+    },
+    "bb_bullish+macd_bearish+rsi_bullish+sr_support+stoch_bullish": {
+      "wins": 2,
+      "losses": 1
+    },
+    "bb_bullish+macd_bearish+sr_support": {
+      "wins": 1,
+      "losses": 0
+    },
+    "macd_bearish+sr_support+stoch_bearish": {
+      "wins": 1,
+      "losses": 0
+    },
+    "macd_bearish+rsi_bullish+sr_support": {
+      "wins": 1,
+      "losses": 0
     }
   },
-  "last_updated": "2026-02-04T19:55:30.706620"
+  "last_updated": "2026-02-05T08:41:31.381409"
 }

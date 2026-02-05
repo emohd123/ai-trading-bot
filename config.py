@@ -25,60 +25,102 @@ MAINNET_API_URL = "https://api.binance.com"
 # =============================================================================
 # TRADING CONFIGURATION
 # =============================================================================
-# Trading pair
+# Trading pair (current pair; overwritten each loop when using multi-coin rotation)
 SYMBOL = "BTCUSDT"
 BASE_ASSET = "BTC"
 QUOTE_ASSET = "USDT"
 
+# Multi-coin rotation: list of (symbol, base_asset) to choose from
+# Extended list for more trading opportunities across market conditions
+SYMBOLS = [
+    # Major coins
+    ("BTCUSDT", "BTC"),
+    ("ETHUSDT", "ETH"),
+    ("BNBUSDT", "BNB"),
+    ("SOLUSDT", "SOL"),
+    ("XRPUSDT", "XRP"),
+    # Popular altcoins
+    ("DOGEUSDT", "DOGE"),
+    ("ADAUSDT", "ADA"),
+    ("AVAXUSDT", "AVAX"),
+    ("MATICUSDT", "MATIC"),
+    ("LINKUSDT", "LINK"),
+    ("DOTUSDT", "DOT"),
+    ("ATOMUSDT", "ATOM"),
+    ("LTCUSDT", "LTC"),
+    ("UNIUSDT", "UNI"),
+    ("NEARUSDT", "NEAR"),
+]
+# Symbol selection cache: reuse regime/score for this many minutes to limit API calls
+SYMBOL_SCAN_CACHE_MINUTES = 1  # Scan every 1 min for near real-time coin switching
+# Re-run full symbol selection at most every N minutes when no position (sticky)
+SYMBOL_ROTATION_INTERVAL_MINUTES = 1  # Re-evaluate every 1 min - instant switching
+# Optional: minimum AI score to consider a symbol for rotation (default: use BUY_THRESHOLD)
+ROTATION_MIN_SCORE = None  # None = use BUY_THRESHOLD
+
 # Trade amount in quote currency (USDT)
-TRADE_AMOUNT_USDT = 40  # Amount to trade per position
+TRADE_AMOUNT_USDT = 40  # Amount to trade per position (use up to this when balance allows)
+TRADE_AMOUNT_MIN = 10   # Minimum USDT to open a position; if balance below this, skip and log (throttled)
 
 # Maximum concurrent positions (1 = focus on one position, fewer whipsaw losses)
-MAX_POSITIONS = 1  # Single position to reduce overtrading and fee drag
+# IMPORTANT: Set to 1 to trade one position at a time and track profit properly
+MAX_POSITIONS = 1  # Single position mode - wait for position to close before opening new one
 
 # Profit and loss targets (as decimals) - 2:1 Risk/Reward Ratio
 PROFIT_TARGET = 0.015  # 1.5% profit target (improved from 1% for better risk/reward)
 PROFIT_TARGET_HIGH_VOL = 0.005  # 0.5% profit target in high volatility (faster sells for quick profits)
-MIN_PROFIT = 0.0025  # 0.25% minimum profit to take
-MIN_PROFIT_HIGH_VOL = 0.0015  # 0.15% minimum profit in high volatility (faster exits)
-STOP_LOSS = 0.01         # 1.0% stop loss (base) - room for noise, HARD_STOP_LIMIT still 2%
-STOP_LOSS_TRENDING_DOWN = 0.008  # 0.8% in downtrend - less whipsaw than 0.6%
+MIN_PROFIT = 0.005   # 0.5% minimum profit to take (was 0.25% - need bigger wins to offset losses)
+MIN_PROFIT_HIGH_VOL = 0.003  # 0.3% minimum profit in high volatility (faster exits)
+STOP_LOSS = 0.007        # 0.7% stop loss (base) - cut losses faster
+STOP_LOSS_TRENDING_DOWN = 0.005  # 0.5% in downtrend - cut losses faster
 STOP_LOSS_HIGH_VOL = 0.0075      # 0.75% in high volatility (matches previous)
 
 # =============================================================================
 # AI ENGINE CONFIGURATION
 # =============================================================================
 # AI score thresholds (stricter to reduce weak entries and losses)
-BUY_THRESHOLD = 0.30   # Buy when AI score > 0.30 (clearer bullish signal)
+BUY_THRESHOLD = 0.35   # Buy when AI score > 0.35 (fewer weak entries, reduce losses)
 BUY_THRESHOLD_DOWNTREND = 0.40  # In downtrend: require stronger score to buy
 SELL_THRESHOLD = -0.25 # Sell when AI score < -0.25 (in profit)
 # Stricter threshold when position is in loss - avoid locking small losses on weak bearish flicker
 SELL_THRESHOLD_IN_LOSS = -0.35  # Require score < -0.35 to sell at a loss on AI signal
 # Allow buys in downtrend only with stronger signal (BUY_THRESHOLD_DOWNTREND)
-NO_BUY_IN_DOWNTREND = False  # False = can buy in downtrend if score >= BUY_THRESHOLD_DOWNTREND
+NO_BUY_IN_DOWNTREND = True  # True = block weak buys in downtrend (most losses were from weak downtrend buys)
+# HIGH SCORE OVERRIDE: If AI score is VERY high, allow trading even in downtrend (AI is confident)
+HIGH_SCORE_DOWNTREND_OVERRIDE = 0.70  # Raised from 0.60 - only buy downtrend when AI very confident (reduces losses)
+# When True: AI fully decides - no hard block on downtrend; if AI says BUY we allow it (multi-coin auto)
+# DISABLED: All recent losses were from downtrend buys. Let NO_BUY_IN_DOWNTREND block them.
+AI_DECIDES_ALL = False  # Respect NO_BUY_IN_DOWNTREND to avoid losses in bear markets
+
+# === LOSS AVOIDANCE (stricter after losses) ===
+BUY_THRESHOLD_AFTER_LOSS = 0.45   # After 1+ consecutive loss, require stronger signal before next BUY
+BUY_THRESHOLD_AFTER_TWO_LOSSES = 0.55  # After 2+ consecutive losses, require even stronger signal
+COOLDOWN_AFTER_LOSS_MINUTES = 15  # Wait 15 min after stop loss before next buy (anti-whipsaw)
+ONLY_BUY_STRICT_UPTREND = False   # True = only buy when regime is "trending_up" (not "ranging") - very conservative
+MIN_CONFLUENCE_AFTER_LOSS = 6     # After a loss, require 6+ indicators to agree for next BUY
 
 # When buying in downtrend is allowed (or for positions carried into downtrend): use smaller size
 POSITION_SIZE_DOWNTREND_MULT = 0.6   # 60% of normal size in downtrend (0.7 = 70%, 1.0 = no reduction)
 
 # Indicator weights for AI scoring (must sum to 1.0) - 10 indicators with ML prediction
-# Rebalanced to match your learned accuracy (25 trades): best macd/ml/ichimoku/ema, weak williams_r/sr/mfi
+# UPDATED based on 51 trades learned accuracy! Best: Momentum/Bollinger/SR/MFI/CCI (77%), Worst: MACD/Ichimoku/EMA (23%)
 INDICATOR_WEIGHTS = {
-    "macd": 0.18,               # Best performer 76.6%
-    "ml_prediction": 0.15,      # 74.8%
-    "ichimoku": 0.12,           # 70%
-    "ema": 0.10,                # 69.4%
-    "momentum": 0.10,           # 38%
-    "bollinger": 0.10,          # 30.6%
-    "support_resistance": 0.08, # 29.1% - needs improvement
-    "mfi": 0.07,                # 30%
-    "williams_r": 0.05,         # 27.9% - needs improvement
-    "cci": 0.05,                # 30%
+    "momentum": 0.25,           # BEST: 76.9% accuracy - INCREASED
+    "bollinger": 0.18,          # GOOD: 76.8% accuracy - INCREASED
+    "support_resistance": 0.15, # GOOD: 76.8% accuracy - INCREASED
+    "mfi": 0.12,                # GOOD: 76.8% accuracy - INCREASED
+    "cci": 0.10,                # GOOD: 76.8% accuracy - INCREASED
+    "ml_prediction": 0.05,      # AVG: 47.6% accuracy - DECREASED
+    "williams_r": 0.05,         # AVG: 48.2% accuracy - DECREASED
+    "macd": 0.04,               # WORST: 23.2% accuracy - DECREASED
+    "ichimoku": 0.03,           # WORST: 23.2% accuracy - DECREASED
+    "ema": 0.03,                # WORST: 23.2% accuracy - DECREASED
 }
 
-# Entry rules (stricter to reduce weak entries)
-MIN_CONFIDENCE_BUY = 0.30      # Require higher confidence for BUY
-MIN_CONFLUENCE_BUY = 4         # At least 4 indicators must agree for BUY
-MIN_CONFLUENCE_BUY_DOWNTREND = 4  # Same as normal in downtrend
+# Entry rules (stricter to reduce weak entries and losses)
+MIN_CONFIDENCE_BUY = 0.35      # Require higher confidence for BUY (was 0.30)
+MIN_CONFLUENCE_BUY = 6         # At least 6 indicators must agree for BUY (was 5 - reduces bad entries)
+MIN_CONFLUENCE_BUY_DOWNTREND = 6  # Even stricter in downtrend if allowed (was 4)
 MIN_CONFLUENCE_SELL = 4        # At least 4 indicators must agree for SELL
 MIN_CONFLUENCE = 5             # Default confluence requirement
 REQUIRE_VOLUME_BLOCKING = False # Volume is now a modifier, not a blocker
@@ -277,8 +319,8 @@ SR_LOOKBACK = 50
 # BOT OPERATION SETTINGS - 24/7 LIVE TRADING
 # =============================================================================
 # How often to check prices and analyze (in seconds)
-# 30s = fast reaction | 15s = very fast (more API calls)
-CHECK_INTERVAL = 30
+# 30s = fast reaction | 15s = very fast | 10s = real-time (more API calls)
+CHECK_INTERVAL = 15  # Check every 15 seconds for near real-time updates
 
 # ML inference throttle: run ML at most every N seconds (avoids blocking the loop)
 ML_INTERVAL_SEC = 300  # 5 minutes; set to 60 for more frequent updates

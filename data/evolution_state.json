@@ -1,5 +1,5 @@
 {
-  "generation": 4,
+  "generation": 6,
   "best_fitness": 0,
   "best_params": {
     "BUY_THRESHOLD": 0.35,
@@ -47,8 +47,20 @@
       "best_fitness": 0,
       "avg_fitness": 0.0,
       "timestamp": "2026-02-03T22:15:46.925410"
+    },
+    {
+      "generation": 5,
+      "best_fitness": 0,
+      "avg_fitness": 0.0,
+      "timestamp": "2026-02-04T22:37:51.285960"
+    },
+    {
+      "generation": 6,
+      "best_fitness": 0,
+      "avg_fitness": 0.0,
+      "timestamp": "2026-02-04T22:38:20.194482"
     }
   ],
-  "mutation_rate": 0.17496,
-  "timestamp": "2026-02-03T22:16:45.580058"
+  "mutation_rate": 0.1889568,
+  "timestamp": "2026-02-04T22:39:03.201491"
 }

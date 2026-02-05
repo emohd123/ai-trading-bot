@@ -1,246 +1,156 @@
 {
   "running": true,
-  "position": {
-    "entry_price": 73825.06,
-    "quantity": 0.00039,
-    "entry_time": "2026-02-04 19:55:33",
-    "amount_usdt": 28.799999999999997,
-    "regime": "trending_down",
-    "indicator_scores": {
-      "momentum": 1.0,
-      "macd": -0.7,
-      "bollinger": 1.0,
-      "ema": -0.7,
-      "support_resistance": 0.8,
-      "ml_prediction": 0.314,
-      "ichimoku": -0.5,
-      "mfi": 0.8,
-      "williams_r": 0.7,
-      "cci": 0.9
-    },
-    "position_id": 1,
-    "trade_id": 78,
-    "entry_conditions": {
-      "rsi_state": "neutral",
-      "rsi_value": 50,
-      "volatility": "normal",
-      "trend": "sideways",
-      "sr_position": "middle",
-      "bb_position": "middle",
-      "hour": 19,
-      "day_of_week": "Wednesday",
-      "regime": "trending_down",
-      "fear_greed": "extreme_fear",
-      "confluence_count": 7
-    },
-    "indicator_combo_key": "no_signals",
-    "volatility": "normal",
-    "lowest_price": 73825.06,
-    "sizing_conditions": {
-      "regime": "trending_down",
-      "volatility": "normal",
-      "volatility_ratio": 0.88,
-      "confidence": 1.0,
-      "confluence": 7,
-      "streak_multiplier": 1.2
-    }
-  },
-  "positions": [
-    {
-      "entry_price": 73825.06,
-      "quantity": 0.00039,
-      "entry_time": "2026-02-04 19:55:33",
-      "amount_usdt": 28.799999999999997,
-      "regime": "trending_down",
-      "indicator_scores": {
-        "momentum": 1.0,
-        "macd": -0.7,
-        "bollinger": 1.0,
-        "ema": -0.7,
-        "support_resistance": 0.8,
-        "ml_prediction": 0.314,
-        "ichimoku": -0.5,
-        "mfi": 0.8,
-        "williams_r": 0.7,
-        "cci": 0.9
-      },
-      "position_id": 1,
-      "trade_id": 78,
-      "entry_conditions": {
-        "rsi_state": "neutral",
-        "rsi_value": 50,
-        "volatility": "normal",
-        "trend": "sideways",
-        "sr_position": "middle",
-        "bb_position": "middle",
-        "hour": 19,
-        "day_of_week": "Wednesday",
-        "regime": "trending_down",
-        "fear_greed": "extreme_fear",
-        "confluence_count": 7
-      },
-      "indicator_combo_key": "no_signals",
-      "volatility": "normal",
-      "lowest_price": 73825.06,
-      "sizing_conditions": {
-        "regime": "trending_down",
-        "volatility": "normal",
-        "volatility_ratio": 0.88,
-        "confidence": 1.0,
-        "confluence": 7,
-        "streak_multiplier": 1.2
-      }
-    }
-  ],
+  "position": null,
+  "positions": [],
   "logs": [
     {
-      "time": "19:56:05",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:55:33",
-      "message": "BUY filled: 0.000390 BTC @ $73,825.06",
-      "level": "success"
-    },
-    {
-      "time": "19:55:31",
-      "message": "Smart BUY #1: $29 (conf: Very High)",
+      "time": "08:48:29",
+      "message": "\ud83d\udd0d No trade: Decision: HOLD (not BUY), Score 0.24 < 0.35, Confluence 5 < 6",
       "level": "info"
     },
     {
-      "time": "19:55:30",
-      "message": "SELL #1: $28.78 | P/L: $+0.07 (+0.25%) | All closed",
-      "level": "success"
-    },
-    {
-      "time": "19:55:29",
-      "message": "SELL #1 (min_profit) at $73,803.08",
+      "time": "08:48:08",
+      "message": "AI Think: check_goals",
       "level": "info"
     },
     {
-      "time": "19:55:28",
-      "message": "\ud83d\udcb0 POSITION #1 MIN PROFIT: +0.26% - SELLING!",
-      "level": "success"
-    },
-    {
-      "time": "19:54:56",
-      "message": "BUY filled: 0.000390 BTC @ $73,610.83",
-      "level": "success"
-    },
-    {
-      "time": "19:54:54",
-      "message": "Smart BUY #1: $29 (conf: Very High)",
+      "time": "08:43:18",
+      "message": "\ud83d\udd0d No trade: Decision: HOLD (not BUY), Confluence 4 < 6",
       "level": "info"
     },
     {
-      "time": "19:54:42",
-      "message": "Error: cannot access local variable '_last_idle_heartbeat' where it is not associated with a value",
-      "level": "error"
-    },
-    {
-      "time": "19:54:39",
-      "message": "SELL #1: $28.72 | P/L: $+0.07 (+0.24%) | All closed",
-      "level": "success"
-    },
-    {
-      "time": "19:54:37",
-      "message": "SELL #1 (min_profit) at $73,663.92",
+      "time": "08:42:10",
+      "message": "\ud83d\udd27 Auto-fix: Synced balances: USDT=42.38, BTC=0.00000903",
       "level": "info"
     },
     {
-      "time": "19:54:37",
-      "message": "\ud83d\udcb0 POSITION #1 MIN PROFIT: +0.26% - SELLING!",
+      "time": "08:41:31",
+      "message": "SELL #1: $27.96 | P/L: $+0.15 (+0.53%)",
       "level": "success"
     },
     {
-      "time": "19:54:05",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
+      "time": "08:41:29",
+      "message": "SELL #1 (min_profit) BNB at $699.03",
+      "level": "info"
     },
     {
-      "time": "19:53:31",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:52:58",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:52:26",
-      "message": "BUY filled: 0.000390 BTC @ $73,471.36",
+      "time": "08:41:29",
+      "message": "\ud83d\udcb0 POSITION #1 MIN PROFIT: +0.52% - SELLING!",
       "level": "success"
     },
     {
-      "time": "19:52:24",
-      "message": "Smart BUY #1: $29 (conf: Very High)",
+      "time": "08:38:49",
+      "message": "BUY filled: 0.041000 BNB @ $695.41",
+      "level": "success"
+    },
+    {
+      "time": "08:38:47",
+      "message": "Smart BUY #1: $29 BNB (conf: High)",
       "level": "info"
     },
     {
-      "time": "19:52:12",
-      "message": "\ud83d\udd27 Auto-fix: Synced balances: USDT=44.87, BTC=0.00000308",
+      "time": "08:38:46",
+      "message": "HIGH SCORE OVERRIDE: BNB downtrend but score 0.78 >= 0.7",
+      "level": "success"
+    },
+    {
+      "time": "08:38:11",
+      "message": "\ud83d\udd0d No trade: Decision: HOLD (not BUY), Downtrend: score 0.39 < 0.4, Confluence 0 < 6",
       "level": "info"
     },
     {
-      "time": "19:52:11",
+      "time": "08:38:06",
+      "message": "SELL #1: $28.88 | P/L: $+0.13 (+0.46%)",
+      "level": "success"
+    },
+    {
+      "time": "08:38:03",
+      "message": "SELL #1 (min_profit) ADA at $0.28",
+      "level": "info"
+    },
+    {
+      "time": "08:38:02",
+      "message": "\ud83d\udcb0 POSITION #1 MIN PROFIT: +0.64% - SELLING!",
+      "level": "success"
+    },
+    {
+      "time": "08:37:10",
+      "message": "BUY filled: 101.700000 ADA @ $0.28",
+      "level": "success"
+    },
+    {
+      "time": "08:37:08",
+      "message": "Smart BUY #1: $29 ADA (conf: Very High)",
+      "level": "info"
+    },
+    {
+      "time": "08:37:08",
+      "message": "HIGH SCORE OVERRIDE: ADA downtrend but score 0.71 >= 0.7",
+      "level": "success"
+    },
+    {
+      "time": "08:36:26",
+      "message": "Sell all: LINK \u2192 $28.88 | P/L: $+0.06 (+0.2%)",
+      "level": "success"
+    },
+    {
+      "time": "08:36:21",
+      "message": "Sell all: DOGE \u2192 $13.75 | P/L: $+0.11 (+0.8%)",
+      "level": "success"
+    },
+    {
+      "time": "08:36:14",
+      "message": "Selling all coins to USDT so we start flat...",
+      "level": "info"
+    },
+    {
+      "time": "08:36:14",
       "message": "Self-healing system initialized",
       "level": "success"
     },
     {
-      "time": "19:52:11",
+      "time": "08:36:14",
       "message": "Smart bot started",
       "level": "success"
     },
     {
-      "time": "19:52:11",
+      "time": "08:36:14",
       "message": "Position size learner initialized",
       "level": "success"
     },
     {
-      "time": "19:52:11",
+      "time": "08:36:14",
       "message": "Bot auto-resumed for 24/7 live trading",
       "level": "success"
     },
     {
-      "time": "19:43:01",
-      "message": "SELL #1: $28.54 | P/L: $-0.39 (-1.35%) | All closed",
-      "level": "warning"
-    },
-    {
-      "time": "19:42:59",
-      "message": "SELL #1 (stop_loss) at $73,152.00",
-      "level": "info"
-    },
-    {
-      "time": "19:42:59",
-      "message": "\ud83d\uded1 POSITION #1 STOP LOSS: -1.39% (limit: -0.6%) - SELLING!",
-      "level": "warning"
-    },
-    {
-      "time": "19:42:59",
-      "message": "\u26a0\ufe0f Max delay cycles (0) reached - Allowing stop",
-      "level": "warning"
-    },
-    {
-      "time": "19:42:57",
-      "message": "\ud83d\udd27 Auto-fix: Synced balances: USDT=16.36, BTC=0.00039308",
-      "level": "info"
-    },
-    {
-      "time": "19:42:56",
-      "message": "Self-healing system initialized",
+      "time": "08:35:03",
+      "message": "HIGH SCORE OVERRIDE: ADA downtrend but score 0.82 >= 0.7",
       "level": "success"
     },
     {
-      "time": "19:42:56",
-      "message": "Smart bot started",
+      "time": "08:34:37",
+      "message": "HIGH SCORE OVERRIDE: ADA downtrend but score 0.82 >= 0.7",
       "level": "success"
     },
     {
-      "time": "19:42:56",
-      "message": "Position size learner initialized",
+      "time": "08:34:16",
+      "message": "\ud83d\udd0d No trade: Balance too small: $0.24 < $1.00",
+      "level": "info"
+    },
+    {
+      "time": "08:34:15",
+      "message": "HIGH SCORE OVERRIDE: ADA downtrend but score 0.85 >= 0.7",
+      "level": "success"
+    },
+    {
+      "time": "08:33:10",
+      "message": "HIGH SCORE OVERRIDE: DOGE downtrend but score 0.94 >= 0.7",
+      "level": "success"
+    },
+    {
+      "time": "08:31:08",
+      "message": "HIGH SCORE OVERRIDE: ADA downtrend but score 0.84 >= 0.7",
       "level": "success"
     }
   ],

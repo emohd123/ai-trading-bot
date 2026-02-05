@@ -410,16 +410,19 @@ class Backtester:
         }
 
 
-# Save/load backtest results
-BACKTEST_HISTORY_FILE = os.path.join("data", "backtest_history.json")
+# Save/load backtest results (use config.DATA_DIR per project rules)
+BACKTEST_HISTORY_FILE = os.path.join(config.DATA_DIR, "backtest_history.json")
 
 def save_backtest_result(strategy: Dict, result: BacktestResult):
     """Save backtest result to history"""
     try:
         history = []
         if os.path.exists(BACKTEST_HISTORY_FILE):
-            with open(BACKTEST_HISTORY_FILE, 'r') as f:
-                history = json.load(f)
+            with open(BACKTEST_HISTORY_FILE, 'r', encoding='utf-8') as f:
+                try:
+                    history = json.load(f)
+                except json.JSONDecodeError:
+                    history = []  # Corrupted file, start fresh
         
         entry = {
             "timestamp": datetime.now().isoformat(),
@@ -432,7 +435,7 @@ def save_backtest_result(strategy: Dict, result: BacktestResult):
         # Keep last 100 results
         history = history[-100:]
         
-        with open(BACKTEST_HISTORY_FILE, 'w') as f:
+        with open(BACKTEST_HISTORY_FILE, 'w', encoding='utf-8') as f:
             json.dump(history, f, indent=2)
             
     except Exception as e:
@@ -445,9 +448,8 @@ def get_best_strategy() -> Optional[Dict]:
         if not os.path.exists(BACKTEST_HISTORY_FILE):
             return None
             
-        with open(BACKTEST_HISTORY_FILE, 'r') as f:
+        with open(BACKTEST_HISTORY_FILE, 'r', encoding='utf-8') as f:
             history = json.load(f)
-        
         if not history:
             return None
         

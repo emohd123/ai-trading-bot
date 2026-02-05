@@ -60,7 +60,7 @@ class RegimeDetector:
         regime = self._classify_regime(adx_data, atr_data, df)
 
         # Get auto-adjusted parameters
-        adjusted_params = self._get_regime_parameters(regime, atr_data)
+        adjusted_params = self._get_regime_parameters(regime, atr_data, adx_data)
 
         return {
             "regime": regime,
@@ -79,7 +79,7 @@ class RegimeDetector:
             "regime_name": "unknown",
             "adx": {"value": 0, "is_trending": False, "trend_direction": "unknown"},
             "atr": {"value": 0, "percent": 0, "volatility_ratio": 1, "is_high_volatility": False},
-            "adjusted_params": self._get_regime_parameters(MarketRegime.UNKNOWN, {}),
+            "adjusted_params": self._get_regime_parameters(MarketRegime.UNKNOWN, {}, {}),
             "description": "Analyzing market...",
             "recommendation": "Gathering data"
         }
@@ -209,7 +209,7 @@ class RegimeDetector:
         # Default to ranging
         return MarketRegime.RANGING
 
-    def _get_regime_parameters(self, regime: MarketRegime, atr_data: Dict) -> Dict:
+    def _get_regime_parameters(self, regime: MarketRegime, atr_data: Dict, adx_data: Dict) -> Dict:
         """
         Auto-adjust trading parameters based on regime
         These override the defaults automatically - no user input needed!
@@ -238,7 +238,7 @@ class RegimeDetector:
         if regime == MarketRegime.TRENDING_UP:
             # Bullish trend: easier to buy, harder to sell, use trailing stops
             # PHASE 3: 3/5 confluence (60%) - follow momentum
-            trailing_mult = self._get_trailing_mult(atr_data)
+            trailing_mult = self._get_trailing_mult(adx_data)
             return {
                 **base_params,
                 "buy_threshold": 0.2,           # Lower - easier to enter
@@ -333,7 +333,7 @@ class RegimeDetector:
 
         return round(stop_percent, 4)
 
-    def _get_trailing_mult(self, atr_data: Dict) -> float:
+    def _get_trailing_mult(self, adx_data: Dict) -> float:
         """
         PHASE 3: Get trailing stop ATR multiplier based on trend strength
 
@@ -342,7 +342,7 @@ class RegimeDetector:
         - ADX > 30 (moderate): 2.0x ATR
         - ADX < 30 (weak): 1.5x ATR
         """
-        adx_value = atr_data.get("value", 25) if "value" not in atr_data else 25
+        adx_value = adx_data.get("value", 25)
 
         # Get from config
         adx_strong = getattr(config, 'TRAIL_ADX_STRONG', 40)

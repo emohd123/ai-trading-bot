@@ -132,28 +132,23 @@ class SelfHealer:
     def check_and_fix_balance_sync(self) -> Optional[str]:
         """Check if tracked balance matches Binance and fix if needed"""
         try:
-            # Get actual balances from Binance
             actual_usdt = self.client.get_balance("USDT")
             actual_btc = self.client.get_balance("BTC")
-            
-            # Get tracked balances
+            # Don't overwrite with zeros when API failed (get_balance returns None on error)
+            if actual_usdt is None or actual_btc is None:
+                return None
             tracked_usdt = self.bot_state.get("balance_usdt", 0)
             tracked_btc = self.bot_state.get("balance_btc", 0)
-            
-            # Check for significant mismatch (more than 1%)
             usdt_diff = abs(actual_usdt - tracked_usdt) / max(tracked_usdt, 1) * 100
-            
-            if usdt_diff > 5:  # More than 5% difference
+            if usdt_diff > 5:
                 self.log_issue(f"USDT balance mismatch: tracked={tracked_usdt:.2f}, actual={actual_usdt:.2f}")
                 self.bot_state["balance_usdt"] = actual_usdt
                 self.bot_state["balance_btc"] = actual_btc
                 fix = f"Synced balances: USDT={actual_usdt:.2f}, BTC={actual_btc:.8f}"
                 self.log_fix(fix)
                 return fix
-                
         except Exception as e:
             self.log_issue(f"Balance sync check failed: {e}", "error")
-            
         return None
     
     def check_and_fix_position_consistency(self) -> Optional[str]:
@@ -243,10 +238,9 @@ class SelfHealer:
         try:
             position = self.bot_state.get("position")
             actual_btc = self.client.get_balance("BTC")
-            
-            # Minimum BTC that's considered "dust" (not a real position)
+            if actual_btc is None:
+                return None
             min_btc = 0.00001
-            
             if position and actual_btc < min_btc:
                 self.log_issue(f"Ghost position detected: tracked {position.get('quantity', 0)} BTC but only {actual_btc} on Binance")
                 
@@ -268,10 +262,9 @@ class SelfHealer:
         try:
             position = self.bot_state.get("position")
             actual_btc = self.client.get_balance("BTC")
-            
-            # Minimum BTC to consider as a real position
-            min_btc = 0.0001  # About $8 at $80k BTC
-            
+            if actual_btc is None:
+                return None
+            min_btc = 0.0001
             if not position and actual_btc >= min_btc:
                 self.log_issue(f"Orphan BTC detected: {actual_btc} BTC on Binance but no position tracked")
                 
@@ -360,7 +353,8 @@ class SelfHealer:
         """
         try:
             actual_btc = self.client.get_balance("BTC")
-            
+            if actual_btc is None:
+                return requested_qty
             if requested_qty > actual_btc:
                 self.log_issue(f"Sell quantity mismatch: requested={requested_qty}, actual={actual_btc}")
                 self.log_fix(f"Adjusted sell quantity from {requested_qty} to {actual_btc}")
@@ -424,8 +418,9 @@ def quick_fix_balance_mismatch(client, bot_state: Dict) -> bool:
     """Quick fix for balance mismatch issues"""
     try:
         actual_btc = client.get_balance("BTC")
+        if actual_btc is None:
+            return False
         position = bot_state.get("position")
-        
         if position:
             tracked_qty = position.get("quantity", 0)
             if abs(tracked_qty - actual_btc) > 0.00000001:

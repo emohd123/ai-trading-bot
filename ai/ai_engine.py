@@ -106,7 +106,7 @@ class AIEngine:
 
         # === PHASE 2: Anti-Whipsaw Cooldown ===
         self.cooldown_until = None  # Timestamp when cooldown ends
-        self.cooldown_minutes = 10  # Minutes to wait after stop loss
+        self.cooldown_minutes = getattr(config, 'COOLDOWN_AFTER_LOSS_MINUTES', 15)  # Loss avoidance: wait longer after stop
         self.last_stop_loss_time = None
 
         # Validate weights sum to 1
@@ -1358,6 +1358,11 @@ class AIEngine:
                     ml_score, ml_result = self.ml_predictor.get_score(df)
                     self._last_ml_time = now_ts
                     self._last_ml_result = (ml_score, ml_result)
+                    # Record prediction so we can update outcome when position closes (ML learning)
+                    try:
+                        self.ml_predictor.record_prediction(ml_result)
+                    except Exception:
+                        pass
                 analysis = dict(analysis)
                 analysis["ml_prediction"] = {
                     "score": ml_score,
@@ -1587,14 +1592,14 @@ class AIEngine:
         Calculate overall confidence level based on multiple factors
         Higher confidence = more reliable signal!
 
-        PHASE 3: Now uses 5 indicators for confluence
+        PHASE 4: Now uses 10 indicators for confluence
         """
         # Base confidence from score magnitude
         score_confidence = abs(score)
 
-        # Confluence factor (0 to 1) - PHASE 3: 6 indicators with ML
+        # Confluence factor (0 to 1) - PHASE 4: 10 indicators with ML
         confluence = enhanced.get("confluence", {})
-        confluence_factor = confluence.get("count", 0) / 6.0
+        confluence_factor = confluence.get("count", 0) / 10.0
 
         # Volume boost
         volume_boost = 1.1 if enhanced.get("volume_confirmed") else 1.0
@@ -1654,16 +1659,19 @@ class AIEngine:
         analysis: Dict,
         current_position: Optional[Dict] = None,
         df: pd.DataFrame = None,
-        mtf_trend_4h: Optional[str] = None
+        mtf_trend_4h: Optional[str] = None,
+        deep_insights: Optional[Dict] = None,
+        performance_context: Optional[Dict] = None,
     ) -> Tuple[Decision, Dict]:
         """
-        Generate smart trading decision with regime-awareness
+        Generate smart trading decision with regime-awareness.
 
         Now checks:
         - Regime-adjusted thresholds
         - Confluence requirements
         - Divergence signals
         - Volume confirmation
+        - Deep insights (weaknesses) to avoid repeating loss patterns
         """
         score, enhanced = self.calculate_score(analysis, df)
         current_price = analysis.get("current_price", 0)
@@ -1672,6 +1680,20 @@ class AIEngine:
         buy_threshold = self.buy_threshold
         sell_threshold = self.sell_threshold
         min_confluence = self.min_confluence
+
+        # Apply deep_insights: if we have identified weaknesses, require stronger signal for BUY
+        if deep_insights and deep_insights.get("weaknesses"):
+            weakness_types = {w.get("weakness") for w in deep_insights["weaknesses"]}
+            if "low_win_rate" in weakness_types or "poor_risk_reward" in weakness_types:
+                buy_threshold += getattr(config, "DEEP_INSIGHT_EXTRA_THRESHOLD", 0.05)
+                min_confluence = min_confluence + 1  # require one more agreeing indicator
+
+        # Performance-based: if recent win rate is low, require stronger signal
+        if performance_context and performance_context.get("recent_trades", 0) >= 5:
+            recent_wr = performance_context.get("recent_win_rate")
+            if recent_wr is not None and recent_wr < getattr(config, "PERF_BAD_WIN_RATE_THRESHOLD", 40):
+                buy_threshold += getattr(config, "PERF_EXTRA_THRESHOLD", 0.05)
+                min_confluence = min_confluence + 1
 
         if self.regime_data:
             params = self.regime_data.get("adjusted_params", {})
@@ -1740,7 +1762,7 @@ class AIEngine:
 
                 # Check AI bearish signal with confluence
                 if score < sell_threshold and confluence_direction == "bearish" and has_confluence:
-                    details["reason"].append(f"AI bearish signal: {score:.2f} with {confluence.get('count')}/6 confluence")
+                    details["reason"].append(f"AI bearish signal: {score:.2f} with {confluence.get('count')}/10 confluence")
                     details["exit_type"] = "ai_signal"
                     return Decision.SELL, details
 
@@ -1767,6 +1789,20 @@ class AIEngine:
 
         # Check for buy signal with confluence
         if score > buy_threshold:
+            # ML confidence gate: if ML is strongly bearish, require higher score to allow BUY
+            ml_pred = enhanced.get("ml_prediction") or {}
+            ml_direction = (ml_pred.get("direction") or "HOLD").upper()
+            ml_conf = float(ml_pred.get("confidence", 0) or 0)
+            ml_veto_threshold = getattr(config, "ML_VETO_CONFIDENCE", 0.6)
+            ml_extra_required = getattr(config, "ML_VETO_EXTRA_THRESHOLD", 0.1)
+            if ml_direction == "DOWN" and ml_conf >= ml_veto_threshold:
+                if score <= buy_threshold + ml_extra_required:
+                    details["reason"].append(
+                        f"ML bearish (conf {ml_conf:.2f}) - need score > {buy_threshold + ml_extra_required:.2f} to allow BUY (have {score:.2f})"
+                    )
+                    return Decision.HOLD, details
+                details["reason"].append(f"ML bearish but score strong enough ({score:.2f} > {buy_threshold + ml_extra_required:.2f}) - allowing BUY")
+
             # Confidence floor: require Medium+ confidence for BUY
             min_confidence = getattr(config, 'MIN_CONFIDENCE_BUY', 0.4)
             if confidence["value"] < min_confidence:
@@ -1977,10 +2013,10 @@ class AIEngine:
         if regime:
             lines.append(f"  Market: {regime.get('regime_name', 'unknown').upper()} - {regime.get('description', '')}")
 
-        # Confluence info (PHASE 3: Now 5 indicators)
+        # Confluence info (PHASE 4: Now 10 indicators)
         confluence = details.get("confluence", {})
         if confluence:
-            lines.append(f"  Confluence: {confluence.get('count', 0)}/6 ({confluence.get('strength', 'none')}) - {', '.join(confluence.get('agreeing_indicators', []))}")
+            lines.append(f"  Confluence: {confluence.get('count', 0)}/10 ({confluence.get('strength', 'none')}) - {', '.join(confluence.get('agreeing_indicators', []))}")
 
         # Divergence info
         divergence = details.get("divergence", {})

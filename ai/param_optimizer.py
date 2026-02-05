@@ -18,7 +18,7 @@ class ParameterOptimizer:
     Analyzes recent performance and adjusts parameters to improve results
     """
     
-    OPTIMIZER_STATE_FILE = os.path.join("data", "optimizer_state.json")
+    OPTIMIZER_STATE_FILE = os.path.join(config.DATA_DIR, "optimizer_state.json")
     
     def __init__(self):
         # Parameters that can be tuned and their bounds
