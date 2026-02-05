@@ -69,7 +69,7 @@ class SelfHealer:
         if self.notifier:
             try:
                 self.notifier.send_message(f"🔧 AUTO-FIX: {fix}")
-            except:
+            except Exception:
                 pass
     
     def run_health_check(self) -> Dict:
@@ -194,8 +194,8 @@ class SelfHealer:
                         # If position is older than 24 hours, log warning
                         if age_hours > 24:
                             self.log_issue(f"Position #{i+1} is {age_hours:.1f} hours old - consider manual review")
-                            
-                    except:
+
+                    except (ValueError, TypeError, KeyError):
                         pass
                         
         except Exception as e:
@@ -223,7 +223,7 @@ class SelfHealer:
                         fix = f"Reconnected to Binance API after {attempt + 1} attempts"
                         self.log_fix(fix)
                         return fix
-                except:
+                except Exception:
                     continue
                     
             self.log_issue("Failed to reconnect to Binance API after max retries", "error")

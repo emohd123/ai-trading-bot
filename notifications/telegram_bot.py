@@ -70,7 +70,7 @@ def get_trade_history():
         path = os.path.join(config.DATA_DIR, 'trade_history.json')
         with open(path, 'r') as f:
             return json.load(f)
-    except:
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
         return []
 
 
@@ -80,7 +80,7 @@ def get_bot_state():
         path = os.path.join(config.DATA_DIR, 'bot_state.json')
         with open(path, 'r') as f:
             return json.load(f)
-    except:
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
         return {}
 
 

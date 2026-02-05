@@ -269,7 +269,7 @@ class Trader:
 
         try:
             entry_time = datetime.fromisoformat(entry_time_str)
-        except:
+        except (ValueError, TypeError):
             return False, ""
 
         entry_price = self.current_position["entry_price"]
@@ -338,7 +338,7 @@ class Trader:
                 "is_old": hours_held > self.stale_position_hours,
                 "max_hours": self.max_position_hours
             }
-        except:
+        except (ValueError, TypeError):
             return {"hours": 0, "status": "Error", "is_old": False}
 
     # === PHASE 2: Scale-Out Methods ===

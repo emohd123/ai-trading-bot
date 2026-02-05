@@ -338,7 +338,7 @@ class MLPredictor:
                 days_since = (datetime.now() - last_date).days
                 if days_since >= self.retrain_interval_days:
                     return True, f"Scheduled retrain ({days_since} days since last)"
-            except:
+            except (ValueError, TypeError):
                 pass
         
         return False, "No retrain needed"

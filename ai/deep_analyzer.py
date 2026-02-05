@@ -173,17 +173,17 @@ class DeepAnalyzer:
                 trade_time = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
                 hour = trade_time.hour
                 day = trade_time.strftime("%A")
-                
+
                 pnl = trade.get("pnl", 0)
                 is_win = pnl > 0
-                
+
                 by_hour[hour]["wins" if is_win else "losses"] += 1
                 by_hour[hour]["pnl"] += pnl
-                
+
                 by_day[day]["wins" if is_win else "losses"] += 1
                 by_day[day]["pnl"] += pnl
-                
-            except:
+
+            except (ValueError, TypeError, KeyError):
                 continue
         
         # Find best/worst hours
@@ -382,7 +382,7 @@ class DeepAnalyzer:
             time_str = trade.get("time", "")
             trade_time = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
             return trade_time.hour
-        except:
+        except (ValueError, TypeError, AttributeError):
             return 12
     
     def _identify_weaknesses(self) -> List[Dict]:

@@ -395,8 +395,7 @@ USE_COLORS = True
 # =============================================================================
 
 # --- PHASE 1: Risk Management ---
-# Hard stop limit (absolute max loss, AI cannot override)
-HARD_STOP_LIMIT = 0.02  # 2% absolute maximum loss
+# Note: HARD_STOP_LIMIT is defined above in AI-ASSISTED STOP LOSS section (0.02 = 2%)
 
 # Slippage buffer for stop loss execution
 STOP_LOSS_SLIPPAGE_BUFFER = 0.002  # 0.2% buffer

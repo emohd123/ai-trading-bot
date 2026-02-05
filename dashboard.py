@@ -761,12 +761,12 @@ def check_smart_stop(current_price, entry_price, pnl_percent, position_data=None
         try:
             entry_time = datetime.strptime(entry_time_str_pos, "%Y-%m-%d %H:%M:%S")
             age_hours = (datetime.now() - entry_time).total_seconds() / 3600
-            
+
             if age_hours > max_hours and pnl_percent < stale_threshold:
                 add_log(f"⏰ Position stale ({age_hours:.1f}h) with loss {pnl_percent:.2f}%", "warning")
                 stop_delay_count = 0
                 return _return(True, "time_exit", None)
-        except:
+        except (ValueError, TypeError):
             pass
     
     # === 6. MAX DELAYS REACHED ===
@@ -2143,7 +2143,7 @@ def bot_loop():
                             "status": age_status,
                             "is_old": hours_held > 18
                         }
-                    except:
+                    except (ValueError, TypeError):
                         pass
                 # PHASE 2: Update scale-out info
                 profit_pct = bot_state["pnl_percent"]
