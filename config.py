@@ -97,7 +97,7 @@ AI_DECIDES_ALL = False  # Respect NO_BUY_IN_DOWNTREND to avoid losses in bear ma
 # === LOSS AVOIDANCE (stricter after losses) ===
 BUY_THRESHOLD_AFTER_LOSS = 0.45   # After 1+ consecutive loss, require stronger signal before next BUY
 BUY_THRESHOLD_AFTER_TWO_LOSSES = 0.55  # After 2+ consecutive losses, require even stronger signal
-COOLDOWN_AFTER_LOSS_MINUTES = 15  # Wait 15 min after stop loss before next buy (anti-whipsaw)
+COOLDOWN_AFTER_LOSS_MINUTES = 30  # Wait 30 min after stop loss before next buy (anti-whipsaw)
 ONLY_BUY_STRICT_UPTREND = False   # True = only buy when regime is "trending_up" (not "ranging") - very conservative
 MIN_CONFLUENCE_AFTER_LOSS = 6     # After a loss, require 6+ indicators to agree for next BUY
 
@@ -120,9 +120,9 @@ INDICATOR_WEIGHTS = {
 }
 
 # Entry rules (stricter to reduce weak entries and losses)
-MIN_CONFIDENCE_BUY = 0.35      # Require higher confidence for BUY (was 0.30)
+MIN_CONFIDENCE_BUY = 0.50      # Require higher confidence for BUY (more conservative)
 MIN_CONFIDENCE_BUY_UPTREND = 0.20  # Lower confidence required in uptrends (safer market conditions)
-MIN_CONFLUENCE_BUY = 6         # At least 6 indicators must agree for BUY (was 5 - reduces bad entries)
+MIN_CONFLUENCE_BUY = 7         # At least 7 indicators must agree for BUY (more conservative)
 MIN_CONFLUENCE_BUY_UPTREND = 4  # Lower confluence required in uptrends (4/10 indicators)
 MIN_CONFLUENCE_BUY_DOWNTREND = 6  # Even stricter in downtrend if allowed (was 4)
 MIN_CONFLUENCE_SELL = 4        # At least 4 indicators must agree for SELL
@@ -161,7 +161,7 @@ STALE_LOSS_THRESHOLD = -0.003  # Only time-exit if loss > -0.3%
 
 # Minimum hold time before regular stop loss applies (reduces whipsaw; hard stop still applies)
 MIN_HOLD_ENABLED = True        # If True, skip regular stop if position age < MIN_HOLD_MINUTES
-MIN_HOLD_MINUTES = 20          # Don't apply regular stop in first 20 min (hard stop & breakeven still apply)
+MIN_HOLD_MINUTES = 45          # Don't apply regular stop in first 45 min (hard stop & breakeven still apply)
 
 # =============================================================================
 # AI-ASSISTED STOP LOSS (AI can override/delay stops)
