@@ -2055,7 +2055,15 @@
             updateIndicators(data.indicators);
 
             // Trade history (always refresh when we receive state)
-            updateHistory(Array.isArray(data.trade_history) ? data.trade_history : []);
+            const tradeHistory = Array.isArray(data.trade_history) ? data.trade_history : [];
+            console.log('Trade history received:', tradeHistory.length, 'trades');
+            if (tradeHistory.length > 0) {
+                console.log('Sample trade:', tradeHistory[0]);
+                const sellCount = tradeHistory.filter(t => (t.type || '').toString().toUpperCase() === 'SELL').length;
+                const buyCount = tradeHistory.filter(t => (t.type || '').toString().toUpperCase() === 'BUY').length;
+                console.log('SELL trades:', sellCount, 'BUY trades:', buyCount);
+            }
+            updateHistory(tradeHistory);
 
             // Smart Analysis features
             updateSmartAnalysis(data);
@@ -2805,8 +2813,27 @@
                 return;
             }
             
-            // Filter to show all trades (BUY and SELL)
-            const allTrades = history.filter(t => t && (t.type === 'BUY' || t.type === 'SELL' || t.type === 'buy' || t.type === 'sell'));
+            console.log('updateHistory called with', history.length, 'trades');
+            
+            // Filter to show all trades (BUY and SELL) - be more permissive
+            const allTrades = history.filter(t => {
+                if (!t) return false;
+                const type = (t.type || '').toString().toUpperCase();
+                const isValid = type === 'BUY' || type === 'SELL';
+                if (!isValid) {
+                    console.log('Filtered out trade with type:', type, t);
+                }
+                return isValid;
+            });
+
+            console.log('After filtering:', allTrades.length, 'trades');
+            const sellTrades = allTrades.filter(t => (t.type || '').toString().toUpperCase() === 'SELL');
+            console.log('SELL trades in filtered list:', sellTrades.length);
+
+            if (allTrades.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No valid trades found (received ' + history.length + ' total)</td></tr>';
+                return;
+            }
 
             // Sort by time descending (newest first) and assign sequential numbers
             const sorted = [...allTrades].sort((a, b) => {
@@ -2821,7 +2848,7 @@
                 const displaySymbol = symbol.replace('USDT', '');
                 const pnlValue = trade.pnl || 0;
                 const pnlPercent = trade.pnl_percent || 0;
-                const tradeType = (trade.type || '').toUpperCase();
+                const tradeType = (trade.type || '').toString().toUpperCase();
                 const isSell = tradeType === 'SELL';
                 
                 return `
