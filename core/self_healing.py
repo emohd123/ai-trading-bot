@@ -283,6 +283,7 @@ class SelfHealer:
         try:
             position = self.bot_state.get("position")
             base_asset = getattr(config, "BASE_ASSET", "BTC")
+            symbol = getattr(config, "SYMBOL", f"{base_asset}USDT")
             actual_balance = self.client.get_balance(base_asset)
             if actual_balance is None:
                 return None
@@ -293,15 +294,17 @@ class SelfHealer:
                     f"Orphan {base_asset} detected: {actual_balance} {base_asset} on Binance but no position tracked"
                 )
                 
-                # Try to recover position from trade history
-                fix = self.recover_position_from_history(actual_balance)
+                # Try to recover position from trade history (for this specific symbol)
+                fix = self.recover_position_from_history(actual_balance, symbol=symbol, base_asset=base_asset)
                 if fix:
                     return fix
                 else:
                     # Create a placeholder position with current price as entry
-                    current_price = self.client.get_current_price()
+                    current_price = self.client.get_current_price(symbol=symbol)
                     if current_price:
                         self.bot_state["position"] = {
+                            "symbol": symbol,
+                            "base_asset": base_asset,
                             "entry_price": current_price,
                             "quantity": actual_balance,
                             "entry_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -324,8 +327,8 @@ class SelfHealer:
             
         return None
     
-    def recover_position_from_history(self, btc_amount: float) -> Optional[str]:
-        """Try to recover position details from trade history"""
+    def recover_position_from_history(self, btc_amount: float, symbol: Optional[str] = None, base_asset: Optional[str] = None) -> Optional[str]:
+        """Try to recover position details from trade history for a specific symbol"""
         try:
             # Load trade history
             history_file = os.path.join(config.DATA_DIR, "trade_history.json")
@@ -334,20 +337,41 @@ class SelfHealer:
                 
             with open(history_file, 'r') as f:
                 trades = json.load(f)
+            
+            # Filter trades by symbol if provided
+            if symbol:
+                trades = [t for t in trades if t.get('symbol') == symbol]
+            elif base_asset:
+                # Fallback: match by base_asset
+                trades = [t for t in trades if t.get('base_asset') == base_asset]
+            
+            if not trades:
+                return None
                 
             # Sort by ID descending (most recent first)
             trades.sort(key=lambda x: x.get('id', 0), reverse=True)
             
-            # Find the most recent BUY that doesn't have a matching SELL
+            # Find the most recent BUY that doesn't have a matching SELL for THIS symbol
             buy_count = 0
             sell_count = 0
             
             for trade in trades:
+                trade_symbol = trade.get('symbol', '')
+                trade_base = trade.get('base_asset', '')
+                
+                # Ensure we're matching the right symbol/base_asset
+                if symbol and trade_symbol != symbol:
+                    continue
+                if base_asset and trade_base != base_asset:
+                    continue
+                    
                 if trade.get('type') == 'BUY':
                     buy_count += 1
                     if buy_count > sell_count:
-                        # Found unmatched BUY
-                        self.bot_state["position"] = {
+                        # Found unmatched BUY for this symbol
+                        recovered_pos = {
+                            "symbol": trade_symbol or symbol or (base_asset + "USDT" if base_asset else config.SYMBOL),
+                            "base_asset": trade_base or base_asset or config.BASE_ASSET,
                             "entry_price": trade.get('price', 0),
                             "quantity": btc_amount,  # Use actual balance
                             "entry_time": trade.get('time', datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
@@ -356,7 +380,8 @@ class SelfHealer:
                             "indicator_scores": {},
                             "recovered": True
                         }
-                        self.bot_state["positions"] = [self.bot_state["position"]]
+                        self.bot_state["position"] = recovered_pos
+                        self.bot_state["positions"] = [recovered_pos]
                         
                         fix = f"Recovered position from trade #{trade.get('id')}: entry ${trade.get('price'):,.2f}"
                         self.log_fix(fix)
