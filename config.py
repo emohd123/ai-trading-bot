@@ -4,6 +4,7 @@ Trading Bot Configuration
 import os
 import logging
 from logging.handlers import RotatingFileHandler
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -52,9 +53,9 @@ SYMBOLS = [
     ("NEARUSDT", "NEAR"),
 ]
 # Symbol selection cache: reuse regime/score for this many minutes to limit API calls
-SYMBOL_SCAN_CACHE_MINUTES = 1  # Scan every 1 min for near real-time coin switching
+SYMBOL_SCAN_CACHE_MINUTES = 0.5  # Scan every 30 seconds for faster gainer detection
 # Re-run full symbol selection at most every N minutes when no position (sticky)
-SYMBOL_ROTATION_INTERVAL_MINUTES = 1  # Re-evaluate every 1 min - instant switching
+SYMBOL_ROTATION_INTERVAL_MINUTES = 0.5  # Re-evaluate every 30 seconds - faster switching
 # Optional: minimum AI score to consider a symbol for rotation (default: use BUY_THRESHOLD)
 ROTATION_MIN_SCORE = None  # None = use BUY_THRESHOLD
 
@@ -68,9 +69,14 @@ MAX_POSITIONS = 1  # Single position mode - wait for position to close before op
 
 # Profit and loss targets (as decimals) - 2:1 Risk/Reward Ratio
 PROFIT_TARGET = 0.015  # 1.5% profit target (improved from 1% for better risk/reward)
-PROFIT_TARGET_HIGH_VOL = 0.005  # 0.5% profit target in high volatility (faster sells for quick profits)
+PROFIT_TARGET_HIGH_VOL = 0.003  # 0.3% profit target in high volatility (faster sells for quick profits - optimized)
 MIN_PROFIT = 0.005   # 0.5% minimum profit to take (was 0.25% - need bigger wins to offset losses)
 MIN_PROFIT_HIGH_VOL = 0.003  # 0.3% minimum profit in high volatility (faster exits)
+
+# Quick Profit Mode: Exit quickly on fast gains
+QUICK_PROFIT_ENABLED = True  # Enable quick profit mode for fast gainers
+QUICK_PROFIT_TARGET = 0.005  # 0.5% profit target for quick exits
+QUICK_PROFIT_TIME_LIMIT = 30  # Exit at quick profit if reached within 30 minutes
 STOP_LOSS = 0.007        # 0.7% stop loss (base) - cut losses faster
 STOP_LOSS_TRENDING_DOWN = 0.005  # 0.5% in downtrend - cut losses faster
 STOP_LOSS_HIGH_VOL = 0.0075      # 0.75% in high volatility (matches previous)
@@ -79,8 +85,8 @@ STOP_LOSS_HIGH_VOL = 0.0075      # 0.75% in high volatility (matches previous)
 # AI ENGINE CONFIGURATION
 # =============================================================================
 # AI score thresholds (stricter to reduce weak entries and losses)
-BUY_THRESHOLD = 0.35   # Buy when AI score > 0.35 (fewer weak entries, reduce losses)
-BUY_THRESHOLD_UPTREND = 0.10   # In uptrend: allow lower score (uptrends are safer, can enter earlier with moderate signals)
+BUY_THRESHOLD = 0.28   # Buy when AI score > 0.28 (lowered for more active trading while staying smart)
+BUY_THRESHOLD_UPTREND = 0.08   # In uptrend: allow even lower score (uptrends are safer, can enter earlier)
 UPTREND_SCORE_BOOST = 0.15     # Boost AI score by this amount when regime is trending_up (accounts for indicator lag/overbought)
 BUY_THRESHOLD_DOWNTREND = 0.40  # In downtrend: require stronger score to buy
 SELL_THRESHOLD = -0.25 # Sell when AI score < -0.25 (in profit)
@@ -95,11 +101,12 @@ HIGH_SCORE_DOWNTREND_OVERRIDE = 0.70  # Raised from 0.60 - only buy downtrend wh
 AI_DECIDES_ALL = False  # Respect NO_BUY_IN_DOWNTREND to avoid losses in bear markets
 
 # === LOSS AVOIDANCE (stricter after losses) ===
-BUY_THRESHOLD_AFTER_LOSS = 0.45   # After 1+ consecutive loss, require stronger signal before next BUY
-BUY_THRESHOLD_AFTER_TWO_LOSSES = 0.55  # After 2+ consecutive losses, require even stronger signal
-COOLDOWN_AFTER_LOSS_MINUTES = 30  # Wait 30 min after stop loss before next buy (anti-whipsaw)
+BUY_THRESHOLD_AFTER_LOSS = 0.32   # After 1+ consecutive loss, require slightly stronger signal (more active recovery)
+BUY_THRESHOLD_AFTER_TWO_LOSSES = 0.38  # After 2+ consecutive losses, require stronger signal (balanced recovery)
+COOLDOWN_AFTER_LOSS_MINUTES = 5  # Wait 5 min after stop loss before next buy (faster recovery - anti-whipsaw)
 ONLY_BUY_STRICT_UPTREND = False   # True = only buy when regime is "trending_up" (not "ranging") - very conservative
-MIN_CONFLUENCE_AFTER_LOSS = 6     # After a loss, require 6+ indicators to agree for next BUY
+MIN_CONFLUENCE_AFTER_LOSS = 4     # After a loss, require 4+ indicators (more active recovery, normal is 5)
+LOSS_AVOIDANCE_TIMEOUT_MINUTES = 60  # Reset loss avoidance after 60 min if no trades (prevents permanent blocking)
 
 # When buying in downtrend is allowed (or for positions carried into downtrend): use smaller size
 POSITION_SIZE_DOWNTREND_MULT = 0.6   # 60% of normal size in downtrend (0.7 = 70%, 1.0 = no reduction)
@@ -122,8 +129,8 @@ INDICATOR_WEIGHTS = {
 # Entry rules (stricter to reduce weak entries and losses)
 MIN_CONFIDENCE_BUY = 0.50      # Require higher confidence for BUY (more conservative)
 MIN_CONFIDENCE_BUY_UPTREND = 0.20  # Lower confidence required in uptrends (safer market conditions)
-MIN_CONFLUENCE_BUY = 7         # At least 7 indicators must agree for BUY (more conservative)
-MIN_CONFLUENCE_BUY_UPTREND = 4  # Lower confluence required in uptrends (4/10 indicators)
+MIN_CONFLUENCE_BUY = 5         # At least 5 indicators must agree for BUY (more active while still smart)
+MIN_CONFLUENCE_BUY_UPTREND = 2  # Lower confluence required in uptrends (2/10 indicators - very active in uptrends)
 MIN_CONFLUENCE_BUY_DOWNTREND = 6  # Even stricter in downtrend if allowed (was 4)
 MIN_CONFLUENCE_SELL = 4        # At least 4 indicators must agree for SELL
 MIN_CONFLUENCE = 5             # Default confluence requirement
@@ -133,8 +140,17 @@ VOLUME_NO_CONFIRM_PENALTY = 0.15  # Reduce score by 15% if no volume confirmatio
 ADAPTIVE_WEIGHTS_ENABLED = True # Learn indicator weights from trade outcomes
 
 # Trailing stop activation - activate earlier to lock profits
-TRAILING_ACTIVATION = 0.005     # Activate at +0.5% (lowered from 1% to lock profits earlier)
-TRAILING_ACTIVATION_HOT = 0.003  # +0.3% during win streak (even earlier)
+TRAILING_ACTIVATION = 0.003     # Activate at +0.3% (optimized for faster profit locking)
+TRAILING_ACTIVATION_HOT = 0.002  # +0.2% during win streak (even earlier for quick gains)
+
+# Gainer Detection Boost Settings
+GAINER_BOOST_1H_THRESHOLD = 0.02  # +2% gain in 1h triggers boost
+GAINER_BOOST_1H_VALUE = 0.15      # +0.15 boost for 1h gainers
+GAINER_BOOST_4H_THRESHOLD = 0.05  # +5% gain in 4h triggers boost
+GAINER_BOOST_4H_VALUE = 0.12      # +0.12 boost for 4h gainers
+GAINER_BOOST_VOLUME_THRESHOLD = 0.5  # 50% volume spike triggers boost
+GAINER_BOOST_VOLUME_VALUE = 0.10     # +0.10 boost for volume spikes
+GAINER_BOOST_MAX = 0.25              # Maximum total gainer boost (cap to avoid overconfidence)
 
 # Daily limits
 MAX_DAILY_LOSS_PCT = 0.03      # 3% of total portfolio max daily loss
@@ -357,8 +373,32 @@ LOG_BACKUP_COUNT = 3
 def setup_logging():
     """Configure logging for the trading bot. Call once at startup."""
     log_level = getattr(logging, LOG_LEVEL.upper(), logging.INFO)
-    log_format = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
-    date_format = "%Y-%m-%d %H:%M:%S"
+    
+    # Check if structured logging is enabled
+    use_structured = os.getenv("STRUCTURED_LOGGING", "False").lower() == "true"
+    
+    if use_structured:
+        # JSON format for log aggregation
+        import json as json_lib
+        class JSONFormatter(logging.Formatter):
+            def format(self, record):
+                log_data = {
+                    "timestamp": datetime.now().isoformat(),
+                    "level": record.levelname,
+                    "logger": record.name,
+                    "message": record.getMessage(),
+                    "module": record.module,
+                    "function": record.funcName,
+                    "line": record.lineno
+                }
+                if record.exc_info:
+                    log_data["exception"] = self.formatException(record.exc_info)
+                return json_lib.dumps(log_data)
+        log_format = JSONFormatter()
+    else:
+        # Standard format
+        log_format = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+        date_format = "%Y-%m-%d %H:%M:%S"
 
     root = logging.getLogger()
     if root.handlers:
@@ -369,7 +409,10 @@ def setup_logging():
     try:
         fh = RotatingFileHandler(LOG_FILE, maxBytes=LOG_MAX_BYTES, backupCount=LOG_BACKUP_COUNT, encoding="utf-8")
         fh.setLevel(log_level)
-        fh.setFormatter(logging.Formatter(log_format, datefmt=date_format))
+        if use_structured:
+            fh.setFormatter(log_format)
+        else:
+            fh.setFormatter(logging.Formatter(log_format, datefmt=date_format))
         root.addHandler(fh)
     except OSError:
         pass  # Fallback to console only if file fails
@@ -377,12 +420,85 @@ def setup_logging():
     # Console handler
     ch = logging.StreamHandler()
     ch.setLevel(log_level)
-    ch.setFormatter(logging.Formatter(log_format, datefmt=date_format))
+    if use_structured:
+        ch.setFormatter(log_format)
+    else:
+        ch.setFormatter(logging.Formatter(log_format, datefmt=date_format))
     root.addHandler(ch)
 
 
 # Initialize logging when config is loaded
 setup_logging()
+
+
+def validate_config():
+    """
+    Validate configuration on startup.
+    Returns list of validation errors (empty if all valid).
+    """
+    errors = []
+    warnings = []
+    
+    # Check API keys
+    if not BINANCE_API_KEY or BINANCE_API_KEY.strip() == "":
+        errors.append("BINANCE_API_KEY is not set")
+    elif BINANCE_API_KEY in ["YOUR_API_KEY_HERE", "xxx", ""]:
+        errors.append("BINANCE_API_KEY appears to be a placeholder - please set a real API key")
+    
+    if not BINANCE_API_SECRET or BINANCE_API_SECRET.strip() == "":
+        errors.append("BINANCE_API_SECRET is not set")
+    elif BINANCE_API_SECRET in ["YOUR_SECRET_HERE", "xxx", ""]:
+        errors.append("BINANCE_API_SECRET appears to be a placeholder - please set a real API secret")
+    
+    # Check required directories
+    if not os.path.exists(DATA_DIR):
+        try:
+            os.makedirs(DATA_DIR, exist_ok=True)
+            logger.info(f"Created DATA_DIR: {DATA_DIR}")
+        except Exception as e:
+            errors.append(f"Cannot create DATA_DIR {DATA_DIR}: {e}")
+    
+    if not os.path.exists(MODEL_DIR):
+        try:
+            os.makedirs(MODEL_DIR, exist_ok=True)
+            logger.info(f"Created MODEL_DIR: {MODEL_DIR}")
+        except Exception as e:
+            errors.append(f"Cannot create MODEL_DIR {MODEL_DIR}: {e}")
+    
+    # Validate trading parameters
+    if TRADE_AMOUNT_USDT <= 0:
+        errors.append(f"TRADE_AMOUNT_USDT must be > 0, got {TRADE_AMOUNT_USDT}")
+    elif TRADE_AMOUNT_USDT < 10:
+        warnings.append(f"TRADE_AMOUNT_USDT is very low ({TRADE_AMOUNT_USDT}), may hit minimum order size limits")
+    
+    if PROFIT_TARGET <= 0 or PROFIT_TARGET > 1:
+        errors.append(f"PROFIT_TARGET must be between 0 and 1, got {PROFIT_TARGET}")
+    
+    if STOP_LOSS <= 0 or STOP_LOSS > 1:
+        errors.append(f"STOP_LOSS must be between 0 and 1, got {STOP_LOSS}")
+    
+    if STOP_LOSS >= PROFIT_TARGET:
+        warnings.append(f"STOP_LOSS ({STOP_LOSS*100}%) >= PROFIT_TARGET ({PROFIT_TARGET*100}%) - risk/reward ratio is poor")
+    
+    if CHECK_INTERVAL < 5:
+        warnings.append(f"CHECK_INTERVAL is very low ({CHECK_INTERVAL}s), may cause rate limiting")
+    elif CHECK_INTERVAL > 300:
+        warnings.append(f"CHECK_INTERVAL is very high ({CHECK_INTERVAL}s), may miss trading opportunities")
+    
+    # Check for dangerous configurations
+    hard_stop_limit = globals().get('HARD_STOP_LIMIT', 0.02)
+    if hard_stop_limit > 0.10:
+        warnings.append(f"HARD_STOP_LIMIT is very high ({hard_stop_limit*100}%), consider lower value")
+    
+    max_daily_loss_pct = globals().get('MAX_DAILY_LOSS_PCT', 0.03)
+    if max_daily_loss_pct > 0.20:
+        warnings.append(f"MAX_DAILY_LOSS_PCT is very high ({max_daily_loss_pct*100}%), consider lower value")
+    
+    # Log warnings
+    for warning in warnings:
+        logger.warning(f"Config warning: {warning}")
+    
+    return errors
 
 # =============================================================================
 # DISPLAY SETTINGS

@@ -109,12 +109,16 @@
         }
 
         /* AI Score Meter */
+        .score-meter-container {
+            position: relative;
+            margin: 15px 0;
+        }
+        
         .score-meter {
             height: 20px;
             background: linear-gradient(90deg, #ff4444, #ffaa00, #00ff88);
             border-radius: 10px;
             position: relative;
-            margin: 15px 0;
         }
 
         .score-marker {
@@ -126,6 +130,7 @@
             transform: translateX(-50%);
             border-radius: 2px;
             transition: left 0.5s ease;
+            z-index: 3;
         }
 
         .score-labels {
@@ -133,6 +138,69 @@
             justify-content: space-between;
             color: #888;
             font-size: 0.8em;
+            margin-top: 5px;
+        }
+        
+        /* Threshold Markers */
+        .threshold-marker {
+            position: absolute;
+            width: 2px;
+            height: 30px;
+            top: -5px;
+            transform: translateX(-50%);
+            z-index: 2;
+            transition: left 0.5s ease;
+        }
+
+        .buy-threshold {
+            background: #00ff88;
+            box-shadow: 0 0 4px rgba(0, 255, 136, 0.6);
+        }
+
+        .sell-threshold {
+            background: #ff4444;
+            box-shadow: 0 0 4px rgba(255, 68, 68, 0.6);
+        }
+
+        .threshold-labels {
+            position: relative;
+            height: 20px;
+            margin-top: -5px;
+        }
+
+        .threshold-label {
+            position: absolute;
+            font-size: 0.7em;
+            transform: translateX(-50%);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .buy-label {
+            color: #00ff88;
+            background: rgba(0, 255, 136, 0.2);
+        }
+
+        .sell-label {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.2);
+        }
+        
+        /* Confluence Bar */
+        .confluence-bar {
+            height: 8px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .confluence-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ffaa00, #00ff88);
+            transition: width 0.5s ease, background 0.3s ease;
+            border-radius: 4px;
         }
 
         /* Decision Display */
@@ -184,6 +252,11 @@
 
         .btn-stop {
             background: #ff4444;
+            color: #fff;
+        }
+
+        .btn-restart {
+            background: linear-gradient(90deg, #ff9900, #ff6600);
             color: #fff;
         }
 
@@ -856,6 +929,9 @@
             <button id="btnStop" class="btn btn-stop" onclick="stopBot()" disabled>
                 Stop Bot
             </button>
+            <button id="btnRestart" class="btn btn-restart" onclick="restartBot()" disabled>
+                Restart Bot
+            </button>
         </div>
 
         <!-- Tab Bar -->
@@ -883,14 +959,66 @@
             <div class="card">
                 <div class="card-title">AI Score</div>
                 <div id="aiScore" class="card-value neutral">0.00</div>
-                <div class="score-meter">
-                    <div id="scoreMarker" class="score-marker" style="left: 50%;"></div>
+                
+                <!-- Enhanced Score Meter with Threshold Markers -->
+                <div class="score-meter-container">
+                    <div class="score-meter">
+                        <div id="scoreMarker" class="score-marker" style="left: 50%;"></div>
+                        <!-- Threshold markers -->
+                        <div id="buyThresholdMarker" class="threshold-marker buy-threshold" style="left: 0%; display: none;"></div>
+                        <div id="sellThresholdMarker" class="threshold-marker sell-threshold" style="left: 0%; display: none;"></div>
+                    </div>
+                    <div class="score-labels">
+                        <span>-1 (Sell)</span>
+                        <span>0</span>
+                        <span>+1 (Buy)</span>
+                    </div>
+                    <!-- Threshold labels above meter -->
+                    <div class="threshold-labels">
+                        <span id="buyThresholdLabel" class="threshold-label buy-label" style="left: 0%; display: none;">BUY</span>
+                        <span id="sellThresholdLabel" class="threshold-label sell-label" style="left: 0%; display: none;">SELL</span>
+                    </div>
                 </div>
-                <div class="score-labels">
-                    <span>-1 (Sell)</span>
-                    <span>0</span>
-                    <span>+1 (Buy)</span>
+                
+                <!-- Threshold Info Box -->
+                <div id="thresholdInfoBox" class="threshold-info-box" style="margin-top: 12px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; font-size: 0.85em;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #888;">Buy Threshold:</span>
+                        <span id="buyThresholdValue" style="color: #00ff88; font-weight: bold;">--</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="color: #888;">Sell Threshold:</span>
+                        <span id="sellThresholdValue" style="color: #ff4444; font-weight: bold;">--</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #888;">Distance to Buy:</span>
+                        <span id="distanceToBuy" style="color: #ffaa00;">--</span>
+                    </div>
                 </div>
+                
+                <!-- Confluence Indicator -->
+                <div id="confluenceIndicator" class="confluence-indicator" style="margin-top: 10px; padding: 8px; background: rgba(0,100,255,0.1); border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span style="color: #0088ff; font-size: 0.9em;">Confluence:</span>
+                        <span id="confluenceCount" style="color: #00ff88; font-weight: bold;">0/0</span>
+                    </div>
+                    <div class="confluence-bar">
+                        <div id="confluenceBarFill" class="confluence-bar-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+                
+                <!-- Multi-Coin Comparison Section -->
+                <div id="coinComparisonBox" class="coin-comparison-box" style="margin-top: 12px; padding: 10px; background: rgba(100,0,255,0.1); border-radius: 8px; border-left: 3px solid #6600ff; display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <strong style="color: #9900ff;">📊 Coin Comparison</strong>
+                        <span id="coinRank" style="color: #ffaa00; font-size: 0.85em;">--</span>
+                    </div>
+                    <div id="bestAlternativeInfo" style="font-size: 0.85em; color: #aaa;">
+                        <div>Best Alternative: <span id="bestAltSymbol" style="color: #00ff88;">--</span></div>
+                        <div>Score: <span id="bestAltScore" style="color: #00ff88;">--</span> (Diff: <span id="scoreDiff" style="color: #ffaa00;">--</span>)</div>
+                    </div>
+                </div>
+                
                 <div id="decisionDisplay" class="decision-display decision-hold">
                     WAITING
                 </div>
@@ -932,8 +1060,13 @@
                         <tr style="border-bottom: 1px solid #333;">
                             <th style="text-align: left; padding: 6px 8px;">Symbol</th>
                             <th style="text-align: left; padding: 6px 8px;">Regime</th>
-                            <th style="text-align: right; padding: 6px 8px;">AI Score</th>
-                            <th style="text-align: center; padding: 6px 8px;">Selected</th>
+                            <th style="text-align: right; padding: 6px 8px;">Score</th>
+                            <th style="text-align: right; padding: 6px 8px;">Boost</th>
+                            <th style="text-align: right; padding: 6px 8px;">1h%</th>
+                            <th style="text-align: right; padding: 6px 8px;">4h%</th>
+                            <th style="text-align: right; padding: 6px 8px;">24h%</th>
+                            <th style="text-align: center; padding: 6px 8px;">Vol</th>
+                            <th style="text-align: center; padding: 6px 8px;">Sel</th>
                         </tr>
                     </thead>
                     <tbody id="symbolScanBody">
@@ -1664,6 +1797,124 @@
             }
         });
 
+        // Update AI Score with thresholds and enhanced display
+        function updateAIScoreWithThresholds(data) {
+            const score = data.ai_score || 0;
+            const thresholds = data.ai_thresholds || {};
+            const confluence = data.confluence || {};
+            
+            // Update score display
+            const scoreEl = document.getElementById('aiScore');
+            scoreEl.textContent = score.toFixed(3);
+            scoreEl.className = 'card-value ' + (score > 0.3 ? 'positive' : score < -0.3 ? 'negative' : 'neutral');
+            
+            // Calculate score marker position (0-100%)
+            const markerPos = ((score + 1) / 2) * 100;
+            document.getElementById('scoreMarker').style.left = markerPos + '%';
+            
+            // Update threshold markers
+            const buyThreshold = thresholds.buy_threshold !== undefined ? thresholds.buy_threshold : 0.28;
+            const sellThreshold = thresholds.sell_threshold !== undefined ? thresholds.sell_threshold : -0.25;
+            
+            const buyPos = ((buyThreshold + 1) / 2) * 100;
+            const sellPos = ((sellThreshold + 1) / 2) * 100;
+            
+            const buyMarker = document.getElementById('buyThresholdMarker');
+            const sellMarker = document.getElementById('sellThresholdMarker');
+            const buyLabel = document.getElementById('buyThresholdLabel');
+            const sellLabel = document.getElementById('sellThresholdLabel');
+            
+            if (buyThreshold > -1 && buyThreshold < 1) {
+                buyMarker.style.left = buyPos + '%';
+                buyMarker.style.display = 'block';
+                buyLabel.style.left = buyPos + '%';
+                buyLabel.style.display = 'block';
+                buyLabel.textContent = `BUY (${buyThreshold.toFixed(2)})`;
+            } else {
+                buyMarker.style.display = 'none';
+                buyLabel.style.display = 'none';
+            }
+            
+            if (sellThreshold > -1 && sellThreshold < 1) {
+                sellMarker.style.left = sellPos + '%';
+                sellMarker.style.display = 'block';
+                sellLabel.style.left = sellPos + '%';
+                sellLabel.style.display = 'block';
+                sellLabel.textContent = `SELL (${sellThreshold.toFixed(2)})`;
+            } else {
+                sellMarker.style.display = 'none';
+                sellLabel.style.display = 'none';
+            }
+            
+            // Update threshold values
+            document.getElementById('buyThresholdValue').textContent = buyThreshold.toFixed(3);
+            document.getElementById('sellThresholdValue').textContent = sellThreshold.toFixed(3);
+            
+            // Calculate and display distance to buy threshold
+            const distanceToBuy = Math.max(0, buyThreshold - score);
+            const distanceEl = document.getElementById('distanceToBuy');
+            if (score < buyThreshold) {
+                distanceEl.textContent = distanceToBuy.toFixed(3) + ' away';
+                distanceEl.style.color = '#ffaa00';
+            } else {
+                distanceEl.textContent = 'Above threshold ✓';
+                distanceEl.style.color = '#00ff88';
+            }
+            
+            // Update confluence indicator
+            const confluenceCount = confluence.count || 0;
+            const confluenceRequired = thresholds.confluence_required || 5;
+            const confluencePercent = confluenceRequired > 0 ? Math.min(100, (confluenceCount / confluenceRequired) * 100) : 0;
+            
+            document.getElementById('confluenceCount').textContent = `${confluenceCount}/${confluenceRequired}`;
+            document.getElementById('confluenceBarFill').style.width = confluencePercent + '%';
+            
+            // Color code confluence bar
+            const confluenceBar = document.getElementById('confluenceBarFill');
+            if (confluencePercent >= 100) {
+                confluenceBar.style.background = '#00ff88';
+            } else if (confluencePercent >= 70) {
+                confluenceBar.style.background = '#ffaa00';
+            } else {
+                confluenceBar.style.background = '#ff4444';
+            }
+            
+            // Update multi-coin comparison
+            updateCoinComparison(data);
+        }
+        
+        function updateCoinComparison(data) {
+            const comparison = data.ai_thresholds?.comparison;
+            const rankEl = document.getElementById('coinRank');
+            const comparisonBox = document.getElementById('coinComparisonBox');
+            const bestAltEl = document.getElementById('bestAlternativeInfo');
+            
+            if (comparison && comparison.current_rank && comparison.total_coins > 1) {
+                rankEl.textContent = `Rank ${comparison.current_rank}/${comparison.total_coins}`;
+                comparisonBox.style.display = 'block';
+                
+                if (comparison.best_alternative) {
+                    const alt = comparison.best_alternative;
+                    document.getElementById('bestAltSymbol').textContent = alt.base_asset || alt.symbol?.replace('USDT', '') || '--';
+                    document.getElementById('bestAltScore').textContent = alt.score?.toFixed(3) || '--';
+                    
+                    const diff = comparison.score_difference || 0;
+                    const diffEl = document.getElementById('scoreDiff');
+                    diffEl.textContent = (diff >= 0 ? '+' : '') + diff.toFixed(3);
+                    diffEl.style.color = diff > 0 ? '#00ff88' : '#ff4444';
+                    
+                    bestAltEl.style.display = 'block';
+                } else {
+                    bestAltEl.style.display = 'none';
+                }
+            } else {
+                // Hide comparison box if no comparison data or only one coin
+                rankEl.textContent = '--';
+                comparisonBox.style.display = 'none';
+                bestAltEl.style.display = 'none';
+            }
+        }
+
         // Update all dashboard elements
         function updateDashboard(data) {
             // Status badge
@@ -1679,6 +1930,7 @@
             // Update buttons
             document.getElementById('btnStartLive').disabled = data.running;
             document.getElementById('btnStop').disabled = !data.running;
+            document.getElementById('btnRestart').disabled = !data.running;
 
             // Price card title (active pair for multi-coin)
             const priceTitleEl = document.getElementById('priceCardTitle');
@@ -1725,21 +1977,37 @@
                 symbolScanBody.innerHTML = data.symbol_scan.map(function(row) {
                     const pair = (row.base_asset || (row.symbol || '').replace('USDT', '')) + '/USDT';
                     const selected = row.selected ? '&#10003;' : '';
-                    const rowStyle = row.selected ? 'background: rgba(0,120,0,0.2);' : '';
-                    return '<tr style="' + rowStyle + '"><td style="padding: 6px 8px;">' + pair + '</td><td style="padding: 6px 8px;">' + (row.regime || '-') + '</td><td style="text-align: right; padding: 6px 8px;">' + (row.score != null ? row.score : '-') + '</td><td style="text-align: center; padding: 6px 8px;">' + selected + '</td></tr>';
+                    const baseScore = row.score != null ? row.score.toFixed(3) : '-';
+                    const boostedScore = row.boosted_score != null ? row.boosted_score.toFixed(3) : baseScore;
+                    const gainerBoost = row.gainer_boost != null && row.gainer_boost > 0 ? '+' + row.gainer_boost.toFixed(3) : '-';
+                    const momentum1h = row.momentum_1h != null ? (row.momentum_1h >= 0 ? '+' : '') + row.momentum_1h.toFixed(2) + '%' : '-';
+                    const momentum4h = row.momentum_4h != null ? (row.momentum_4h >= 0 ? '+' : '') + row.momentum_4h.toFixed(2) + '%' : '-';
+                    const momentum24h = row.momentum_24h != null ? (row.momentum_24h >= 0 ? '+' : '') + row.momentum_24h.toFixed(2) + '%' : '-';
+                    const volumeSpike = row.volume_spike ? '&#9650;' : '-';
+                    
+                    // Highlight gainers (positive momentum or volume spike)
+                    const isGainer = (row.momentum_1h > 0 && row.momentum_1h >= 2) || (row.momentum_4h > 0 && row.momentum_4h >= 5) || row.volume_spike;
+                    const rowStyle = row.selected ? 'background: rgba(0,120,0,0.2);' : (isGainer ? 'background: rgba(0,150,0,0.1);' : '');
+                    const scoreColor = row.gainer_boost > 0 ? 'color: #4CAF50;' : '';
+                    
+                    return '<tr style="' + rowStyle + '">' +
+                        '<td style="padding: 6px 8px;">' + pair + '</td>' +
+                        '<td style="padding: 6px 8px;">' + (row.regime || '-') + '</td>' +
+                        '<td style="text-align: right; padding: 6px 8px; ' + scoreColor + '">' + boostedScore + '</td>' +
+                        '<td style="text-align: right; padding: 6px 8px; color: #4CAF50;">' + gainerBoost + '</td>' +
+                        '<td style="text-align: right; padding: 6px 8px; ' + (row.momentum_1h > 0 ? 'color: #4CAF50;' : 'color: #f44336;') + '">' + momentum1h + '</td>' +
+                        '<td style="text-align: right; padding: 6px 8px; ' + (row.momentum_4h > 0 ? 'color: #4CAF50;' : 'color: #f44336;') + '">' + momentum4h + '</td>' +
+                        '<td style="text-align: right; padding: 6px 8px; ' + (row.momentum_24h > 0 ? 'color: #4CAF50;' : 'color: #f44336;') + '">' + momentum24h + '</td>' +
+                        '<td style="text-align: center; padding: 6px 8px; ' + (row.volume_spike ? 'color: #FF9800;' : '') + '">' + volumeSpike + '</td>' +
+                        '<td style="text-align: center; padding: 6px 8px;">' + selected + '</td>' +
+                        '</tr>';
                 }).join('');
             } else if (symbolScanBody) {
-                symbolScanBody.innerHTML = '<tr><td colspan="4" style="padding: 8px; color: #666;">No data</td></tr>';
+                symbolScanBody.innerHTML = '<tr><td colspan="9" style="padding: 8px; color: #666;">No data</td></tr>';
             }
 
-            // AI Score
-            const scoreEl = document.getElementById('aiScore');
-            scoreEl.textContent = data.ai_score.toFixed(3);
-            scoreEl.className = 'card-value ' + (data.ai_score > 0.3 ? 'positive' : data.ai_score < -0.3 ? 'negative' : 'neutral');
-
-            // Score marker position (0-100%)
-            const markerPos = ((data.ai_score + 1) / 2) * 100;
-            document.getElementById('scoreMarker').style.left = markerPos + '%';
+            // Update AI Score with thresholds and enhanced display
+            updateAIScoreWithThresholds(data);
 
             // Decision
             const decisionEl = document.getElementById('decisionDisplay');
@@ -2719,6 +2987,7 @@
                 if (data.status === 'ok') {
                     document.getElementById('btnStartLive').textContent = 'Running';
                     document.getElementById('btnStop').disabled = false;
+                    document.getElementById('btnRestart').disabled = false;
                 } else {
                     document.getElementById('btnStartLive').disabled = false;
                     document.getElementById('btnStartLive').textContent = 'Start Trading';
@@ -2747,6 +3016,7 @@
                 document.getElementById('btnStartLive').textContent = 'Start Trading';
                 document.getElementById('btnStop').disabled = true;
                 document.getElementById('btnStop').textContent = 'Stop Bot';
+                document.getElementById('btnRestart').disabled = true;
                 // Request fresh state
                 socket.emit('request_update');
             })
@@ -2754,6 +3024,48 @@
                 console.error('Stop error:', err);
                 document.getElementById('btnStop').disabled = false;
                 document.getElementById('btnStop').textContent = 'Stop Bot';
+            });
+        }
+
+        function restartBot() {
+            if (!confirm('Are you sure you want to restart the bot? This will stop and restart all trading operations.')) {
+                return;
+            }
+            
+            document.getElementById('btnRestart').disabled = true;
+            document.getElementById('btnRestart').textContent = 'Restarting...';
+            document.getElementById('btnStartLive').disabled = true;
+            document.getElementById('btnStop').disabled = true;
+            
+            fetch('/api/restart', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                console.log(data.message);
+                if (data.status === 'ok') {
+                    document.getElementById('statusBadge').textContent = 'RUNNING';
+                    document.getElementById('statusBadge').className = 'status-badge status-running';
+                    document.getElementById('btnStartLive').disabled = true;
+                    document.getElementById('btnStartLive').textContent = 'Running';
+                    document.getElementById('btnStop').disabled = false;
+                    document.getElementById('btnRestart').disabled = false;
+                    document.getElementById('btnRestart').textContent = 'Restart Bot';
+                    // Request fresh state
+                    socket.emit('request_update');
+                } else {
+                    alert('Restart error: ' + data.message);
+                    document.getElementById('btnRestart').disabled = false;
+                    document.getElementById('btnRestart').textContent = 'Restart Bot';
+                    document.getElementById('btnStartLive').disabled = false;
+                    document.getElementById('btnStop').disabled = false;
+                }
+            })
+            .catch(err => {
+                console.error('Restart error:', err);
+                alert('Error restarting bot: ' + err);
+                document.getElementById('btnRestart').disabled = false;
+                document.getElementById('btnRestart').textContent = 'Restart Bot';
+                document.getElementById('btnStartLive').disabled = false;
+                document.getElementById('btnStop').disabled = false;
             });
         }
 

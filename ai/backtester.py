@@ -227,6 +227,8 @@ class Backtester:
             else:
                 # Check for exit
                 entry_price = position["entry_price"]
+                if not entry_price or entry_price <= 0:
+                    continue  # Skip invalid entry price
                 pnl_pct = (current_price - entry_price) / entry_price * 100
                 
                 should_exit = False

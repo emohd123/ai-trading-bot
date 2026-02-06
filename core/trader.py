@@ -211,6 +211,8 @@ class Trader:
             return
 
         entry_price = self.current_position["entry_price"]
+        if not entry_price or entry_price <= 0:
+            return
         profit_percent = ((current_price - entry_price) / entry_price) * 100
 
         # Track highest price since entry
@@ -273,6 +275,8 @@ class Trader:
             return False, ""
 
         entry_price = self.current_position["entry_price"]
+        if not entry_price or entry_price <= 0:
+            return
         profit_percent = ((current_price - entry_price) / entry_price) * 100
         hours_held = (datetime.now() - entry_time).total_seconds() / 3600
 
@@ -354,6 +358,8 @@ class Trader:
             return False, 0, ""
 
         entry_price = self.current_position["entry_price"]
+        if not entry_price or entry_price <= 0:
+            return
         profit_percent = ((current_price - entry_price) / entry_price) * 100
 
         for level in self.scale_out_levels:
@@ -384,6 +390,8 @@ class Trader:
             # Calculate partial profit
             entry_price = self.current_position["entry_price"]
             exit_price = result["price"]
+            if not entry_price or entry_price <= 0:
+                entry_price = exit_price  # Fallback to prevent division by zero
             partial_profit = (exit_price - entry_price) * sell_quantity
             partial_profit_percent = ((exit_price - entry_price) / entry_price) * 100
 
@@ -689,6 +697,8 @@ class Trader:
             exit_price = result["price"]
             quantity = result["quantity"]
 
+            if not entry_price or entry_price <= 0:
+                entry_price = exit_price  # Fallback to prevent division by zero
             profit = (exit_price - entry_price) * quantity
             profit_percent = ((exit_price - entry_price) / entry_price) * 100
 

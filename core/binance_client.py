@@ -7,6 +7,7 @@ import time
 from typing import Optional, Dict, List, Any
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
+from requests.exceptions import ConnectionError, Timeout, ReadTimeout
 import pandas as pd
 import config
 
@@ -71,19 +72,100 @@ class BinanceClient:
         except Exception as e:
             logger.warning("Could not re-sync time with Binance: %s", e)
 
-    def get_current_price(self, symbol: str = None) -> float:
+    def get_current_price(self, symbol: str = None, max_retries=3) -> Optional[float]:
         """
-        Get current price for a symbol
+        Get current price for a symbol with retry logic for network errors
 
         Args:
             symbol: Trading pair symbol (default: from config)
+            max_retries: Maximum number of retry attempts
 
         Returns:
-            Current price as float
+            Current price as float, or None if all retries fail
         """
         symbol = symbol or config.SYMBOL
-        ticker = self.client.get_symbol_ticker(symbol=symbol)
-        return float(ticker['price'])
+        
+        start_time = time.time()
+        for attempt in range(max_retries):
+            try:
+                ticker = self.client.get_symbol_ticker(symbol=symbol)
+                duration = time.time() - start_time
+                # Record metrics
+                try:
+                    from core.metrics import get_metrics_collector
+                    collector = get_metrics_collector()
+                    collector.record_api_call("get_current_price", duration, success=True)
+                except Exception:
+                    pass
+                return float(ticker['price'])
+            except BinanceAPIException as e:
+                # Handle specific Binance error codes
+                if e.code == -1021:  # Timestamp error
+                    logger.warning("Timestamp error in get_current_price, syncing time...")
+                    self._sync_time()
+                    if attempt < max_retries - 1:
+                        time.sleep(1)
+                        continue
+                    else:
+                        logger.error("Failed to sync time after retries")
+                        return None
+                elif e.code == -1015:  # Rate limit
+                    wait_time = 60 if attempt == 0 else 120
+                    logger.warning(f"Rate limit hit, waiting {wait_time}s...")
+                    time.sleep(wait_time)
+                    if attempt < max_retries - 1:
+                        continue
+                    else:
+                        logger.error("Rate limit retries exhausted")
+                        return None
+                else:
+                    # Other API errors - don't retry
+                    duration = time.time() - start_time
+                    try:
+                        from core.metrics import get_metrics_collector
+                        collector = get_metrics_collector()
+                        collector.record_api_call("get_current_price", duration, success=False)
+                    except Exception:
+                        pass
+                    logger.error(f"Binance API error {e.code}: {e.message}")
+                    return None
+            except (ConnectionError, Timeout, ReadTimeout) as e:
+                # Network errors - retry with backoff
+                if attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 2  # 2s, 4s, 6s
+                    logger.warning(f"Network error (attempt {attempt+1}/{max_retries}), retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    duration = time.time() - start_time
+                    try:
+                        from core.metrics import get_metrics_collector
+                        collector = get_metrics_collector()
+                        collector.record_api_call("get_current_price", duration, success=False)
+                    except Exception:
+                        pass
+                    logger.error(f"Network error after {max_retries} attempts: {e}")
+                    return None
+            except Exception as e:
+                # Unexpected errors - don't retry
+                duration = time.time() - start_time
+                try:
+                    from core.metrics import get_metrics_collector
+                    collector = get_metrics_collector()
+                    collector.record_api_call("get_current_price", duration, success=False)
+                except Exception:
+                    pass
+                logger.error(f"Unexpected error in get_current_price: {e}")
+                return None
+        
+        duration = time.time() - start_time
+        try:
+            from core.metrics import get_metrics_collector
+            collector = get_metrics_collector()
+            collector.record_api_call("get_current_price", duration, success=False)
+        except Exception:
+            pass
+        return None
 
     def get_historical_klines(
         self,
@@ -181,12 +263,30 @@ class BinanceClient:
         for attempt in range(2):
             try:
                 price = self.get_current_price(symbol)
+                if not price or price <= 0:
+                    return {"status": "error", "message": "Could not get current price"}
                 quantity = quote_amount / price
                 info = self.client.get_symbol_info(symbol)
                 step_size = float([f['stepSize'] for f in info['filters']
                                  if f['filterType'] == 'LOT_SIZE'][0])
                 precision = len(str(step_size).split('.')[-1].rstrip('0'))
                 quantity = round(quantity, precision)
+                
+                # Check minimum notional value (price × quantity must meet minimum)
+                min_notional = None
+                for f in info['filters']:
+                    if f['filterType'] == 'MIN_NOTIONAL':
+                        min_notional = float(f.get('minNotional', f.get('notional', 0)))
+                        break
+                
+                if min_notional and min_notional > 0:
+                    order_value = price * quantity
+                    if order_value < min_notional:
+                        return {
+                            "status": "error", 
+                            "message": f"Order value ${order_value:.2f} below minimum notional ${min_notional:.2f} (need at least ${min_notional:.2f} USDT)"
+                        }
+                
                 order = self.client.order_market_buy(
                     symbol=symbol,
                     quantity=quantity
@@ -251,6 +351,25 @@ class BinanceClient:
                                if f['filterType'] == 'LOT_SIZE'][0])
                 if quantity < min_qty:
                     return {"status": "error", "message": f"Quantity {quantity} below minimum {min_qty}"}
+                
+                # Check minimum notional value (price × quantity must meet minimum)
+                min_notional = None
+                for f in info['filters']:
+                    if f['filterType'] == 'MIN_NOTIONAL':
+                        min_notional = float(f.get('minNotional', f.get('notional', 0)))
+                        break
+                
+                if min_notional and min_notional > 0:
+                    # Get current price to calculate order value
+                    current_price = self.get_current_price(symbol)
+                    if current_price:
+                        order_value = current_price * quantity
+                        if order_value < min_notional:
+                            return {
+                                "status": "error", 
+                                "message": f"Order value ${order_value:.2f} below minimum notional ${min_notional:.2f} (price ${current_price:.2f} × qty {quantity:.8f})"
+                            }
+                
                 order = self.client.order_market_sell(
                     symbol=symbol,
                     quantity=quantity

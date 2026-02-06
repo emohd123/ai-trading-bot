@@ -27,6 +27,7 @@ PHASE 3 NEW FEATURES:
 """
 import logging
 from flask import Flask, render_template, jsonify, request
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 from flask_socketio import SocketIO, emit
@@ -34,6 +35,9 @@ import threading
 import time
 import json
 import os
+import signal
+import sys
+import atexit
 from datetime import datetime
 
 # Import bot components
@@ -90,6 +94,45 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable static file caching
 app.jinja_env.auto_reload = True  # Force Jinja2 to reload templates
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
+# Rate limiting storage
+_rate_limit_store = {}
+_rate_limit_lock = threading.Lock()
+
+
+def rate_limit(max_per_minute=60):
+    """Simple rate limiting decorator"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Get client IP
+            client_ip = request.remote_addr or 'unknown'
+            current_time = time.time()
+            
+            with _rate_limit_lock:
+                # Clean old entries (older than 1 minute)
+                cutoff = current_time - 60
+                if client_ip in _rate_limit_store:
+                    _rate_limit_store[client_ip] = [
+                        t for t in _rate_limit_store[client_ip] if t > cutoff
+                    ]
+                else:
+                    _rate_limit_store[client_ip] = []
+                
+                # Check rate limit
+                if len(_rate_limit_store[client_ip]) >= max_per_minute:
+                    logger.warning(f"Rate limit exceeded for {client_ip}")
+                    return jsonify({
+                        "error": "Rate limit exceeded",
+                        "message": f"Maximum {max_per_minute} requests per minute"
+                    }), 429
+                
+                # Record this request
+                _rate_limit_store[client_ip].append(current_time)
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
 # Global bot state with smart features
 bot_state = {
     "running": False,
@@ -100,6 +143,8 @@ bot_state = {
     "ai_score": 0,
     "decision": "WAITING",
     "activity_status": "Idle",
+    "connection_status": "unknown",  # Connection status: "connected", "failed", "connecting", "unknown"
+    "last_connection_time": None,  # Timestamp of last successful connection
     "decision_reasons": [],
     "position": None,          # Legacy single position (for backward compat)
     "positions": [],           # NEW: Multiple positions list
@@ -331,6 +376,7 @@ meta_ai = None      # Meta AI controller for autonomous operation
 trailing_stop_price = None
 highest_price_since_entry = None
 consecutive_losses = 0
+last_loss_time = None  # Track when last loss occurred for timeout reset
 daily_losses = 0
 daily_trades = 0  # PHASE 5: Track daily trade count
 
@@ -347,6 +393,154 @@ health_check_interval = 300  # 5 minutes
 position_size_learner = None
 _last_idle_heartbeat = 0
 _last_insufficient_balance_log = 0.0  # Throttle "insufficient balance" log and Telegram (once per 15 min)
+
+
+def _calculate_ai_thresholds(regime, consecutive_losses, position_in_loss=False):
+    """
+    Calculate regime-specific AI thresholds for current market conditions.
+    
+    Args:
+        regime: Market regime string ("trending_up", "trending_down", "ranging", etc.)
+        consecutive_losses: Number of consecutive losses (for loss avoidance)
+        position_in_loss: Whether current position is in loss (affects sell threshold)
+    
+    Returns:
+        dict with buy_threshold, sell_threshold, confluence_required, etc.
+    """
+    # Buy threshold based on regime
+    if regime == "trending_up":
+        buy_threshold = getattr(config, 'BUY_THRESHOLD_UPTREND', 0.08)
+    elif regime == "trending_down":
+        buy_threshold = getattr(config, 'BUY_THRESHOLD_DOWNTREND', 0.40)
+    else:
+        buy_threshold = getattr(config, 'BUY_THRESHOLD', 0.28)
+    
+    # Loss avoidance adjustments
+    if consecutive_losses >= 2:
+        buy_threshold = max(buy_threshold, getattr(config, 'BUY_THRESHOLD_AFTER_TWO_LOSSES', 0.38))
+    elif consecutive_losses >= 1:
+        buy_threshold = max(buy_threshold, getattr(config, 'BUY_THRESHOLD_AFTER_LOSS', 0.32))
+    
+    # Sell threshold based on position state
+    if position_in_loss:
+        sell_threshold = getattr(config, 'SELL_THRESHOLD_IN_LOSS', -0.35)
+    else:
+        sell_threshold = getattr(config, 'SELL_THRESHOLD', -0.25)
+    
+    # Confluence requirements
+    if regime == "trending_up":
+        confluence_required = getattr(config, 'MIN_CONFLUENCE_BUY_UPTREND', 2)
+    elif regime == "trending_down":
+        confluence_required = getattr(config, 'MIN_CONFLUENCE_BUY_DOWNTREND', 6)
+    else:
+        confluence_required = getattr(config, 'MIN_CONFLUENCE_BUY', 5)
+    
+    return {
+        "buy_threshold": buy_threshold,
+        "sell_threshold": sell_threshold,
+        "confluence_required": confluence_required,
+        "regime": regime,
+        "loss_avoidance_active": consecutive_losses > 0
+    }
+
+
+def _calculate_momentum(client, symbol):
+    """
+    Calculate price momentum for a symbol across multiple timeframes.
+    
+    Returns:
+        dict with 1h, 4h, 24h price changes and volume spike detection
+    """
+    try:
+        # Get current price
+        current_price = client.get_current_price(symbol=symbol)
+        if not current_price or current_price <= 0:
+            return {"1h_change": 0, "4h_change": 0, "24h_change": 0, "volume_spike": False, "volume_ratio": 1.0}
+        
+        # Fetch klines for different intervals
+        # For 1h change: need 1h candles (fetch more for volume analysis)
+        df_1h = client.get_historical_klines(symbol=symbol, interval="1h", limit=25)  # 25 candles for volume analysis
+        df_4h = client.get_historical_klines(symbol=symbol, interval="4h", limit=2)
+        df_24h = client.get_historical_klines(symbol=symbol, interval="1d", limit=2)
+        
+        # Calculate price changes
+        change_1h = 0
+        change_4h = 0
+        change_24h = 0
+        
+        if df_1h is not None and len(df_1h) >= 2:
+            price_1h_ago = df_1h['close'].iloc[-2]
+            if price_1h_ago > 0:
+                change_1h = ((current_price - price_1h_ago) / price_1h_ago) * 100
+        
+        if df_4h is not None and len(df_4h) >= 2:
+            price_4h_ago = df_4h['close'].iloc[-2]
+            if price_4h_ago > 0:
+                change_4h = ((current_price - price_4h_ago) / price_4h_ago) * 100
+        
+        if df_24h is not None and len(df_24h) >= 2:
+            price_24h_ago = df_24h['close'].iloc[-2]
+            if price_24h_ago > 0:
+                change_24h = ((current_price - price_24h_ago) / price_24h_ago) * 100
+        
+        # Volume spike detection (using 1h data)
+        volume_spike = False
+        volume_ratio = 1.0
+        if df_1h is not None and len(df_1h) >= 5 and 'volume' in df_1h.columns:
+            # Use last 4 candles for recent volume, last 20 for average (or all if less than 20)
+            recent_volume = df_1h['volume'].tail(min(4, len(df_1h))).mean()
+            lookback = min(20, len(df_1h))
+            avg_volume = df_1h['volume'].tail(lookback).mean()
+            if avg_volume > 0:
+                volume_ratio = recent_volume / avg_volume
+                volume_spike = volume_ratio > 1.5  # 50%+ above average
+        
+        return {
+            "1h_change": round(change_1h, 2),
+            "4h_change": round(change_4h, 2),
+            "24h_change": round(change_24h, 2),
+            "volume_spike": volume_spike,
+            "volume_ratio": round(volume_ratio, 2)
+        }
+    except Exception as e:
+        logger.warning(f"Error calculating momentum for {symbol}: {e}")
+        return {"1h_change": 0, "4h_change": 0, "24h_change": 0, "volume_spike": False, "volume_ratio": 1.0}
+
+
+def _calculate_gainer_boost(momentum_data):
+    """
+    Calculate gainer boost based on momentum data.
+    
+    Returns:
+        float: Boost value (0 to GAINER_BOOST_MAX)
+    """
+    boost = 0.0
+    
+    # 1h gain boost
+    change_1h = momentum_data.get("1h_change", 0)
+    threshold_1h = getattr(config, 'GAINER_BOOST_1H_THRESHOLD', 0.02)
+    value_1h = getattr(config, 'GAINER_BOOST_1H_VALUE', 0.15)
+    if change_1h >= threshold_1h * 100:  # Convert to percentage
+        boost += value_1h
+    
+    # 4h gain boost
+    change_4h = momentum_data.get("4h_change", 0)
+    threshold_4h = getattr(config, 'GAINER_BOOST_4H_THRESHOLD', 0.05)
+    value_4h = getattr(config, 'GAINER_BOOST_4H_VALUE', 0.12)
+    if change_4h >= threshold_4h * 100:  # Convert to percentage
+        boost += value_4h
+    
+    # Volume spike boost
+    volume_spike = momentum_data.get("volume_spike", False)
+    volume_threshold = getattr(config, 'GAINER_BOOST_VOLUME_THRESHOLD', 0.5)
+    volume_value = getattr(config, 'GAINER_BOOST_VOLUME_VALUE', 0.10)
+    volume_ratio = momentum_data.get("volume_ratio", 1.0)
+    if volume_spike or volume_ratio > (1 + volume_threshold):
+        boost += volume_value
+    
+    # Cap at maximum
+    max_boost = getattr(config, 'GAINER_BOOST_MAX', 0.25)
+    return min(boost, max_boost)
 
 
 def _get_activity_status(decision, details, position):
@@ -402,6 +596,10 @@ def update_dashboard():
 _price_ticker_running = False
 _price_ticker_thread = None
 
+# Track all background threads for cleanup
+_background_threads = []
+_shutdown_in_progress = False
+
 def _price_ticker_loop():
     """Background thread for real-time price updates every 5 seconds"""
     global _price_ticker_running, client
@@ -414,7 +612,7 @@ def _price_ticker_loop():
             # Fetch live price
             if client:
                 price = client.get_current_price(symbol)
-                if price:
+                if price and price > 0:
                     # Calculate PnL if in position
                     pnl_percent = 0
                     pnl_usd = 0
@@ -422,15 +620,17 @@ def _price_ticker_loop():
                         for pos in bot_state["positions"]:
                             if pos.get("symbol") == symbol:
                                 entry = pos.get("entry_price", price)
-                                pnl_percent = ((price - entry) / entry) * 100
-                                qty = pos.get("quantity", 0)
-                                pnl_usd = (price - entry) * qty
+                                if entry and entry > 0:
+                                    pnl_percent = ((price - entry) / entry) * 100
+                                    qty = pos.get("quantity", 0)
+                                    pnl_usd = (price - entry) * qty
                                 break
                     elif bot_state.get("position"):
                         entry = bot_state["position"].get("entry_price", price)
-                        pnl_percent = ((price - entry) / entry) * 100
-                        qty = bot_state["position"].get("quantity", 0)
-                        pnl_usd = (price - entry) * qty
+                        if entry and entry > 0:
+                            pnl_percent = ((price - entry) / entry) * 100
+                            qty = bot_state["position"].get("quantity", 0)
+                            pnl_usd = (price - entry) * qty
                     
                     # Emit real-time price tick
                     socketio.emit('price_tick', {
@@ -464,6 +664,7 @@ def start_price_ticker():
     _price_ticker_running = True
     _price_ticker_thread = threading.Thread(target=_price_ticker_loop, daemon=True)
     _price_ticker_thread.start()
+    _background_threads.append(_price_ticker_thread)
     logger.info("Real-time price ticker started")
 
 
@@ -805,6 +1006,8 @@ def update_trailing_stop(current_price, regime_data):
         return
 
     entry_price = bot_state["position"]["entry_price"]
+    if not entry_price or entry_price <= 0:
+        return
     profit_percent = ((current_price - entry_price) / entry_price) * 100
 
     if highest_price_since_entry is None:
@@ -878,7 +1081,7 @@ def update_trailing_stop_for_position(position: dict, current_price: float, regi
         return position.get("trailing_stop")
 
     entry_price = position.get("entry_price", current_price)
-    if not entry_price:
+    if not entry_price or entry_price <= 0:
         return position.get("trailing_stop")
 
     profit_percent = ((current_price - entry_price) / entry_price) * 100
@@ -1058,7 +1261,7 @@ def _sell_all_to_usdt(client):
                     # Check if this BUY could be for this symbol (rough price match)
                     try:
                         current_price = client.get_current_price(symbol=symbol)
-                        if t_price > 0 and abs(t_price - current_price) / current_price < 0.1:
+                        if current_price and current_price > 0 and t_price > 0 and abs(t_price - current_price) / current_price < 0.1:
                             entry_price = t_price
                             break
                     except Exception:
@@ -1100,7 +1303,13 @@ def _sell_all_to_usdt(client):
                 add_log(f"Sell all: {base_asset} → ${quote_amount:,.2f} | P/L: ${pnl:+,.2f} ({pnl_percent:+.1f}%)", level)
                 sold_any = True
             else:
-                add_log(f"Sell all to USDT: {base_asset} sell failed: {result.get('message', 'Unknown')}", "warning")
+                error_msg = result.get('message', 'Unknown')
+                # Skip dust amounts below notional threshold (not an error, just too small to trade)
+                if "notional" in error_msg.lower() or "NOTIONAL" in error_msg:
+                    logger.info("Skipping %s: below minimum notional threshold (dust)", base_asset)
+                    # Don't log as warning - this is expected for small balances
+                else:
+                    add_log(f"Sell all to USDT: {base_asset} sell failed: {error_msg}", "warning")
         except Exception as e:
             logger.warning("Sell all to USDT failed for %s: %s", base_asset, e)
             add_log(f"Sell all to USDT: {base_asset} error - {e}", "warning")
@@ -1229,15 +1438,42 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
                 _symbol_scan_cache[symbol] = {"regime": "unknown", "score": 0.0, "ts": now_ts}
                 regime, score = "unknown", 0.0
 
-        candidates.append((score, symbol, base_asset, regime))
+        # Calculate momentum and gainer boost
+        momentum_data = _calculate_momentum(client, symbol)
+        gainer_boost = _calculate_gainer_boost(momentum_data)
+        boosted_score = score + gainer_boost
+        
+        # Store in candidates with boosted score for sorting
+        candidates.append((boosted_score, symbol, base_asset, regime, score, gainer_boost))
+        
+        # Calculate thresholds for this coin (no loss avoidance for scan comparison)
+        coin_thresholds = _calculate_ai_thresholds(regime, 0, False)
+        distance_to_buy = max(0, coin_thresholds["buy_threshold"] - boosted_score) if boosted_score < coin_thresholds["buy_threshold"] else 0
+        
         scan_list.append({
             "symbol": symbol,
             "base_asset": base_asset,
             "regime": regime,
             "score": round(score, 3),
+            "boosted_score": round(boosted_score, 3),
+            "gainer_boost": round(gainer_boost, 3),
             "selected": False,
+            "buy_threshold": coin_thresholds["buy_threshold"],
+            "distance_to_buy": round(distance_to_buy, 3),
+            "confluence_required": coin_thresholds["confluence_required"],
+            # Momentum data
+            "momentum_1h": momentum_data.get("1h_change", 0),
+            "momentum_4h": momentum_data.get("4h_change", 0),
+            "momentum_24h": momentum_data.get("24h_change", 0),
+            "volume_spike": momentum_data.get("volume_spike", False),
+            "volume_ratio": momentum_data.get("volume_ratio", 1.0)
         })
 
+    # Initialize best_symbol and best_base for fallback cases
+    best_symbol = None
+    best_base = None
+    best_score = 0.0
+    
     if candidates:
         # PRIORITY: When NO_BUY_IN_DOWNTREND is enabled, prefer non-downtrend coins
         no_buy_downtrend = getattr(config, 'NO_BUY_IN_DOWNTREND', False)
@@ -1252,40 +1488,44 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
             
             # Tier 1: Uptrend (or strict: only trending_up) + good score = READY TO TRADE
             # Use uptrend threshold for uptrending coins, regular threshold for ranging
+            # Note: candidates format is (boosted_score, symbol, base_asset, regime, base_score, gainer_boost)
             tier1_uptrend_ready = [
-                (s, sym, base, reg) for s, sym, base, reg in candidates 
-                if (reg == "trending_up" if only_strict_uptrend else reg != "trending_down") 
-                and s >= (buy_threshold_uptrend if reg == "trending_up" else buy_threshold)
+                c for c in candidates 
+                if (c[3] == "trending_up" if only_strict_uptrend else c[3] != "trending_down") 
+                and c[0] >= (buy_threshold_uptrend if c[3] == "trending_up" else buy_threshold)
             ]
             
             # Tier 2: Downtrend but VERY HIGH score = AI confident, can trade
             tier2_high_score = [
-                (s, sym, base, reg) for s, sym, base, reg in candidates 
-                if reg == "trending_down" and s >= high_score_override
+                c for c in candidates 
+                if c[3] == "trending_down" and c[0] >= high_score_override
             ]
             
             # Tier 3: Uptrend but weak score = monitor for better entry
             # Check against uptrend threshold for uptrending coins
             tier3_uptrend_weak = [
-                (s, sym, base, reg) for s, sym, base, reg in candidates 
-                if reg != "trending_down" 
-                and s < (buy_threshold_uptrend if reg == "trending_up" else buy_threshold)
+                c for c in candidates 
+                if c[3] != "trending_down" 
+                and c[0] < (buy_threshold_uptrend if c[3] == "trending_up" else buy_threshold)
             ]
             
             if tier1_uptrend_ready:
                 # BEST: Uptrend + good score - ready to trade!
                 tier1_uptrend_ready.sort(key=lambda x: -x[0])
-                best_score, best_symbol, best_base, best_regime = tier1_uptrend_ready[0]
+                best_candidate = tier1_uptrend_ready[0]
+                best_score, best_symbol, best_base, best_regime = best_candidate[0], best_candidate[1], best_candidate[2], best_candidate[3]
                 bot_state["selection_status"] = f"READY: {best_symbol.replace('USDT','')} ({best_regime}, score {best_score:+.2f})"
             elif tier2_high_score:
                 # HIGH SCORE OVERRIDE: Downtrend but AI very confident
                 tier2_high_score.sort(key=lambda x: -x[0])
-                best_score, best_symbol, best_base, best_regime = tier2_high_score[0]
+                best_candidate = tier2_high_score[0]
+                best_score, best_symbol, best_base, best_regime = best_candidate[0], best_candidate[1], best_candidate[2], best_candidate[3]
                 bot_state["selection_status"] = f"HIGH SCORE: {best_symbol.replace('USDT','')} (downtrend but score {best_score:+.2f} > {high_score_override})"
             elif tier3_uptrend_weak:
                 # Coins in uptrend but scores too low - monitor
                 tier3_uptrend_weak.sort(key=lambda x: -x[0])
-                best_score, best_symbol, best_base, best_regime = tier3_uptrend_weak[0]
+                best_candidate = tier3_uptrend_weak[0]
+                best_score, best_symbol, best_base, best_regime = best_candidate[0], best_candidate[1], best_candidate[2], best_candidate[3]
                 threshold_for_msg = buy_threshold_uptrend if best_regime == "trending_up" else buy_threshold
                 bot_state["selection_status"] = f"WAITING: {best_symbol.replace('USDT','')} {best_regime} but weak score ({best_score:+.2f} < {threshold_for_msg})"
                 # Reduce cache time to rescan sooner when waiting
@@ -1294,16 +1534,18 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
             else:
                 # All coins in downtrend with low scores - pick highest, show status
                 candidates.sort(key=lambda x: -x[0])
-                best_score, best_symbol, best_base, best_regime = candidates[0]
-                down_count = sum(1 for _, _, _, r in candidates if r == "trending_down")
+                best_candidate = candidates[0]
+                best_score, best_symbol, best_base, best_regime = best_candidate[0], best_candidate[1], best_candidate[2], best_candidate[3]
+                down_count = sum(1 for c in candidates if c[3] == "trending_down")
                 bot_state["selection_status"] = f"BEARISH: {down_count}/{len(candidates)} downtrend. Best: {best_symbol.replace('USDT','')} ({best_score:+.2f} < {high_score_override})"
                 # Reduce cache time significantly to catch trend changes faster
                 for sym_key in _symbol_scan_cache:
                     _symbol_scan_cache[sym_key]["ts"] = now_ts - (cache_min * 0.5)
         else:
-            # AI decides all - just pick highest score regardless of regime
+            # AI decides all - just pick highest boosted score regardless of regime
             candidates.sort(key=lambda x: -x[0])
-            best_score, best_symbol, best_base, _ = candidates[0]
+            best_candidate = candidates[0]
+            best_score, best_symbol, best_base = best_candidate[0], best_candidate[1], best_candidate[2]
             bot_state["selection_status"] = f"AI MODE: {best_symbol.replace('USDT','')} (score {best_score:+.2f})"
         
         _last_rotation_time = now_ts
@@ -1311,14 +1553,60 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
             s["selected"] = s["symbol"] == best_symbol
         bot_state["symbol_scan"] = scan_list
         
+        # Calculate comparison data (current coin rank and best alternative)
+        # Sort by boosted_score to prioritize gainers
+        if scan_list and len(scan_list) > 1:
+            sorted_coins = sorted(scan_list, key=lambda x: x.get("boosted_score", x.get("score", 0)), reverse=True)
+            current_symbol = bot_state.get("current_symbol") or config.SYMBOL
+            current_score = bot_state.get("ai_score", 0)
+            
+            # Find current coin rank
+            current_rank = None
+            for i, coin in enumerate(sorted_coins):
+                if coin["symbol"] == current_symbol:
+                    current_rank = i + 1
+                    break
+            
+            # Find best alternative (if different from current)
+            best_alt = None
+            if sorted_coins and sorted_coins[0]["symbol"] != current_symbol:
+                best_alt = sorted_coins[0]
+            elif len(sorted_coins) > 1:
+                best_alt = sorted_coins[1]
+            
+            # Store comparison in ai_thresholds (merge with existing thresholds if they exist)
+            if "ai_thresholds" not in bot_state:
+                bot_state["ai_thresholds"] = {}
+            
+            if current_rank and best_alt:
+                bot_state["ai_thresholds"]["comparison"] = {
+                    "current_rank": current_rank,
+                    "total_coins": len(sorted_coins),
+                    "best_alternative": best_alt,
+                    "score_difference": best_alt["score"] - current_score
+                }
+            elif current_rank:
+                bot_state["ai_thresholds"]["comparison"] = {
+                    "current_rank": current_rank,
+                    "total_coins": len(sorted_coins),
+                    "best_alternative": None,
+                    "score_difference": 0
+                }
+            else:
+                # No rank found - clear comparison if it exists
+                if "comparison" in bot_state["ai_thresholds"]:
+                    bot_state["ai_thresholds"]["comparison"] = None
+        
         # If we have a position, show that we're holding but found better opportunity
         if current_pos_symbol:
             current_pos_short = current_pos_symbol.replace('USDT', '')
-            # Find current position's score from scan results
+            # Find current position's scores from scan results (both base and boosted)
             current_pos_score = None
+            current_pos_boosted_score = None
             for s in scan_list:
                 if s["symbol"] == current_pos_symbol:
                     current_pos_score = s.get("score", 0.0)
+                    current_pos_boosted_score = s.get("boosted_score", current_pos_score)
                     break
             
             # If current position not in scan (shouldn't happen, but safety check)
@@ -1326,20 +1614,26 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
                 bot_state["selection_status"] = f"HOLDING {current_pos_short} - Scanning for opportunities..."
                 return (current_pos_symbol, current_pos_base)
             
-            best_short = best_symbol.replace('USDT', '')
-            if best_symbol != current_pos_symbol:
-                # Better opportunity exists but can't switch due to position
-                max_positions = getattr(config, 'MAX_POSITIONS', 1)
-                if max_positions == 1:
-                    bot_state["selection_status"] = f"HOLDING {current_pos_short} ({current_pos_score:+.2f}) - Better: {best_short} ({best_score:+.2f}) but MAX_POSITIONS=1"
+            # Use boosted scores for fair comparison
+            if best_symbol:
+                best_short = best_symbol.replace('USDT', '')
+                if best_symbol != current_pos_symbol:
+                    # Better opportunity exists but can't switch due to position
+                    max_positions = getattr(config, 'MAX_POSITIONS', 1)
+                    if max_positions == 1:
+                        bot_state["selection_status"] = f"HOLDING {current_pos_short} ({current_pos_boosted_score:+.2f}) - Better: {best_short} ({best_score:+.2f}) but MAX_POSITIONS=1"
+                    else:
+                        bot_state["selection_status"] = f"HOLDING {current_pos_short} ({current_pos_boosted_score:+.2f}) - Also watching: {best_short} ({best_score:+.2f})"
                 else:
-                    bot_state["selection_status"] = f"HOLDING {current_pos_short} ({current_pos_score:+.2f}) - Also watching: {best_short} ({best_score:+.2f})"
+                    # Current position is still the best
+                    bot_state["selection_status"] = f"HOLDING {current_pos_short} - Still best (score {best_score:+.2f})"
             else:
-                # Current position is still the best
-                bot_state["selection_status"] = f"HOLDING {current_pos_short} - Still best (score {best_score:+.2f})"
+                bot_state["selection_status"] = f"HOLDING {current_pos_short} ({current_pos_boosted_score:+.2f})"
             return (current_pos_symbol, current_pos_base)
         
-        return (best_symbol, best_base)
+        # Return best symbol (should be defined if candidates exist)
+        if best_symbol and best_base:
+            return (best_symbol, best_base)
 
     bot_state["symbol_scan"] = scan_list
     # If we have a position, return it even if scan found nothing
@@ -1348,12 +1642,72 @@ def _pick_active_symbol(client, regime_detector, analyzer=None, ai_engine=None):
         return (current_pos_symbol, current_pos_base)
     # No position and no candidates - return first symbol as fallback
     if candidates:
-        # Shouldn't reach here, but if we do, pick highest score
+        # Shouldn't reach here, but if we do, pick highest boosted score
         candidates.sort(key=lambda x: -x[0])
-        best_score, best_symbol, best_base, _ = candidates[0]
+        best_candidate = candidates[0]
+        best_symbol, best_base = best_candidate[1], best_candidate[2]
         return (best_symbol, best_base)
-    first = symbols_config[0]
-    return (first[0], first[1])
+    # Fallback: return first symbol from config
+    if symbols_config:
+        first = symbols_config[0]
+        return (first[0], first[1])
+    # Ultimate fallback
+    return (config.SYMBOL, config.BASE_ASSET)
+
+
+def _initialize_client_with_retry(max_attempts=3, delay=5):
+    """Initialize BinanceClient with retry logic"""
+    global client
+    for attempt in range(max_attempts):
+        try:
+            logger.info(f"Initializing Binance client (attempt {attempt+1}/{max_attempts})...")
+            bot_state["connection_status"] = "connecting"
+            client = BinanceClient()
+            bot_state["connection_status"] = "connected"
+            bot_state["last_connection_time"] = datetime.now().isoformat()
+            logger.info("Binance client initialized successfully")
+            return client
+        except Exception as e:
+            logger.warning(f"Client init attempt {attempt+1}/{max_attempts} failed: {e}")
+            if attempt < max_attempts - 1:
+                bot_state["connection_status"] = "connecting"
+                time.sleep(delay)
+            else:
+                bot_state["connection_status"] = "failed"
+                logger.error(f"Failed to initialize Binance client after {max_attempts} attempts")
+                raise
+
+
+def _reconnect_client(max_attempts=3, delay=5):
+    """Attempt to reconnect Binance client"""
+    global client
+    try:
+        logger.info("Attempting to reconnect Binance client...")
+        bot_state["connection_status"] = "connecting"
+        client = BinanceClient()
+        bot_state["connection_status"] = "connected"
+        bot_state["last_connection_time"] = datetime.now().isoformat()
+        add_log("✅ API connection restored", "success")
+        logger.info("Binance client reconnected successfully")
+        return client
+    except Exception as e:
+        logger.warning(f"Reconnection attempt failed: {e}")
+        bot_state["connection_status"] = "failed"
+        return None
+
+
+def _check_client_health():
+    """Check if client is healthy by testing a simple API call"""
+    global client
+    if client is None:
+        return False
+    try:
+        # Simple test: try to get server time (lightweight call)
+        client.client.get_server_time()
+        return True
+    except Exception as e:
+        logger.debug(f"Client health check failed: {e}")
+        return False
 
 
 def bot_loop():
@@ -1386,6 +1740,26 @@ def bot_loop():
             add_log(f"Self-healing init failed: {e}", "warning")
 
     while not stop_bot.is_set():
+        iteration_start = time.time()  # Track loop iteration time
+        
+        # === CLIENT HEALTH CHECK & RECONNECTION ===
+        if client is None or not _check_client_health():
+            logger.warning("Client is None or unhealthy, attempting reconnection...")
+            bot_state["activity_status"] = "API connection lost - reconnecting..."
+            client = _reconnect_client()
+            if client is None:
+                add_log("⚠️ API connection failed - retrying in 30s", "warning")
+                bot_state["activity_status"] = "API connection failed - retrying..."
+                # Reinitialize self-healer if client was reconnected
+                if client and self_healer is None:
+                    try:
+                        notifier = get_notifier()
+                        self_healer = SelfHealer(client, bot_state, notifier)
+                    except Exception:
+                        pass
+                time.sleep(30)
+                continue
+        
         try:
             # === SELL ALL TO USDT (once at startup - even if we have positions) ===
             # Consolidates multiple open positions into USDT so we start flat and trade one coin at a time
@@ -1458,8 +1832,8 @@ def bot_loop():
                             "last_analysis": report.get("timestamp", ""),
                         }
                         logger.info("Deep analysis updated: %d weaknesses, %d strengths",
-                                    len(bot_state["deep_insights"]["weaknesses"]),
-                                    len(bot_state["deep_insights"].get("strengths", [])))
+                                    len(bot_state.get("deep_insights", {}).get("weaknesses", [])),
+                                    len(bot_state.get("deep_insights", {}).get("strengths", [])))
                     # Always update timestamp to prevent repeated attempts when no data or on error
                     globals()["_last_deep_analysis_time"] = _now
                 except Exception as e:
@@ -1481,6 +1855,7 @@ def bot_loop():
                         logger.warning("Meta AI awareness update failed: %s", e)
                 _t = threading.Thread(target=_run_meta_awareness, daemon=True)
                 _t.start()
+                _background_threads.append(_t)
                 globals()["_last_meta_ai_time"] = _now  # throttle immediately so we don't spawn again next cycle
             
             bot_state["activity_status"] = "Fetching 4h/1h/15m data..."
@@ -1515,8 +1890,9 @@ def bot_loop():
             if bot_state["position"]:
                 try:
                     live_price = client.get_current_price()
-                    current_price = live_price
-                    analysis["current_price"] = live_price
+                    if live_price and live_price > 0:
+                        current_price = live_price
+                        analysis["current_price"] = live_price
                 except Exception:
                     pass  # Fall back to candle close if API fails
 
@@ -1609,8 +1985,12 @@ def bot_loop():
                 else:
                     try:
                         pos_price = client.get_current_price(symbol=pos_symbol)
+                        if not pos_price or pos_price <= 0:
+                            pos_price = current_price  # fallback
                     except Exception:
                         pos_price = current_price  # fallback
+                
+                # Calculate PnL for this position (always calculate after pos_price is set)
                 pnl_percent = ((pos_price - entry_price) / entry_price) * 100
 
                 # Ensure per-position state is initialized
@@ -1714,7 +2094,10 @@ def bot_loop():
             # Legacy single position support (backward compatibility)
             if bot_state["position"] and not bot_state.get("positions"):
                 entry_price = bot_state["position"]["entry_price"]
-                pnl_percent = ((current_price - entry_price) / entry_price) * 100
+                if entry_price and entry_price > 0:
+                    pnl_percent = ((current_price - entry_price) / entry_price) * 100
+                else:
+                    pnl_percent = 0
                 
                 # PHASE 6: Track lowest price for max drawdown learning
                 lowest_price = bot_state["position"].get("lowest_price", entry_price)
@@ -1837,6 +2220,28 @@ def bot_loop():
                 "bullish_count": confluence.get("bullish_count", 0),
                 "bearish_count": confluence.get("bearish_count", 0),
             }
+            
+            # Calculate and store AI thresholds
+            regime = bot_state.get("market_regime", "unknown")
+            position_in_loss = False
+            if bot_state.get("positions"):
+                for pos in bot_state["positions"]:
+                    if pos.get("entry_price") and current_price:
+                        entry = pos.get("entry_price", current_price)
+                        if entry > 0:
+                            pnl = ((current_price - entry) / entry) * 100
+                            if pnl < 0:
+                                position_in_loss = True
+                                break
+            elif bot_state.get("position"):
+                entry = bot_state["position"].get("entry_price", current_price)
+                if entry and entry > 0 and current_price:
+                    pnl = ((current_price - entry) / entry) * 100
+                    position_in_loss = pnl < 0
+            
+            thresholds = _calculate_ai_thresholds(regime, consecutive_losses, position_in_loss)
+            thresholds["confluence_current"] = confluence.get("count", 0)
+            bot_state["ai_thresholds"] = thresholds
 
             # Confidence
             confidence = details.get("confidence", {})
@@ -2210,6 +2615,16 @@ def bot_loop():
                 high_score_override = getattr(config, 'HIGH_SCORE_DOWNTREND_OVERRIDE', 0.70)
                 
                 # === LOSS AVOIDANCE: Stricter after losses (reduce losing streaks) ===
+                # Reset loss avoidance if timeout expired (prevents permanent blocking)
+                global last_loss_time
+                loss_avoidance_timeout = getattr(config, 'LOSS_AVOIDANCE_TIMEOUT_MINUTES', 60)
+                if last_loss_time and consecutive_losses > 0:
+                    time_since_loss = (datetime.now() - last_loss_time).total_seconds() / 60
+                    if time_since_loss >= loss_avoidance_timeout:
+                        add_log(f"⏰ Loss avoidance timeout ({loss_avoidance_timeout} min) - resetting to normal thresholds", "info")
+                        consecutive_losses = 0
+                        last_loss_time = None
+                
                 loss_avoid_block = False
                 only_uptrend = getattr(config, 'ONLY_BUY_STRICT_UPTREND', False)
                 if only_uptrend and regime != "trending_up":
@@ -2338,12 +2753,18 @@ def bot_loop():
                         if ai_score < downtrend_threshold:
                             reasons.append(f"Downtrend: score {ai_score:.2f} < {downtrend_threshold}")
                     else:
-                        buy_threshold = getattr(config, 'BUY_THRESHOLD', 0.25)
-                        if ai_score < buy_threshold:
-                            reasons.append(f"Score {ai_score:.2f} < {buy_threshold}")
-                    min_confluence = getattr(config, 'MIN_CONFLUENCE_BUY', 4)
-                    if confluence_count < min_confluence:
-                        reasons.append(f"Confluence {confluence_count} < {min_confluence}")
+                        # Use uptrend threshold for uptrends, regular for others
+                        buy_threshold_uptrend = getattr(config, 'BUY_THRESHOLD_UPTREND', 0.10)
+                        buy_threshold = getattr(config, 'BUY_THRESHOLD', 0.32)
+                        threshold_to_check = buy_threshold_uptrend if regime == "trending_up" else buy_threshold
+                        if ai_score < threshold_to_check:
+                            reasons.append(f"Score {ai_score:.2f} < {threshold_to_check} ({'uptrend' if regime == 'trending_up' else 'normal'} threshold)")
+                    # Use regime-specific confluence requirement
+                    min_confluence_uptrend = getattr(config, 'MIN_CONFLUENCE_BUY_UPTREND', 2)
+                    min_confluence = getattr(config, 'MIN_CONFLUENCE_BUY', 5)
+                    min_confluence_to_check = min_confluence_uptrend if regime == "trending_up" else min_confluence
+                    if confluence_count < min_confluence_to_check:
+                        reasons.append(f"Confluence {confluence_count} < {min_confluence_to_check} ({'uptrend' if regime == 'trending_up' else 'normal'} requirement)")
                     if not can_trade:
                         risk_reason = bot_state.get("risk_status", {}).get("reason", "risk rules")
                         reasons.append(f"Risk blocked: {risk_reason}")
@@ -2376,6 +2797,21 @@ def bot_loop():
                 save_bot_state()
                 globals()["_last_state_save"] = now
 
+            # Record loop iteration time
+            iteration_time = time.time() - iteration_start
+            try:
+                from core.metrics import get_metrics_collector
+                collector = get_metrics_collector()
+                collector.record_loop_iteration(iteration_time)
+                collector.update_gauge("current_price", current_price)
+                collector.update_gauge("balance_usdt", bot_state.get("balance_usdt", 0))
+                collector.update_gauge("balance_btc", bot_state.get("balance_btc", 0))
+                collector.update_gauge("total_value", bot_state.get("total_value", 0))
+                collector.update_gauge("active_positions", len(bot_state.get("positions", [])) + (1 if bot_state.get("position") else 0))
+                collector.update_gauge("connection_status", bot_state.get("connection_status", "unknown"))
+            except Exception:
+                pass  # Don't fail if metrics fail
+            
             # Wait for next cycle
             for _ in range(config.CHECK_INTERVAL):
                 if stop_bot.is_set():
@@ -2383,9 +2819,54 @@ def bot_loop():
                 time.sleep(1)
 
         except Exception as e:
-            add_log(f"Error: {str(e)}", "error")
+            error_msg = str(e)
+            error_type = type(e).__name__
+            add_log(f"Error: {error_msg}", "error")
             import traceback
             traceback.print_exc()
+            
+            # Enhanced error handling with recovery strategies
+            from binance.exceptions import BinanceAPIException
+            from requests.exceptions import ConnectionError, Timeout, ReadTimeout
+            
+            # Check if it's a network error - try to reconnect
+            if isinstance(e, (ConnectionError, Timeout, ReadTimeout)):
+                logger.warning(f"Network error detected: {error_type} - {error_msg}")
+                bot_state["connection_status"] = "failed"
+                client = None  # Force reconnection on next loop
+                time.sleep(10)  # Shorter wait for network errors
+                continue
+            
+            # Check if it's a Binance API error
+            elif isinstance(e, BinanceAPIException):
+                error_code = getattr(e, 'code', None)
+                if error_code == -1021:  # Timestamp error
+                    logger.warning("Binance timestamp error - attempting time sync")
+                    if client:
+                        try:
+                            client._sync_time()
+                        except Exception:
+                            pass
+                    time.sleep(5)
+                    continue
+                elif error_code == -1015:  # Rate limit
+                    logger.warning("Binance rate limit - waiting 60s")
+                    time.sleep(60)
+                    continue
+                elif error_code in [-2015, -2010]:  # Auth errors
+                    logger.error(f"Binance authentication error: {error_code}")
+                    bot_state["connection_status"] = "failed"
+                    add_log(f"⚠️ API authentication failed - check API keys", "error")
+                    time.sleep(30)
+                    continue
+                else:
+                    # Other API errors - log and continue
+                    logger.error(f"Binance API error {error_code}: {error_msg}")
+                    time.sleep(10)
+                    continue
+            
+            # Generic error - log and continue with exponential backoff
+            logger.error(f"Unexpected error in bot_loop: {error_type} - {error_msg}")
             time.sleep(10)
 
     bot_state["activity_status"] = "Stopped"
@@ -2394,6 +2875,14 @@ def bot_loop():
 
 def execute_buy(price, regime_data=None, details=None):
     """Execute a buy order with smart sizing - supports multiple positions"""
+    # Create backup before trade
+    try:
+        from core.backup import get_backup_manager
+        backup_mgr = get_backup_manager()
+        if os.path.exists(BOT_STATE_FILE):
+            backup_mgr.create_backup(BOT_STATE_FILE, "pre_trade")
+    except Exception:
+        pass  # Don't fail trade if backup fails
     global trailing_stop_price, highest_price_since_entry, breakeven_activated, previous_rsi, stop_delay_count
 
     # Capture symbol at start so trade history always matches the pair we actually trade
@@ -2577,6 +3066,14 @@ def execute_buy(price, regime_data=None, details=None):
         bot_state["trade_history"].insert(0, trade)
         save_trades()
         update_dashboard()  # Push updated trade history to UI immediately
+        
+        # Record trade metrics
+        try:
+            from core.metrics import get_metrics_collector
+            collector = get_metrics_collector()
+            collector.record_trade(0.0, 0.0)  # PnL not known yet, execution time not tracked
+        except Exception:
+            pass
 
         add_log(f"BUY filled: {result['quantity']:.6f} {trade_base} @ ${result['price']:,.2f}", "success")
         bot_state["activity_status"] = "Position opened - Monitoring"
@@ -2631,6 +3128,15 @@ def execute_sell(price, exit_type="manual", position_index=None):
     """Execute a sell order - supports multiple positions"""
     global trailing_stop_price, highest_price_since_entry, consecutive_losses, daily_losses, daily_trades
     global breakeven_activated, previous_rsi, stop_delay_count
+    
+    # Create backup before trade
+    try:
+        from core.backup import get_backup_manager
+        backup_mgr = get_backup_manager()
+        if os.path.exists(BOT_STATE_FILE):
+            backup_mgr.create_backup(BOT_STATE_FILE, "pre_trade")
+    except Exception:
+        pass  # Don't fail trade if backup fails
 
     # Determine which position to sell
     positions = bot_state.get("positions", [])
@@ -2711,14 +3217,25 @@ def execute_sell(price, exit_type="manual", position_index=None):
         pnl_percent = ((exit_price - entry_price) / entry_price) * 100
 
         # Update loss tracking
+        global last_loss_time
         if pnl > 0:
             consecutive_losses = 0
+            last_loss_time = None  # Reset timeout on win
         else:
             consecutive_losses += 1
+            last_loss_time = datetime.now()  # Track when loss occurred for timeout
             daily_losses += abs(pnl)
         
         # PHASE 5: Track daily trade count
         daily_trades += 1
+        
+        # Record trade metrics
+        try:
+            from core.metrics import get_metrics_collector
+            collector = get_metrics_collector()
+            collector.record_trade(pnl, 0.0)  # Execution time not tracked here
+        except Exception:
+            pass
 
         # PHASE 2 + 6: Record in AI engine for streak tracking, adaptive weights, and advanced learning
         if ai_engine:
@@ -3052,6 +3569,18 @@ BOT_STATE_FILE = os.path.join(config.DATA_DIR, "bot_state.json")
 def save_bot_state():
     """Save bot state to file so it persists across restarts"""
     try:
+        # Create backup before saving (only if file exists)
+        if os.path.exists(BOT_STATE_FILE):
+            try:
+                from core.backup import get_backup_manager
+                backup_mgr = get_backup_manager()
+                backup_mgr.create_backup(BOT_STATE_FILE, "auto")
+            except Exception as e:
+                logger.debug(f"Backup creation skipped: {e}")
+    except Exception:
+        pass  # Don't fail if backup fails
+    
+    try:
         state = {
             "running": bot_state["running"],
             "position": bot_state["position"],
@@ -3092,7 +3621,11 @@ def recover_position_from_binance():
     try:
         # Initialize client if needed
         if client is None:
-            client = BinanceClient()
+            try:
+                client = _initialize_client_with_retry(max_attempts=2, delay=3)
+            except Exception as e:
+                logger.warning(f"Failed to initialize client for position recovery: {e}")
+                return False
         
         btc_balance = client.get_balance(config.BASE_ASSET)
         if btc_balance is None:
@@ -3168,6 +3701,16 @@ def recover_position_from_binance():
 
 def save_trades():
     """Save trade history to file and update total profit"""
+    # Create backup before saving (only if file exists)
+    trade_history_file = os.path.join(config.DATA_DIR, "trade_history.json")
+    if os.path.exists(trade_history_file):
+        try:
+            from core.backup import get_backup_manager
+            backup_mgr = get_backup_manager()
+            backup_mgr.create_backup(trade_history_file, "auto")
+        except Exception:
+            pass  # Don't fail if backup fails
+    
     try:
         with open(os.path.join(config.DATA_DIR, "trade_history.json"), "w", encoding="utf-8") as f:
             json.dump(bot_state["trade_history"], f, indent=2, ensure_ascii=True)
@@ -3189,13 +3732,26 @@ def load_trades():
 
 
 def calculate_total_profit():
-    """Calculate total profit from all SELL trades"""
+    """Calculate total profit from all SELL trades - loads from file for all-time stats"""
     total_profit = 0.0
     total_invested = 0.0
     winning = 0
     losing = 0
     
-    for trade in bot_state["trade_history"]:
+    # Load from file to ensure we get ALL trades, not just recent ones in bot_state
+    trade_history_file = os.path.join(config.DATA_DIR, "trade_history.json")
+    all_trades = []
+    
+    try:
+        if os.path.exists(trade_history_file):
+            with open(trade_history_file, "r", encoding="utf-8") as f:
+                all_trades = json.load(f)
+    except Exception as e:
+        logger.warning(f"Could not load full trade history from file: {e}, using bot_state")
+        all_trades = bot_state.get("trade_history", [])
+    
+    # Calculate from all trades
+    for trade in all_trades:
         if trade.get("type") == "SELL":
             pnl = trade.get("pnl", 0)
             total_profit += pnl
@@ -3310,6 +3866,7 @@ def get_state():
 
 
 @app.route('/api/start', methods=['POST'])
+@rate_limit(max_per_minute=10)  # Limit start/stop to 10 per minute
 def start_bot():
     """Start the trading bot"""
     global client, analyzer, ai_engine, regime_detector, bot_thread, stop_bot
@@ -3328,8 +3885,14 @@ def start_bot():
     daily_losses = 0
     daily_trades = 0
 
-    # Initialize components
-    client = BinanceClient()
+    # Initialize components with retry logic for client
+    try:
+        client = _initialize_client_with_retry(max_attempts=3, delay=5)
+    except Exception as e:
+        add_log(f"Failed to initialize API client: {e}", "error")
+        bot_state["running"] = False
+        return jsonify({"status": "error", "message": f"API initialization failed: {str(e)}"}), 500
+    
     analyzer = TechnicalAnalyzer()
     ai_engine = AIEngine()
     regime_detector = RegimeDetector()
@@ -3340,6 +3903,7 @@ def start_bot():
     # Start bot thread
     bot_thread = threading.Thread(target=bot_loop, daemon=True)
     bot_thread.start()
+    _background_threads.append(bot_thread)
     
     # Start real-time price ticker
     start_price_ticker()
@@ -3358,6 +3922,7 @@ def start_bot():
 
 
 @app.route('/api/stop', methods=['POST'])
+@rate_limit(max_per_minute=10)  # Limit start/stop to 10 per minute
 def stop_bot_route():
     """Stop the trading bot"""
     global stop_bot
@@ -3385,6 +3950,87 @@ def stop_bot_route():
     )
 
     return jsonify({"status": "ok", "message": "Bot stopped"})
+
+
+@app.route('/api/restart', methods=['POST'])
+@rate_limit(max_per_minute=5)  # Limit restarts to 5 per minute
+def restart_bot_route():
+    """Restart the trading bot completely"""
+    global stop_bot, bot_thread, client, analyzer, ai_engine, regime_detector
+    
+    logger.info("Restart requested - stopping bot first...")
+    
+    # Step 1: Stop the bot if running
+    if bot_state["running"]:
+        stop_bot.set()
+        bot_state["running"] = False
+        bot_state["decision"] = "RESTARTING"
+        bot_state["activity_status"] = "Restarting..."
+        
+        # Stop real-time price ticker
+        stop_price_ticker()
+        
+        # Wait for bot thread to finish (with timeout)
+        if bot_thread and bot_thread.is_alive():
+            bot_thread.join(timeout=5.0)
+            if bot_thread.is_alive():
+                logger.warning("Bot thread did not stop within timeout, continuing anyway")
+        
+        add_log("Bot stopped for restart", "info")
+    
+    # Step 2: Clean up resources
+    try:
+        from notifications.telegram_bot import stop_bot_thread
+        stop_bot_thread()
+    except Exception as e:
+        logger.debug(f"Telegram bot cleanup: {e}")
+    
+    # Step 3: Reset state
+    stop_bot.clear()
+    trailing_stop_price = None
+    highest_price_since_entry = None
+    consecutive_losses = 0
+    daily_losses = 0
+    daily_trades = 0
+    
+    # Step 4: Reinitialize components
+    try:
+        client = _initialize_client_with_retry(max_attempts=3, delay=5)
+    except Exception as e:
+        add_log(f"Failed to initialize API client during restart: {e}", "error")
+        bot_state["running"] = False
+        bot_state["activity_status"] = f"Restart failed: {str(e)}"
+        return jsonify({"status": "error", "message": f"Restart failed: API initialization error: {str(e)}"}), 500
+    
+    analyzer = TechnicalAnalyzer()
+    ai_engine = AIEngine()
+    regime_detector = RegimeDetector()
+    
+    # Initialize Telegram notifier
+    init_notifier()
+    
+    # Step 5: Set running state and start bot thread
+    bot_state["running"] = True
+    bot_state["decision"] = "WAITING"
+    bot_state["activity_status"] = "Restarted - Monitoring market..."
+    
+    bot_thread = threading.Thread(target=bot_loop, daemon=True)
+    bot_thread.start()
+    _background_threads.append(bot_thread)
+    
+    # Start real-time price ticker
+    start_price_ticker()
+    
+    add_log("Bot restarted successfully", "success")
+    calculate_total_profit()  # Refresh totals
+    get_notifier().notify_start(
+        total_profit=bot_state.get("total_profit", 0),
+        total_trades=bot_state.get("total_trades", 0),
+        win_rate=bot_state.get("win_rate", 0)
+    )
+    save_bot_state()
+    
+    return jsonify({"status": "ok", "message": "Bot restarted successfully"})
 
 
 @app.route('/api/pause', methods=['POST'])
@@ -3592,6 +4238,7 @@ def ai_goals_endpoint():
 
 
 @app.route('/api/settings', methods=['POST'])
+@rate_limit(max_per_minute=20)  # Limit settings changes
 def update_settings():
     """Update bot settings and save to config file"""
     data = request.json
@@ -3683,6 +4330,7 @@ def clear_history():
 
 
 @app.route('/api/save-keys', methods=['POST'])
+@rate_limit(max_per_minute=5)  # Very strict limit for API key changes
 def save_api_keys():
     """Save API keys to .env file"""
     try:
@@ -3772,6 +4420,88 @@ def check_api_keys():
         })
     except Exception as e:
         return jsonify({"configured": False, "testnet": False, "api_key_masked": ""})
+
+
+@app.route('/api/status', methods=['GET'])
+def status_check():
+    """Status check endpoint for monitoring bot health and connection"""
+    try:
+        error_handler = None
+        if PHASE_ENHANCEMENTS_AVAILABLE:
+            try:
+                from core.error_handler import get_error_handler
+                error_handler = get_error_handler()
+            except Exception:
+                pass
+        
+        # Check client health
+        client_healthy = client is not None and _check_client_health()
+        connection_status = bot_state.get("connection_status", "unknown")
+        
+        # Check database health
+        db_healthy = True
+        if DATABASE_AVAILABLE and getattr(config, 'USE_DATABASE', True):
+            try:
+                from core.database import get_database
+                db = get_database()
+                # Simple test query
+                with db.get_cursor() as cursor:
+                    cursor.execute("SELECT 1")
+            except Exception as e:
+                db_healthy = False
+                logger.debug(f"Database health check failed: {e}")
+        
+        # Check Binance API connectivity
+        binance_healthy = False
+        if client:
+            try:
+                client.client.get_server_time()
+                binance_healthy = True
+            except Exception:
+                pass
+        
+        # Determine overall health
+        is_healthy = client_healthy and connection_status == "connected" and db_healthy
+        
+        status = {
+            "status": "healthy" if is_healthy else "unhealthy",
+            "connection": connection_status,
+            "client_available": client is not None,
+            "client_healthy": client_healthy,
+            "database_healthy": db_healthy,
+            "binance_api_healthy": binance_healthy,
+            "last_connection_time": bot_state.get("last_connection_time"),
+            "bot_running": bot_state.get("running", False),
+            "last_update": bot_state.get("last_update"),
+            "errors_24h": error_handler.get_error_stats()["last_24h"] if error_handler else 0,
+            "dependencies": {
+                "binance_api": "healthy" if binance_healthy else "unhealthy",
+                "database": "healthy" if db_healthy else "unhealthy",
+                "client": "healthy" if client_healthy else "unhealthy"
+            }
+        }
+        
+        status_code = 200 if is_healthy else 503
+        return jsonify(status), status_code
+    except Exception as e:
+        logger.error(f"Health check error: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/metrics', methods=['GET'])
+def metrics_endpoint():
+    """Prometheus metrics endpoint"""
+    try:
+        from core.metrics import get_metrics_collector
+        collector = get_metrics_collector()
+        metrics_text = collector.get_prometheus_metrics()
+        return metrics_text, 200, {'Content-Type': 'text/plain; version=0.0.4; charset=utf-8'}
+    except Exception as e:
+        logger.error(f"Metrics endpoint error: {e}")
+        return f"# Error generating metrics: {e}\n", 500, {'Content-Type': 'text/plain'}
 
 
 @app.route('/api/test-connection', methods=['GET'])
@@ -4365,22 +5095,143 @@ def _auto_start_if_was_running():
         consecutive_losses = 0
         daily_losses = 0
         daily_trades = 0
-        client = BinanceClient()
+        
+        # Initialize client with retry logic
+        try:
+            client = _initialize_client_with_retry(max_attempts=3, delay=5)
+        except Exception as e:
+            logger.error(f"24/7: Client initialization failed: {e}")
+            bot_state["running"] = False
+            bot_state["decision"] = "STOPPED"
+            bot_state["connection_status"] = "failed"
+            add_log(f"Auto-resume failed: API connection error - {e}", "error")
+            logger.error("24/7: Auto-resume failed - client unavailable")
+            return
+        
         analyzer = TechnicalAnalyzer()
         ai_engine = AIEngine()
         regime_detector = RegimeDetector()
         bot_thread = threading.Thread(target=bot_loop, daemon=True)
         bot_thread.start()
+        _background_threads.append(bot_thread)
         add_log("Bot auto-resumed for 24/7 live trading", "success")
         logger.info("24/7: Bot auto-started successfully")
     except Exception as e:
         bot_state["running"] = False
         bot_state["decision"] = "STOPPED"
+        bot_state["connection_status"] = "failed"
         add_log(f"Auto-resume failed: {e}", "error")
         logger.error("24/7: Auto-resume failed: %s", e)
 
 
+def _cleanup_resources():
+    """Cleanup all resources on shutdown"""
+    global _shutdown_in_progress, client, bot_thread, _price_ticker_running
+    global _background_threads
+    
+    if _shutdown_in_progress:
+        return
+    
+    _shutdown_in_progress = True
+    logger.info("Shutting down gracefully...")
+    
+    # Stop bot loop
+    if bot_state.get("running"):
+        logger.info("Stopping bot...")
+        stop_bot.set()
+        bot_state["running"] = False
+        bot_state["activity_status"] = "Shutting down..."
+        save_bot_state()
+    
+    # Stop price ticker
+    _price_ticker_running = False
+    
+    # Wait for bot thread to finish (with timeout)
+    if bot_thread and bot_thread.is_alive():
+        logger.info("Waiting for bot thread to finish...")
+        bot_thread.join(timeout=10)
+        if bot_thread.is_alive():
+            logger.warning("Bot thread did not finish within timeout")
+    
+    # Wait for other background threads
+    for thread in _background_threads:
+        if thread.is_alive() and thread != bot_thread:
+            thread.join(timeout=2)
+    
+    # Close database connections
+    if DATABASE_AVAILABLE:
+        try:
+            from core.database import get_database
+            db = get_database()
+            if db:
+                db.close()
+                logger.info("Database connections closed")
+        except Exception as e:
+            logger.warning(f"Error closing database: {e}")
+    
+    # Stop Meta AI if running
+    try:
+        from ai.meta_ai import stop_autonomous_ai
+        stop_autonomous_ai()
+        logger.info("Meta AI stopped")
+    except Exception:
+        pass
+    
+    # Stop Telegram bot if running
+    try:
+        from notifications.telegram_bot import stop_bot_thread
+        stop_bot_thread()
+        logger.info("Telegram bot stopped")
+    except Exception:
+        pass
+    
+    # Create backup before shutdown
+    try:
+        from core.backup import get_backup_manager
+        backup_mgr = get_backup_manager()
+        if os.path.exists(BOT_STATE_FILE):
+            backup_mgr.create_backup(BOT_STATE_FILE, "pre_shutdown")
+    except Exception:
+        pass
+    
+    # Save final state
+    try:
+        save_bot_state()
+        save_trades()
+        logger.info("Final state saved")
+    except Exception as e:
+        logger.error(f"Error saving final state: {e}")
+    
+    logger.info("Shutdown complete")
+
+
+def _signal_handler(signum, frame):
+    """Handle shutdown signals"""
+    signal_name = signal.Signals(signum).name
+    logger.info(f"Received {signal_name} signal, initiating graceful shutdown...")
+    _cleanup_resources()
+    sys.exit(0)
+
+
 if __name__ == '__main__':
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, _signal_handler)
+    signal.signal(signal.SIGTERM, _signal_handler)
+    
+    # Register cleanup on normal exit
+    atexit.register(_cleanup_resources)
+    
+    # Validate configuration
+    logger.info("Validating configuration...")
+    config_errors = config.validate_config()
+    if config_errors:
+        logger.error("Configuration validation failed:")
+        for error in config_errors:
+            logger.error(f"  - {error}")
+        logger.error("Please fix configuration errors before starting the bot")
+        sys.exit(1)
+    logger.info("Configuration validation passed")
+    
     os.makedirs('templates', exist_ok=True)
     load_trades()
     load_bot_state()

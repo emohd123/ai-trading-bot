@@ -192,7 +192,27 @@ class PositionManager:
         if force_stop:
             return True, ExitReason.HARD_STOP, f"Forced stop: {force_reason}"
         
-        # === 2. PROFIT TARGET CHECK ===
+        # === 2. QUICK PROFIT MODE ===
+        # Exit quickly if profit target reached within time limit (for fast gainers)
+        quick_profit_enabled = getattr(config, 'QUICK_PROFIT_ENABLED', True)
+        if quick_profit_enabled:
+            quick_profit_target = getattr(config, 'QUICK_PROFIT_TARGET', 0.005) * 100  # 0.5%
+            quick_profit_time_limit = getattr(config, 'QUICK_PROFIT_TIME_LIMIT', 30)  # 30 minutes
+            
+            # Parse entry_time (may be string or datetime)
+            if isinstance(self.entry_time, str):
+                try:
+                    entry_dt = datetime.strptime(self.entry_time, "%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    entry_dt = datetime.now()  # Fallback
+            else:
+                entry_dt = self.entry_time
+            
+            position_age_minutes = (datetime.now() - entry_dt).total_seconds() / 60
+            if position_age_minutes < quick_profit_time_limit and pnl_pct >= quick_profit_target:
+                return True, ExitReason.PROFIT_TARGET, f"Quick profit +{pnl_pct:.2f}% (reached in {position_age_minutes:.1f} min)"
+        
+        # === 3. PROFIT TARGET CHECK ===
         # In volatile markets, use lower targets
         if volatility in ("high", "extreme"):
             profit_target = getattr(config, 'PROFIT_TARGET_HIGH_VOL', 0.005) * 100
@@ -217,13 +237,13 @@ class PositionManager:
             if regime == "trending_down" or volatility in ("high", "extreme"):
                 return True, ExitReason.MIN_PROFIT, f"Quick profit +{pnl_pct:.2f}% ({regime})"
         
-        # === 3. TRAILING PROFIT (for positions in profit) ===
+        # === 4. TRAILING PROFIT (for positions in profit) ===
         if pnl_pct > 0:
             trail_result = self.trailing_profit_tracker.update(current_price, regime, volatility)
             if trail_result['should_exit']:
                 return True, ExitReason.TRAILING_PROFIT, f"Trailing profit +{trail_result['locked_profit_pct']:.2f}%"
         
-        # === 4. BREAKEVEN STOP ===
+        # === 5. BREAKEVEN STOP ===
         breakeven_pct = getattr(config, 'BREAKEVEN_ACTIVATION', 0.005) * 100
         breakeven_buffer = getattr(config, 'BREAKEVEN_BUFFER', 0.001)
         
@@ -236,22 +256,22 @@ class PositionManager:
             if current_price <= breakeven_price:
                 return True, ExitReason.BREAKEVEN, f"Breakeven stop at ${breakeven_price:,.2f}"
         
-        # === 5. STOP LOSS CHECK ===
+        # === 6. STOP LOSS CHECK ===
         # Min-hold: skip regular stop in first N minutes (hard stop already applied in section 1)
         if getattr(config, 'MIN_HOLD_ENABLED', False):
-            try:
-                entry_dt = datetime.strptime(self.entry_time, "%Y-%m-%d %H:%M:%S")
-                age_min = (datetime.now() - entry_dt).total_seconds() / 60
-                if age_min < getattr(config, 'MIN_HOLD_MINUTES', 20):
-                    pass  # Skip regular stop during min-hold window
-                else:
-                    base_stop = getattr(config, 'STOP_LOSS', 0.01)
-                    effective_stop, stop_reason = risk_mgr.get_effective_stop_loss(
-                        base_stop, regime, volatility, self.entry_price, current_price
-                    )
-                    if pnl_pct <= -effective_stop * 100:
-                        return True, ExitReason.STOP_LOSS, f"Stop loss {stop_reason}: {pnl_pct:.2f}%"
-            except Exception:
+            # Parse entry_time (may be string or datetime)
+            if isinstance(self.entry_time, str):
+                try:
+                    entry_dt = datetime.strptime(self.entry_time, "%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    entry_dt = datetime.now()  # Fallback
+            else:
+                entry_dt = self.entry_time
+            
+            age_min = (datetime.now() - entry_dt).total_seconds() / 60
+            if age_min < getattr(config, 'MIN_HOLD_MINUTES', 20):
+                pass  # Skip regular stop during min-hold window
+            else:
                 base_stop = getattr(config, 'STOP_LOSS', 0.01)
                 effective_stop, stop_reason = risk_mgr.get_effective_stop_loss(
                     base_stop, regime, volatility, self.entry_price, current_price
@@ -268,7 +288,15 @@ class PositionManager:
         
         # === 6. TIME-BASED EXIT ===
         try:
-            entry_dt = datetime.strptime(self.entry_time, "%Y-%m-%d %H:%M:%S")
+            # Parse entry_time (may be string or datetime)
+            if isinstance(self.entry_time, str):
+                try:
+                    entry_dt = datetime.strptime(self.entry_time, "%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    entry_dt = datetime.now()  # Fallback
+            else:
+                entry_dt = self.entry_time
+            
             age_hours = (datetime.now() - entry_dt).total_seconds() / 3600
             
             max_hours = getattr(config, 'MAX_POSITION_AGE_HOURS', 4)

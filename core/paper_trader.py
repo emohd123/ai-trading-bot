@@ -353,8 +353,13 @@ class PaperTrader:
             if current_price < pos['lowest_price']:
                 self.positions[i]['lowest_price'] = current_price
             
-            pnl_percent = ((current_price - pos['entry_price']) / pos['entry_price']) * 100
-            pnl_dollar = (current_price - pos['entry_price']) * pos['quantity']
+            entry_price = pos['entry_price']
+            if entry_price and entry_price > 0:
+                pnl_percent = ((current_price - entry_price) / entry_price) * 100
+                pnl_dollar = (current_price - entry_price) * pos['quantity']
+            else:
+                pnl_percent = 0
+                pnl_dollar = 0
             
             position_status.append({
                 'index': i,

@@ -184,7 +184,7 @@ class PerformanceTracker:
         now = datetime.now()
         
         # Calculate MAE/MFE
-        if highest_price > 0 and lowest_price > 0:
+        if highest_price > 0 and lowest_price > 0 and entry_price and entry_price > 0:
             mfe = ((highest_price - entry_price) / entry_price) * 100  # Max favorable
             mae = ((entry_price - lowest_price) / entry_price) * 100  # Max adverse
         else:

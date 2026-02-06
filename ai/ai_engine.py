@@ -1189,7 +1189,7 @@ class AIEngine:
         bearish_indicators = []
         neutral_indicators = []
 
-        # PHASE 4: Check 10 indicators (including ML prediction + new Phase 4 indicators)
+        # PHASE 4: Check 11 indicators (including ML prediction + new Phase 4 indicators + Candlestick Patterns)
         indicators = {
             "Momentum": analysis.get("momentum", {}),
             "MACD": analysis.get("macd", {}),
@@ -1201,7 +1201,9 @@ class AIEngine:
             "Ichimoku": analysis.get("ichimoku", {}),
             "MFI": analysis.get("mfi", {}),
             "Williams": analysis.get("williams_r", {}),
-            "CCI": analysis.get("cci", {})
+            "CCI": analysis.get("cci", {}),
+            # Enhanced: Candlestick Patterns (now included in confluence)
+            "Candlestick": analysis.get("candle_patterns", {})
         }
 
         # Also check Fibonacci for extra boost (not counted in confluence but affects score)
@@ -1210,11 +1212,16 @@ class AIEngine:
         if fib_data.get("at_fib") and fib_data.get("score", 0) != 0:
             fib_boost = fib_data.get("score", 0) * 0.2  # 20% of Fib score as boost
 
-        # Check candle patterns for extra boost
+        # Check candle patterns for extra boost (ENHANCED: increased from 15% to 25%)
         candle_data = analysis.get("candle_patterns", {})
         candle_boost = 0
         if candle_data.get("pattern_count", 0) > 0:
-            candle_boost = candle_data.get("score", 0) * 0.15  # 15% of candle score
+            base_boost = candle_data.get("score", 0) * 0.25  # 25% of candle score (increased from 15%)
+            # Additional boost for strong patterns (score > 0.6)
+            pattern_score = abs(candle_data.get("score", 0))
+            if pattern_score > 0.6:
+                base_boost += 0.1  # Extra 0.1 boost for very strong patterns
+            candle_boost = base_boost
 
         for name, data in indicators.items():
             score = data.get("score", 0)
@@ -1718,8 +1725,20 @@ class AIEngine:
         # PHASE 3: Fibonacci level boost
         fib_boost = 1.1 if enhanced.get("fibonacci", {}).get("at_fib") else 1.0
 
-        # PHASE 3: Candle pattern boost
-        candle_boost = 1.1 if enhanced.get("candle_patterns", {}).get("pattern_count", 0) > 0 else 1.0
+        # PHASE 3: Candle pattern boost (ENHANCED: strength-based multiplier)
+        candle_patterns = enhanced.get("candle_patterns", {})
+        pattern_count = candle_patterns.get("pattern_count", 0)
+        pattern_score = abs(candle_patterns.get("score", 0))
+        if pattern_count > 0:
+            # Base multiplier 1.1, increase to 1.2 for strong patterns, 1.3 for very strong
+            if pattern_score > 0.6:
+                candle_boost = 1.3  # Very strong patterns
+            elif pattern_score > 0.4:
+                candle_boost = 1.2  # Strong patterns
+            else:
+                candle_boost = 1.1  # Moderate patterns
+        else:
+            candle_boost = 1.0
 
         # PHASE 3: 15m refinement boost
         refinement = enhanced.get("refinement_15m", {})
@@ -1964,7 +1983,7 @@ class AIEngine:
             min_confluence_buy = getattr(config, 'MIN_CONFLUENCE_BUY', 5)
             if regime == MarketRegime.TRENDING_UP:
                 # Use lower confluence for uptrends (safer market conditions)
-                uptrend_confluence = getattr(config, 'MIN_CONFLUENCE_BUY_UPTREND', 4)
+                uptrend_confluence = getattr(config, 'MIN_CONFLUENCE_BUY_UPTREND', 2)
                 min_confluence_buy = uptrend_confluence
                 details["reason"].append(f"📈 Uptrend: requiring {min_confluence_buy} confluence")
             elif regime == MarketRegime.TRENDING_DOWN:
@@ -1991,9 +2010,32 @@ class AIEngine:
             confluence_count = confluence.get("count", 0)
             has_enough_confluence = confluence_count >= min_confluence_buy
             
-            # Allow BUY if confluence count is met, even if direction is neutral (for more trading activity)
+            # Allow BUY if confluence count is met - be more flexible with direction for active trading
             confluence_direction = confluence.get("direction", "neutral")
-            if has_enough_confluence and (confluence_direction == "bullish" or (confluence_direction == "neutral" and confluence_count >= min_confluence_buy)):
+            bullish_count = confluence.get("bullish_count", 0)
+            bearish_count = confluence.get("bearish_count", 0)
+            
+            # More active: Allow BUY if we have enough bullish indicators (primary check)
+            # OR if score is very strong and we have close to enough bullish indicators
+            has_bullish_confluence = bullish_count >= min_confluence_buy
+            has_strong_score = score >= buy_threshold * 1.3  # 30% above threshold = very confident
+            has_near_bullish = bullish_count >= (min_confluence_buy - 1) and bullish_count > bearish_count
+            
+            # Smart but active: Buy if we have enough bullish indicators (primary check - most important!)
+            # OR strong score with near-enough bullish indicators
+            # OR enough total confluence with bullish/neutral direction
+            should_buy = (has_bullish_confluence or 
+                         (has_strong_score and has_near_bullish) or 
+                         (has_enough_confluence and confluence_direction in ["bullish", "neutral"]))
+            
+            if should_buy:
+                # Log which condition triggered
+                if has_bullish_confluence:
+                    details["reason"].append(f"✅ Bullish confluence: {bullish_count} >= {min_confluence_buy} bullish indicators")
+                elif has_strong_score and has_near_bullish:
+                    details["reason"].append(f"✅ Strong score ({score:.2f}) with {bullish_count} bullish indicators")
+                else:
+                    details["reason"].append(f"✅ Total confluence: {confluence_count} with {confluence_direction} direction")
                 details["reason"].append(f"AI bullish: {score:.2f} (threshold: {buy_threshold})")
                 details["reason"].append(f"Confluence: {confluence_count}/{min_confluence_buy} required ({confluence.get('strength')})")
 
@@ -2035,7 +2077,7 @@ class AIEngine:
 
         # No buy signal
         details["reason"].append(f"Score ({score:.2f}) below threshold ({buy_threshold})")
-        min_conf_display = getattr(config, 'MIN_CONFLUENCE_BUY', 5)
+        min_conf_display = getattr(config, 'MIN_CONFLUENCE_BUY', 6)
         if confluence.get("count", 0) < min_conf_display:
             details["reason"].append(f"Confluence: {confluence.get('count', 0)}/10 (need {min_conf_display})")
 

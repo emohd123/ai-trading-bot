@@ -9,6 +9,8 @@ from flask import Blueprint, jsonify, request
 from functools import wraps
 from datetime import datetime
 from typing import Dict, Any
+import time
+import threading
 
 import config
 
@@ -19,6 +21,45 @@ api_bp = Blueprint('api', __name__, url_prefix='/api/v1')
 
 # API key authentication (optional)
 API_KEY = getattr(config, 'API_KEY', None)
+
+# Rate limiting storage
+_rate_limit_store = {}
+_rate_limit_lock = threading.Lock()
+
+
+def rate_limit(max_per_minute=60):
+    """Simple rate limiting decorator for REST API"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Get client IP
+            client_ip = request.remote_addr or 'unknown'
+            current_time = time.time()
+            
+            with _rate_limit_lock:
+                # Clean old entries (older than 1 minute)
+                cutoff = current_time - 60
+                if client_ip in _rate_limit_store:
+                    _rate_limit_store[client_ip] = [
+                        t for t in _rate_limit_store[client_ip] if t > cutoff
+                    ]
+                else:
+                    _rate_limit_store[client_ip] = []
+                
+                # Check rate limit
+                if len(_rate_limit_store[client_ip]) >= max_per_minute:
+                    logger.warning(f"Rate limit exceeded for {client_ip}")
+                    return jsonify({
+                        "error": "Rate limit exceeded",
+                        "message": f"Maximum {max_per_minute} requests per minute"
+                    }), 429
+                
+                # Record this request
+                _rate_limit_store[client_ip].append(current_time)
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 
 def require_api_key(f):
@@ -38,6 +79,7 @@ def require_api_key(f):
 # =========================================================================
 
 @api_bp.route('/status', methods=['GET'])
+@rate_limit(max_per_minute=120)  # Status endpoint can be polled frequently
 def get_status():
     """Get bot status"""
     try:

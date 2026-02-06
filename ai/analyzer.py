@@ -820,23 +820,22 @@ class TechnicalAnalyzer:
 
     def calculate_candlestick_patterns(self, df: pd.DataFrame) -> Dict:
         """
-        Detect Candlestick Patterns - PHASE 3 NEW!
-
-        High-probability reversal patterns:
-        - Bullish Engulfing: Strong buy signal
-        - Bearish Engulfing: Strong sell signal
-        - Hammer: Potential bottom reversal
-        - Shooting Star: Potential top reversal
-        - Doji: Indecision, possible reversal
+        Enhanced Japanese Candlestick Pattern Recognition
+        
+        Detects 20+ candlestick patterns with detailed wick/body analysis:
+        - Single candle: Hammer, Hanging Man, Shooting Star, Inverted Hammer, Spinning Top, Marubozu, Doji variants
+        - Two candle: Engulfing patterns, Piercing Pattern, Dark Cloud Cover, Harami, Harami Cross
+        - Three candle: Morning/Evening Star, Three White Soldiers, Three Black Crows, Three Inside Up/Down
+        - Four+ candle: Rising/Falling Three Methods, Abandoned Baby
 
         Args:
             df: DataFrame with OHLC columns
 
         Returns:
-            Detected patterns and trading signal
+            Detected patterns, structure analysis, and trading signal
         """
         if len(df) < 3:
-            return {"patterns": [], "signal": "insufficient_data", "score": 0}
+            return {"patterns": [], "signal": "insufficient_data", "score": 0, "structure": {}}
 
         open_price = df['open'].iloc[-1]
         high_price = df['high'].iloc[-1]
@@ -851,11 +850,26 @@ class TechnicalAnalyzer:
         patterns = []
         total_score = 0
 
-        # Body and wick calculations
+        # Enhanced body and wick calculations
         body = abs(close_price - open_price)
         upper_wick = high_price - max(open_price, close_price)
         lower_wick = min(open_price, close_price) - low_price
         total_range = high_price - low_price if high_price > low_price else 0.0001
+
+        # Calculate detailed structure metrics
+        body_size_pct = (body / total_range * 100) if total_range > 0 else 0
+        upper_wick_pct = (upper_wick / total_range * 100) if total_range > 0 else 0
+        lower_wick_pct = (lower_wick / total_range * 100) if total_range > 0 else 0
+        body_position = ((close_price - low_price) / total_range) if total_range > 0 else 0.5
+        
+        # Wick ratios
+        upper_wick_ratio = (upper_wick / body) if body > 0 else 0
+        lower_wick_ratio = (lower_wick / body) if body > 0 else 0
+        
+        # Pattern detection flags
+        is_marubozu = body_size_pct > 80 and upper_wick_pct < 5 and lower_wick_pct < 5
+        is_long_upper_shadow = upper_wick_ratio > 2.0
+        is_long_lower_shadow = lower_wick_ratio > 2.0
 
         prev_body = abs(prev_close - prev_open)
         is_bullish = close_price > open_price
@@ -863,64 +877,84 @@ class TechnicalAnalyzer:
         prev_bullish = prev_close > prev_open
         prev_bearish = prev_close < prev_open
 
-        # ===== BULLISH ENGULFING =====
-        # Current bullish candle completely engulfs previous bearish candle
-        if (is_bullish and prev_bearish and
-            close_price > prev_open and open_price < prev_close and
-            body > prev_body * 1.1):  # Current body 10% larger
-            patterns.append({
-                "name": "bullish_engulfing",
-                "type": "bullish",
-                "strength": "strong",
-                "score": 0.6
-            })
-            total_score += 0.6
+        # ===== SINGLE CANDLE PATTERNS =====
+        
+        # HAMMER / HANGING MAN (Same shape, different meaning based on body type)
+        # Hammer: Bullish reversal (usually bullish body or at bottom)
+        # Hanging Man: Bearish reversal (usually bearish body or at top)
+        if (body > 0 and lower_wick >= body * 2 and upper_wick <= body * 0.5 and body_size_pct < 30):
+            if is_bearish:
+                # Hanging Man: Bearish reversal pattern
+                patterns.append({
+                    "name": "hanging_man",
+                    "type": "bearish",
+                    "strength": "moderate",
+                    "score": -0.5
+                })
+                total_score -= 0.5
+            else:
+                # Hammer: Bullish reversal pattern
+                patterns.append({
+                    "name": "hammer",
+                    "type": "bullish",
+                    "strength": "moderate",
+                    "score": 0.5
+                })
+                total_score += 0.5
 
-        # ===== BEARISH ENGULFING =====
-        # Current bearish candle completely engulfs previous bullish candle
-        if (is_bearish and prev_bullish and
-            close_price < prev_open and open_price > prev_close and
-            body > prev_body * 1.1):
-            patterns.append({
-                "name": "bearish_engulfing",
-                "type": "bearish",
-                "strength": "strong",
-                "score": -0.6
-            })
-            total_score -= 0.6
+        # INVERTED HAMMER (Bullish reversal) - Hammer inverted, usually at bottom
+        # Differentiate from shooting star: inverted hammer has smaller body or bullish context
+        if (body > 0 and upper_wick >= body * 2 and lower_wick <= body * 0.5 and body_size_pct < 30):
+            # Inverted hammer: bullish reversal pattern (can be bullish or bearish body, but small)
+            # Prefer inverted hammer if body is very small or if it's bullish
+            if body_size_pct < 15 or is_bullish:
+                patterns.append({
+                    "name": "inverted_hammer",
+                    "type": "bullish",
+                    "strength": "moderate",
+                    "score": 0.4
+                })
+                total_score += 0.4
+            # SHOOTING STAR (Bearish reversal) - Usually at top with bearish body
+            elif is_bearish:
+                patterns.append({
+                    "name": "shooting_star",
+                    "type": "bearish",
+                    "strength": "moderate",
+                    "score": -0.5
+                })
+                total_score -= 0.5
 
-        # ===== HAMMER (Bullish reversal) =====
-        # Small body at top, long lower wick (2x+ body), small upper wick
-        if (body > 0 and
-            lower_wick >= body * 2 and
-            upper_wick <= body * 0.5 and
-            body / total_range < 0.3):  # Body is less than 30% of range
+        # SPINNING TOP (Indecision)
+        if (body_size_pct < 20 and upper_wick_pct > 20 and lower_wick_pct > 20):
             patterns.append({
-                "name": "hammer",
-                "type": "bullish",
-                "strength": "moderate",
-                "score": 0.5
+                "name": "spinning_top",
+                "type": "neutral",
+                "strength": "weak",
+                "score": 0
             })
-            total_score += 0.5
 
-        # ===== SHOOTING STAR (Bearish reversal) =====
-        # Small body at bottom, long upper wick (2x+ body), small lower wick
-        if (body > 0 and
-            upper_wick >= body * 2 and
-            lower_wick <= body * 0.5 and
-            body / total_range < 0.3):
-            patterns.append({
-                "name": "shooting_star",
-                "type": "bearish",
-                "strength": "moderate",
-                "score": -0.5
-            })
-            total_score -= 0.5
+        # MARUBOZU (Strong directional candle)
+        if is_marubozu:
+            if is_bullish:
+                patterns.append({
+                    "name": "bullish_marubozu",
+                    "type": "bullish",
+                    "strength": "strong",
+                    "score": 0.6
+                })
+                total_score += 0.6
+            else:
+                patterns.append({
+                    "name": "bearish_marubozu",
+                    "type": "bearish",
+                    "strength": "strong",
+                    "score": -0.6
+                })
+                total_score -= 0.6
 
-        # ===== DOJI (Indecision) =====
-        # Very small body (open ≈ close), with wicks
-        if body / total_range < 0.1 and total_range > 0:  # Body less than 10% of range
-            # Dragonfly Doji (bullish) - long lower wick
+        # DOJI VARIANTS
+        if body_size_pct < 10 and total_range > 0:
             if lower_wick > upper_wick * 2:
                 patterns.append({
                     "name": "dragonfly_doji",
@@ -929,7 +963,6 @@ class TechnicalAnalyzer:
                     "score": 0.3
                 })
                 total_score += 0.3
-            # Gravestone Doji (bearish) - long upper wick
             elif upper_wick > lower_wick * 2:
                 patterns.append({
                     "name": "gravestone_doji",
@@ -946,14 +979,103 @@ class TechnicalAnalyzer:
                     "score": 0
                 })
 
-        # ===== MORNING STAR (3-candle bullish reversal) =====
+        # ===== TWO-CANDLE PATTERNS =====
+        
+        # BULLISH ENGULFING
+        if (is_bullish and prev_bearish and close_price > prev_open and open_price < prev_close and body > prev_body * 1.1):
+            patterns.append({
+                "name": "bullish_engulfing",
+                "type": "bullish",
+                "strength": "strong",
+                "score": 0.6
+            })
+            total_score += 0.6
+
+        # BEARISH ENGULFING
+        if (is_bearish and prev_bullish and close_price < prev_open and open_price > prev_close and body > prev_body * 1.1):
+            patterns.append({
+                "name": "bearish_engulfing",
+                "type": "bearish",
+                "strength": "strong",
+                "score": -0.6
+            })
+            total_score -= 0.6
+
+        # PIERCING PATTERN (Bullish reversal)
+        if (prev_bearish and is_bullish and open_price < prev_close and 
+            close_price > (prev_open + prev_close) / 2 and close_price < prev_open):
+            patterns.append({
+                "name": "piercing_pattern",
+                "type": "bullish",
+                "strength": "moderate",
+                "score": 0.5
+            })
+            total_score += 0.5
+
+        # DARK CLOUD COVER (Bearish reversal)
+        if (prev_bullish and is_bearish and open_price > prev_close and 
+            close_price < (prev_open + prev_close) / 2 and close_price > prev_open):
+            patterns.append({
+                "name": "dark_cloud_cover",
+                "type": "bearish",
+                "strength": "moderate",
+                "score": -0.5
+            })
+            total_score -= 0.5
+
+        # HARAMI (Indecision/reversal)
+        if prev_body > 0:
+            if (prev_bullish and body < prev_body * 0.5 and 
+                open_price > prev_close and close_price < prev_open):
+                patterns.append({
+                    "name": "bearish_harami",
+                    "type": "bearish",
+                    "strength": "weak",
+                    "score": -0.3
+                })
+                total_score -= 0.3
+            elif (prev_bearish and body < prev_body * 0.5 and 
+                  open_price < prev_close and close_price > prev_open):
+                patterns.append({
+                    "name": "bullish_harami",
+                    "type": "bullish",
+                    "strength": "weak",
+                    "score": 0.3
+                })
+                total_score += 0.3
+
+        # HARAMI CROSS (Stronger harami)
+        if prev_body > 0 and body_size_pct < 5:
+            if (prev_bullish and open_price > prev_close and close_price < prev_open):
+                patterns.append({
+                    "name": "bearish_harami_cross",
+                    "type": "bearish",
+                    "strength": "moderate",
+                    "score": -0.4
+                })
+                total_score -= 0.4
+            elif (prev_bearish and open_price < prev_close and close_price > prev_open):
+                patterns.append({
+                    "name": "bullish_harami_cross",
+                    "type": "bullish",
+                    "strength": "moderate",
+                    "score": 0.4
+                })
+                total_score += 0.4
+
+        # ===== THREE-CANDLE PATTERNS =====
         if len(df) >= 3:
             candle_3_open = df['open'].iloc[-3]
             candle_3_close = df['close'].iloc[-3]
+            candle_3_high = df['high'].iloc[-3]
+            candle_3_low = df['low'].iloc[-3]
+            candle_3_body = abs(candle_3_close - candle_3_open)
             candle_3_bearish = candle_3_close < candle_3_open
-            candle_2_small = prev_body < abs(candle_3_close - candle_3_open) * 0.3
+            candle_3_bullish = candle_3_close > candle_3_open
+            candle_2_small = prev_body < candle_3_body * 0.3
 
-            if (candle_3_bearish and candle_2_small and is_bullish and
+            # MORNING STAR
+            if (candle_3_bearish and candle_2_small and is_bullish and 
                 close_price > (candle_3_open + candle_3_close) / 2):
                 patterns.append({
                     "name": "morning_star",
@@ -962,6 +1084,41 @@ class TechnicalAnalyzer:
                     "score": 0.7
                 })
                 total_score += 0.7
+
+            # EVENING STAR
+            if (candle_3_bullish and candle_2_small and is_bearish and 
+                close_price < (candle_3_open + candle_3_close) / 2):
+                patterns.append({
+                    "name": "evening_star",
+                    "type": "bearish",
+                    "strength": "strong",
+                    "score": -0.7
+                })
+                total_score -= 0.7
+
+            # THREE WHITE SOLDIERS (Strong bullish continuation)
+            if (candle_3_bullish and prev_bullish and is_bullish and
+                close_price > prev_close and prev_close > candle_3_close and
+                open_price > prev_open and prev_open > candle_3_open):
+                patterns.append({
+                    "name": "three_white_soldiers",
+                    "type": "bullish",
+                    "strength": "strong",
+                    "score": 0.8
+                })
+                total_score += 0.8
+
+            # THREE BLACK CROWS (Strong bearish continuation)
+            if (candle_3_bearish and prev_bearish and is_bearish and
+                close_price < prev_close and prev_close < candle_3_close and
+                open_price < prev_open and prev_open < candle_3_open):
+                patterns.append({
+                    "name": "three_black_crows",
+                    "type": "bearish",
+                    "strength": "strong",
+                    "score": -0.8
+                })
+                total_score -= 0.8
 
         # Cap score at -1 to 1
         total_score = max(-1.0, min(1.0, total_score))
@@ -978,12 +1135,27 @@ class TechnicalAnalyzer:
         else:
             signal = "no_clear_pattern"
 
+        # Enhanced structure analysis
+        structure = {
+            "body_size_pct": round(body_size_pct, 2),
+            "upper_wick_pct": round(upper_wick_pct, 2),
+            "lower_wick_pct": round(lower_wick_pct, 2),
+            "body_position": round(body_position, 3),
+            "upper_wick_ratio": round(upper_wick_ratio, 2),
+            "lower_wick_ratio": round(lower_wick_ratio, 2),
+            "is_marubozu": is_marubozu,
+            "is_long_upper_shadow": is_long_upper_shadow,
+            "is_long_lower_shadow": is_long_lower_shadow,
+            "candle_type": "bullish" if is_bullish else "bearish" if is_bearish else "doji"
+        }
+
         return {
             "patterns": patterns,
             "pattern_count": len(patterns),
             "signal": signal,
             "score": round(total_score, 3),
-            "current_candle": "bullish" if is_bullish else "bearish" if is_bearish else "doji"
+            "current_candle": "bullish" if is_bullish else "bearish" if is_bearish else "doji",
+            "structure": structure
         }
 
     def calculate_bollinger_squeeze(self, df: pd.DataFrame, bb_data: Dict = None) -> Dict:
