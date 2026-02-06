@@ -1672,7 +1672,7 @@
                 </thead>
                 <tbody id="historyBody">
                     <tr>
-                        <td colspan="7" class="empty-state">No trades yet</td>
+                        <td colspan="8" class="empty-state">No trades yet</td>
                     </tr>
                 </tbody>
             </table>
@@ -2804,32 +2804,37 @@
                 tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No trades yet</td></tr>';
                 return;
             }
+            
+            // Filter to show all trades (BUY and SELL)
+            const allTrades = history.filter(t => t && (t.type === 'BUY' || t.type === 'SELL' || t.type === 'buy' || t.type === 'sell'));
 
             // Sort by time descending (newest first) and assign sequential numbers
-            const sorted = [...history].sort((a, b) => {
+            const sorted = [...allTrades].sort((a, b) => {
                 const timeA = new Date(a.time || 0).getTime();
                 const timeB = new Date(b.time || 0).getTime();
                 return timeB - timeA;
             });
 
             tbody.innerHTML = sorted.map((trade, index) => {
-                const tradeNum = history.length - index;
+                const tradeNum = sorted.length - index;
                 const symbol = trade.symbol || trade.base_asset || '?';
                 const displaySymbol = symbol.replace('USDT', '');
                 const pnlValue = trade.pnl || 0;
                 const pnlPercent = trade.pnl_percent || 0;
+                const tradeType = (trade.type || '').toUpperCase();
+                const isSell = tradeType === 'SELL';
                 
                 return `
                 <tr>
                     <td>${tradeNum}</td>
                     <td><span style="color: #00d4ff; font-weight: 600;">${displaySymbol}</span></td>
                     <td>${trade.time || '-'}</td>
-                    <td class="type-${(trade.type || 'buy').toLowerCase()}">${trade.type || '-'}</td>
+                    <td class="type-${tradeType.toLowerCase()}">${tradeType || '-'}</td>
                     <td>$${formatNumber(trade.price || 0)}</td>
                     <td>${(trade.quantity || 0).toFixed(6)}</td>
                     <td>$${formatNumber(trade.amount || 0)}</td>
                     <td class="${pnlValue >= 0 ? 'positive' : 'negative'}">
-                        ${trade.type === 'SELL' ? (pnlValue >= 0 ? '+' : '') + '$' + formatNumber(pnlValue) + ' (' + pnlPercent.toFixed(2) + '%)' : '-'}
+                        ${isSell ? (pnlValue >= 0 ? '+' : '') + '$' + formatNumber(pnlValue) + ' (' + pnlPercent.toFixed(2) + '%)' : '-'}
                     </td>
                 </tr>
             `}).join('');
