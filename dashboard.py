@@ -2050,11 +2050,12 @@ def bot_loop():
                             pass
 
                 if in_min_hold:
-                    # During MIN_HOLD: only allow hard_stop and breakeven_stop (protect capital)
+                    # During MIN_HOLD: allow hard_stop, breakeven_stop, and max_delays_exhausted (forced stop)
                     should_stop, stop_reason, stop_level = check_smart_stop(
                         pos_price, entry_price, pnl_percent, pos
                     )
-                    if should_stop and stop_reason in ("hard_stop", "breakeven_stop"):
+                    min_hold_allowed_stops = ("hard_stop", "breakeven_stop", "max_delays_exhausted_loss")
+                    if should_stop and stop_reason in min_hold_allowed_stops:
                         add_log(f"🛑 POSITION #{i+1} {stop_reason} during MIN_HOLD: {pnl_percent:.2f}% - SELLING!", "warning")
                         positions_to_close.append((i, pos, stop_reason, pos_price))
                     # Update trailing stop tracking even during hold (so it's ready when hold expires)
