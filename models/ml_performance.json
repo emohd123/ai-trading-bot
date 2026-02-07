@@ -1,1400 +1,1400 @@
 {
   "predictions": [
     {
-      "timestamp": "2026-02-05T13:28:02.238839",
+      "timestamp": "2026-02-06T14:38:01.130124",
       "predicted_direction": "DOWN",
-      "confidence": 0.5968,
-      "probability": 0.2016,
+      "confidence": 0.2596,
+      "probability": 0.3702,
       "model_votes": {
-        "rf": 0.3991,
-        "xgb": 0.179,
-        "lgb": 0.041,
+        "rf": 0.4331,
+        "xgb": 0.3638,
+        "lgb": 0.3195,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T13:28:02.243401",
+      "timestamp": "2026-02-06T14:38:01.141677",
       "predicted_direction": "DOWN",
-      "confidence": 0.5968,
-      "probability": 0.2016,
+      "confidence": 0.2596,
+      "probability": 0.3702,
       "model_votes": {
-        "rf": 0.3991,
-        "xgb": 0.179,
-        "lgb": 0.041,
+        "rf": 0.4331,
+        "xgb": 0.3638,
+        "lgb": 0.3195,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T13:33:06.933073",
+      "timestamp": "2026-02-06T14:39:00.919483",
       "predicted_direction": "DOWN",
-      "confidence": 0.7298,
-      "probability": 0.1351,
+      "confidence": 0.2709,
+      "probability": 0.3646,
       "model_votes": {
-        "rf": 0.3399,
-        "xgb": 0.0681,
-        "lgb": 0.0072,
+        "rf": 0.4342,
+        "xgb": 0.3749,
+        "lgb": 0.2932,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T13:33:06.939663",
+      "timestamp": "2026-02-06T14:39:00.930192",
       "predicted_direction": "DOWN",
-      "confidence": 0.7298,
-      "probability": 0.1351,
+      "confidence": 0.2709,
+      "probability": 0.3646,
       "model_votes": {
-        "rf": 0.3399,
-        "xgb": 0.0681,
-        "lgb": 0.0072,
+        "rf": 0.4342,
+        "xgb": 0.3749,
+        "lgb": 0.2932,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T13:38:07.049771",
+      "timestamp": "2026-02-06T14:39:57.657343",
       "predicted_direction": "DOWN",
-      "confidence": 0.7146,
-      "probability": 0.1427,
+      "confidence": 0.2676,
+      "probability": 0.3662,
       "model_votes": {
-        "rf": 0.3365,
-        "xgb": 0.0984,
-        "lgb": 0.0048,
+        "rf": 0.4392,
+        "xgb": 0.3749,
+        "lgb": 0.2932,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T13:38:07.052851",
+      "timestamp": "2026-02-06T14:39:57.671557",
       "predicted_direction": "DOWN",
-      "confidence": 0.7146,
-      "probability": 0.1427,
+      "confidence": 0.2676,
+      "probability": 0.3662,
       "model_votes": {
-        "rf": 0.3365,
-        "xgb": 0.0984,
-        "lgb": 0.0048,
+        "rf": 0.4392,
+        "xgb": 0.3749,
+        "lgb": 0.2932,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T13:43:24.911892",
+      "timestamp": "2026-02-06T14:40:58.256482",
       "predicted_direction": "DOWN",
-      "confidence": 0.6876,
-      "probability": 0.1562,
+      "confidence": 0.3015,
+      "probability": 0.3492,
       "model_votes": {
-        "rf": 0.3197,
-        "xgb": 0.1532,
-        "lgb": 0.0094,
+        "rf": 0.4501,
+        "xgb": 0.3409,
+        "lgb": 0.2661,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T13:43:24.918337",
+      "timestamp": "2026-02-06T14:40:58.266744",
       "predicted_direction": "DOWN",
-      "confidence": 0.6876,
-      "probability": 0.1562,
+      "confidence": 0.3015,
+      "probability": 0.3492,
       "model_votes": {
-        "rf": 0.3197,
-        "xgb": 0.1532,
-        "lgb": 0.0094,
+        "rf": 0.4501,
+        "xgb": 0.3409,
+        "lgb": 0.2661,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T13:48:32.616557",
+      "timestamp": "2026-02-06T14:41:59.007986",
       "predicted_direction": "DOWN",
-      "confidence": 0.7308,
-      "probability": 0.1346,
+      "confidence": 0.0844,
+      "probability": 0.4578,
       "model_votes": {
-        "rf": 0.3307,
-        "xgb": 0.0755,
-        "lgb": 0.0076,
+        "rf": 0.4462,
+        "xgb": 0.5476,
+        "lgb": 0.39,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T13:48:32.621078",
+      "timestamp": "2026-02-06T14:41:59.018228",
       "predicted_direction": "DOWN",
-      "confidence": 0.7308,
-      "probability": 0.1346,
+      "confidence": 0.0844,
+      "probability": 0.4578,
       "model_votes": {
-        "rf": 0.3307,
-        "xgb": 0.0755,
-        "lgb": 0.0076,
+        "rf": 0.4462,
+        "xgb": 0.5476,
+        "lgb": 0.39,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T13:50:23.331195",
-      "predicted_direction": "UP",
-      "confidence": 0.3366,
-      "probability": 0.6683,
-      "model_votes": {
-        "rf": 0.5329,
-        "xgb": 0.6749,
-        "lgb": 0.7863,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T13:50:23.333731",
-      "predicted_direction": "UP",
-      "confidence": 0.3366,
-      "probability": 0.6683,
-      "model_votes": {
-        "rf": 0.5329,
-        "xgb": 0.6749,
-        "lgb": 0.7863,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T13:52:08.359842",
-      "predicted_direction": "UP",
-      "confidence": 0.3059,
-      "probability": 0.6529,
-      "model_votes": {
-        "rf": 0.5325,
-        "xgb": 0.6344,
-        "lgb": 0.7795,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T13:52:08.376333",
-      "predicted_direction": "UP",
-      "confidence": 0.3059,
-      "probability": 0.6529,
-      "model_votes": {
-        "rf": 0.5325,
-        "xgb": 0.6344,
-        "lgb": 0.7795,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T13:55:20.765713",
-      "predicted_direction": "UP",
-      "confidence": 0.3034,
-      "probability": 0.6517,
-      "model_votes": {
-        "rf": 0.5474,
-        "xgb": 0.7321,
-        "lgb": 0.6758,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T13:55:20.769910",
-      "predicted_direction": "UP",
-      "confidence": 0.3034,
-      "probability": 0.6517,
-      "model_votes": {
-        "rf": 0.5474,
-        "xgb": 0.7321,
-        "lgb": 0.6758,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T13:57:44.463142",
-      "predicted_direction": "UP",
-      "confidence": 0.3668,
-      "probability": 0.6834,
-      "model_votes": {
-        "rf": 0.5459,
-        "xgb": 0.7436,
-        "lgb": 0.7559,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T13:57:44.465441",
-      "predicted_direction": "UP",
-      "confidence": 0.3668,
-      "probability": 0.6834,
-      "model_votes": {
-        "rf": 0.5459,
-        "xgb": 0.7436,
-        "lgb": 0.7559,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T13:59:52.929377",
-      "predicted_direction": "UP",
-      "confidence": 0.3369,
-      "probability": 0.6685,
-      "model_votes": {
-        "rf": 0.5338,
-        "xgb": 0.723,
-        "lgb": 0.7433,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T13:59:52.933674",
-      "predicted_direction": "UP",
-      "confidence": 0.3369,
-      "probability": 0.6685,
-      "model_votes": {
-        "rf": 0.5338,
-        "xgb": 0.723,
-        "lgb": 0.7433,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:01:35.295569",
-      "predicted_direction": "UP",
-      "confidence": 0.2254,
-      "probability": 0.6127,
-      "model_votes": {
-        "rf": 0.5658,
-        "xgb": 0.5434,
-        "lgb": 0.7169,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:01:35.305880",
-      "predicted_direction": "UP",
-      "confidence": 0.2254,
-      "probability": 0.6127,
-      "model_votes": {
-        "rf": 0.5658,
-        "xgb": 0.5434,
-        "lgb": 0.7169,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:06:35.922375",
+      "timestamp": "2026-02-06T14:43:00.152926",
       "predicted_direction": "DOWN",
-      "confidence": 0.6179,
-      "probability": 0.191,
+      "confidence": 0.0765,
+      "probability": 0.4617,
       "model_votes": {
-        "rf": 0.4302,
-        "xgb": 0.1279,
-        "lgb": 0.0283,
+        "rf": 0.4501,
+        "xgb": 0.5562,
+        "lgb": 0.39,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T14:06:35.927028",
+      "timestamp": "2026-02-06T14:43:00.163458",
       "predicted_direction": "DOWN",
-      "confidence": 0.6179,
-      "probability": 0.191,
+      "confidence": 0.0765,
+      "probability": 0.4617,
       "model_votes": {
-        "rf": 0.4302,
-        "xgb": 0.1279,
-        "lgb": 0.0283,
+        "rf": 0.4501,
+        "xgb": 0.5562,
+        "lgb": 0.39,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T14:11:52.179882",
+      "timestamp": "2026-02-06T14:43:58.112002",
       "predicted_direction": "DOWN",
-      "confidence": 0.4731,
-      "probability": 0.2634,
+      "confidence": 0.1723,
+      "probability": 0.4138,
       "model_votes": {
-        "rf": 0.5483,
-        "xgb": 0.1704,
-        "lgb": 0.0854,
+        "rf": 0.448,
+        "xgb": 0.4329,
+        "lgb": 0.3667,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T14:11:52.188360",
+      "timestamp": "2026-02-06T14:43:58.124057",
       "predicted_direction": "DOWN",
-      "confidence": 0.4731,
-      "probability": 0.2634,
+      "confidence": 0.1723,
+      "probability": 0.4138,
       "model_votes": {
-        "rf": 0.5483,
-        "xgb": 0.1704,
-        "lgb": 0.0854,
+        "rf": 0.448,
+        "xgb": 0.4329,
+        "lgb": 0.3667,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T14:17:04.295127",
+      "timestamp": "2026-02-06T14:44:57.899172",
       "predicted_direction": "DOWN",
-      "confidence": 0.2606,
-      "probability": 0.3697,
+      "confidence": 0.2182,
+      "probability": 0.3909,
       "model_votes": {
-        "rf": 0.5652,
-        "xgb": 0.3328,
-        "lgb": 0.2236,
+        "rf": 0.4462,
+        "xgb": 0.397,
+        "lgb": 0.336,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T14:17:04.299878",
+      "timestamp": "2026-02-06T14:44:57.908972",
       "predicted_direction": "DOWN",
-      "confidence": 0.2606,
-      "probability": 0.3697,
+      "confidence": 0.2182,
+      "probability": 0.3909,
       "model_votes": {
-        "rf": 0.5652,
-        "xgb": 0.3328,
-        "lgb": 0.2236,
+        "rf": 0.4462,
+        "xgb": 0.397,
+        "lgb": 0.336,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T14:21:18.341818",
-      "predicted_direction": "UP",
-      "confidence": 0.3401,
-      "probability": 0.6701,
-      "model_votes": {
-        "rf": 0.5858,
-        "xgb": 0.6434,
-        "lgb": 0.7707,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:21:18.346448",
-      "predicted_direction": "UP",
-      "confidence": 0.3401,
-      "probability": 0.6701,
-      "model_votes": {
-        "rf": 0.5858,
-        "xgb": 0.6434,
-        "lgb": 0.7707,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:25:13.599751",
-      "predicted_direction": "UP",
-      "confidence": 0.6497,
-      "probability": 0.8249,
-      "model_votes": {
-        "rf": 0.6441,
-        "xgb": 0.8645,
-        "lgb": 0.9549,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:25:13.613105",
-      "predicted_direction": "UP",
-      "confidence": 0.6497,
-      "probability": 0.8249,
-      "model_votes": {
-        "rf": 0.6441,
-        "xgb": 0.8645,
-        "lgb": 0.9549,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:30:20.086460",
-      "predicted_direction": "UP",
-      "confidence": 0.5256,
-      "probability": 0.7628,
-      "model_votes": {
-        "rf": 0.5623,
-        "xgb": 0.8574,
-        "lgb": 0.8623,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:30:20.096913",
-      "predicted_direction": "UP",
-      "confidence": 0.5256,
-      "probability": 0.7628,
-      "model_votes": {
-        "rf": 0.5623,
-        "xgb": 0.8574,
-        "lgb": 0.8623,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:30:55.836414",
-      "predicted_direction": "UP",
-      "confidence": 0.6576,
-      "probability": 0.8288,
-      "model_votes": {
-        "rf": 0.6393,
-        "xgb": 0.873,
-        "lgb": 0.9628,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:30:55.854120",
-      "predicted_direction": "UP",
-      "confidence": 0.6576,
-      "probability": 0.8288,
-      "model_votes": {
-        "rf": 0.6393,
-        "xgb": 0.873,
-        "lgb": 0.9628,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:33:11.327683",
-      "predicted_direction": "UP",
-      "confidence": 0.6015,
-      "probability": 0.8008,
-      "model_votes": {
-        "rf": 0.6249,
-        "xgb": 0.8376,
-        "lgb": 0.9289,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:33:11.334575",
-      "predicted_direction": "UP",
-      "confidence": 0.6015,
-      "probability": 0.8008,
-      "model_votes": {
-        "rf": 0.6249,
-        "xgb": 0.8376,
-        "lgb": 0.9289,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:38:10.735389",
-      "predicted_direction": "UP",
-      "confidence": 0.3607,
-      "probability": 0.6803,
-      "model_votes": {
-        "rf": 0.5736,
-        "xgb": 0.7,
-        "lgb": 0.7605,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:38:10.743934",
-      "predicted_direction": "UP",
-      "confidence": 0.3607,
-      "probability": 0.6803,
-      "model_votes": {
-        "rf": 0.5736,
-        "xgb": 0.7,
-        "lgb": 0.7605,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:39:07.935846",
-      "predicted_direction": "UP",
-      "confidence": 0.5113,
-      "probability": 0.7556,
-      "model_votes": {
-        "rf": 0.6013,
-        "xgb": 0.7361,
-        "lgb": 0.9141,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:39:07.956502",
-      "predicted_direction": "UP",
-      "confidence": 0.5113,
-      "probability": 0.7556,
-      "model_votes": {
-        "rf": 0.6013,
-        "xgb": 0.7361,
-        "lgb": 0.9141,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:41:28.031711",
-      "predicted_direction": "UP",
-      "confidence": 0.2994,
-      "probability": 0.6497,
-      "model_votes": {
-        "rf": 0.5618,
-        "xgb": 0.6509,
-        "lgb": 0.729,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:41:28.053168",
-      "predicted_direction": "UP",
-      "confidence": 0.2994,
-      "probability": 0.6497,
-      "model_votes": {
-        "rf": 0.5618,
-        "xgb": 0.6509,
-        "lgb": 0.729,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:46:54.247722",
-      "predicted_direction": "UP",
-      "confidence": 0.5907,
-      "probability": 0.7953,
-      "model_votes": {
-        "rf": 0.5922,
-        "xgb": 0.8562,
-        "lgb": 0.9271,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:46:54.252229",
-      "predicted_direction": "UP",
-      "confidence": 0.5907,
-      "probability": 0.7953,
-      "model_votes": {
-        "rf": 0.5922,
-        "xgb": 0.8562,
-        "lgb": 0.9271,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T14:52:10.108400",
+      "timestamp": "2026-02-06T14:46:02.413625",
       "predicted_direction": "DOWN",
-      "confidence": 0.0858,
-      "probability": 0.4571,
+      "confidence": 0.1866,
+      "probability": 0.4067,
       "model_votes": {
-        "rf": 0.4464,
-        "xgb": 0.3841,
-        "lgb": 0.5315,
+        "rf": 0.4359,
+        "xgb": 0.4226,
+        "lgb": 0.3667,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T14:52:10.119775",
+      "timestamp": "2026-02-06T14:46:02.425222",
       "predicted_direction": "DOWN",
-      "confidence": 0.0858,
-      "probability": 0.4571,
+      "confidence": 0.1866,
+      "probability": 0.4067,
       "model_votes": {
-        "rf": 0.4464,
-        "xgb": 0.3841,
-        "lgb": 0.5315,
+        "rf": 0.4359,
+        "xgb": 0.4226,
+        "lgb": 0.3667,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T14:57:14.217317",
+      "timestamp": "2026-02-06T14:48:17.511046",
       "predicted_direction": "DOWN",
-      "confidence": 0.0858,
-      "probability": 0.4571,
+      "confidence": 0.2182,
+      "probability": 0.3909,
       "model_votes": {
-        "rf": 0.4464,
-        "xgb": 0.3841,
-        "lgb": 0.5315,
+        "rf": 0.4462,
+        "xgb": 0.397,
+        "lgb": 0.336,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T14:57:14.223764",
+      "timestamp": "2026-02-06T14:48:17.528726",
       "predicted_direction": "DOWN",
-      "confidence": 0.0858,
-      "probability": 0.4571,
+      "confidence": 0.2182,
+      "probability": 0.3909,
       "model_votes": {
-        "rf": 0.4464,
-        "xgb": 0.3841,
-        "lgb": 0.5315,
+        "rf": 0.4462,
+        "xgb": 0.397,
+        "lgb": 0.336,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:48:55.246498",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2182,
+      "probability": 0.3909,
+      "model_votes": {
+        "rf": 0.4462,
+        "xgb": 0.397,
+        "lgb": 0.336,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:48:55.257685",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2182,
+      "probability": 0.3909,
+      "model_votes": {
+        "rf": 0.4462,
+        "xgb": 0.397,
+        "lgb": 0.336,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:50:03.439541",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2182,
+      "probability": 0.3909,
+      "model_votes": {
+        "rf": 0.4462,
+        "xgb": 0.397,
+        "lgb": 0.336,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:50:03.452943",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2182,
+      "probability": 0.3909,
+      "model_votes": {
+        "rf": 0.4462,
+        "xgb": 0.397,
+        "lgb": 0.336,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:50:41.520401",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2182,
+      "probability": 0.3909,
+      "model_votes": {
+        "rf": 0.4462,
+        "xgb": 0.397,
+        "lgb": 0.336,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:50:41.541836",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2182,
+      "probability": 0.3909,
+      "model_votes": {
+        "rf": 0.4462,
+        "xgb": 0.397,
+        "lgb": 0.336,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:50:59.130860",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2318,
+      "probability": 0.3841,
+      "model_votes": {
+        "rf": 0.4626,
+        "xgb": 0.3684,
+        "lgb": 0.3275,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:50:59.145600",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2318,
+      "probability": 0.3841,
+      "model_votes": {
+        "rf": 0.4626,
+        "xgb": 0.3684,
+        "lgb": 0.3275,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:51:41.870880",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2097,
+      "probability": 0.3952,
+      "model_votes": {
+        "rf": 0.4661,
+        "xgb": 0.3827,
+        "lgb": 0.3424,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:51:41.880982",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2097,
+      "probability": 0.3952,
+      "model_votes": {
+        "rf": 0.4661,
+        "xgb": 0.3827,
+        "lgb": 0.3424,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:52:01.438814",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2097,
+      "probability": 0.3952,
+      "model_votes": {
+        "rf": 0.4661,
+        "xgb": 0.3827,
+        "lgb": 0.3424,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:52:01.454792",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2097,
+      "probability": 0.3952,
+      "model_votes": {
+        "rf": 0.4661,
+        "xgb": 0.3827,
+        "lgb": 0.3424,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:52:22.376253",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2251,
+      "probability": 0.3874,
+      "model_votes": {
+        "rf": 0.4661,
+        "xgb": 0.3827,
+        "lgb": 0.3211,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:52:22.400646",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2251,
+      "probability": 0.3874,
+      "model_votes": {
+        "rf": 0.4661,
+        "xgb": 0.3827,
+        "lgb": 0.3211,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:53:05.271258",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2168,
+      "probability": 0.3916,
+      "model_votes": {
+        "rf": 0.4778,
+        "xgb": 0.3937,
+        "lgb": 0.3126,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:53:05.291671",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2168,
+      "probability": 0.3916,
+      "model_votes": {
+        "rf": 0.4778,
+        "xgb": 0.3937,
+        "lgb": 0.3126,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:57:52.015704",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2487,
+      "probability": 0.3757,
+      "model_votes": {
+        "rf": 0.4755,
+        "xgb": 0.3937,
+        "lgb": 0.2706,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T14:57:52.049213",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2487,
+      "probability": 0.3757,
+      "model_votes": {
+        "rf": 0.4755,
+        "xgb": 0.3937,
+        "lgb": 0.2706,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:03:08.950946",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2243,
+      "probability": 0.3878,
+      "model_votes": {
+        "rf": 0.4821,
+        "xgb": 0.3654,
+        "lgb": 0.3228,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:03:08.969663",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2243,
+      "probability": 0.3878,
+      "model_votes": {
+        "rf": 0.4821,
+        "xgb": 0.3654,
+        "lgb": 0.3228,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:08:21.950648",
+      "predicted_direction": "DOWN",
+      "confidence": 0.1014,
+      "probability": 0.4493,
+      "model_votes": {
+        "rf": 0.4797,
+        "xgb": 0.4602,
+        "lgb": 0.4127,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:08:21.963923",
+      "predicted_direction": "DOWN",
+      "confidence": 0.1014,
+      "probability": 0.4493,
+      "model_votes": {
+        "rf": 0.4797,
+        "xgb": 0.4602,
+        "lgb": 0.4127,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:13:37.121624",
+      "predicted_direction": "DOWN",
+      "confidence": 0.1291,
+      "probability": 0.4355,
+      "model_votes": {
+        "rf": 0.5,
+        "xgb": 0.4118,
+        "lgb": 0.3982,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:13:37.131726",
+      "predicted_direction": "DOWN",
+      "confidence": 0.1291,
+      "probability": 0.4355,
+      "model_votes": {
+        "rf": 0.5,
+        "xgb": 0.4118,
+        "lgb": 0.3982,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:19:00.877961",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2117,
+      "probability": 0.3941,
+      "model_votes": {
+        "rf": 0.4742,
+        "xgb": 0.3925,
+        "lgb": 0.3239,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:19:00.896410",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2117,
+      "probability": 0.3941,
+      "model_votes": {
+        "rf": 0.4742,
+        "xgb": 0.3925,
+        "lgb": 0.3239,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:20:56.920375",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2111,
+      "probability": 0.3945,
+      "model_votes": {
+        "rf": 0.4821,
+        "xgb": 0.3677,
+        "lgb": 0.3393,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:20:56.928352",
+      "predicted_direction": "DOWN",
+      "confidence": 0.2111,
+      "probability": 0.3945,
+      "model_votes": {
+        "rf": 0.4821,
+        "xgb": 0.3677,
+        "lgb": 0.3393,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:33:18.008163",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0553,
+      "probability": 0.4723,
+      "model_votes": {
+        "rf": 0.503,
+        "xgb": 0.4616,
+        "lgb": 0.4543,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:33:18.020662",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0553,
+      "probability": 0.4723,
+      "model_votes": {
+        "rf": 0.503,
+        "xgb": 0.4616,
+        "lgb": 0.4543,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:38:29.833868",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0511,
+      "probability": 0.4744,
+      "model_votes": {
+        "rf": 0.5149,
+        "xgb": 0.4424,
+        "lgb": 0.466,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:38:29.837388",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0511,
+      "probability": 0.4744,
+      "model_votes": {
+        "rf": 0.5149,
+        "xgb": 0.4424,
+        "lgb": 0.466,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:43:33.162051",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0623,
+      "probability": 0.4689,
+      "model_votes": {
+        "rf": 0.4977,
+        "xgb": 0.4424,
+        "lgb": 0.466,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:43:33.165666",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0623,
+      "probability": 0.4689,
+      "model_votes": {
+        "rf": 0.4977,
+        "xgb": 0.4424,
+        "lgb": 0.466,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:44:39.078260",
+      "predicted_direction": "DOWN",
+      "confidence": 0.1422,
+      "probability": 0.4289,
+      "model_votes": {
+        "rf": 0.4803,
+        "xgb": 0.4134,
+        "lgb": 0.3963,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:44:39.082469",
+      "predicted_direction": "DOWN",
+      "confidence": 0.1422,
+      "probability": 0.4289,
+      "model_votes": {
+        "rf": 0.4803,
+        "xgb": 0.4134,
+        "lgb": 0.3963,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:49:12.176695",
+      "predicted_direction": "DOWN",
+      "confidence": 0.1422,
+      "probability": 0.4289,
+      "model_votes": {
+        "rf": 0.4803,
+        "xgb": 0.4134,
+        "lgb": 0.3963,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:49:12.209856",
+      "predicted_direction": "DOWN",
+      "confidence": 0.1422,
+      "probability": 0.4289,
+      "model_votes": {
+        "rf": 0.4803,
+        "xgb": 0.4134,
+        "lgb": 0.3963,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:51:26.762790",
+      "predicted_direction": "DOWN",
+      "confidence": 0.1183,
+      "probability": 0.4408,
+      "model_votes": {
+        "rf": 0.4794,
+        "xgb": 0.4529,
+        "lgb": 0.3957,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:51:26.769574",
+      "predicted_direction": "DOWN",
+      "confidence": 0.1183,
+      "probability": 0.4408,
+      "model_votes": {
+        "rf": 0.4794,
+        "xgb": 0.4529,
+        "lgb": 0.3957,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:56:59.607858",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0224,
+      "probability": 0.4888,
+      "model_votes": {
+        "rf": 0.4776,
+        "xgb": 0.5691,
+        "lgb": 0.4289,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T15:56:59.718823",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0224,
+      "probability": 0.4888,
+      "model_votes": {
+        "rf": 0.4776,
+        "xgb": 0.5691,
+        "lgb": 0.4289,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T16:02:41.407108",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0868,
+      "probability": 0.4566,
+      "model_votes": {
+        "rf": 0.4315,
+        "xgb": 0.4216,
+        "lgb": 0.5096,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T16:02:41.411275",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0868,
+      "probability": 0.4566,
+      "model_votes": {
+        "rf": 0.4315,
+        "xgb": 0.4216,
+        "lgb": 0.5096,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T16:08:47.824495",
+      "predicted_direction": "DOWN",
+      "confidence": 0.164,
+      "probability": 0.418,
+      "model_votes": {
+        "rf": 0.4369,
+        "xgb": 0.2982,
+        "lgb": 0.5053,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T16:08:47.827963",
+      "predicted_direction": "DOWN",
+      "confidence": 0.164,
+      "probability": 0.418,
+      "model_votes": {
+        "rf": 0.4369,
+        "xgb": 0.2982,
+        "lgb": 0.5053,
         "lstm": 0.5
       },
       "actual_direction": "UP",
       "correct": false
     },
     {
-      "timestamp": "2026-02-05T15:02:32.376065",
+      "timestamp": "2026-02-06T16:14:04.608222",
       "predicted_direction": "DOWN",
-      "confidence": 0.6047,
-      "probability": 0.1977,
+      "confidence": 0.0052,
+      "probability": 0.4974,
       "model_votes": {
-        "rf": 0.3979,
-        "xgb": 0.1289,
-        "lgb": 0.0754,
+        "rf": 0.4733,
+        "xgb": 0.3738,
+        "lgb": 0.6265,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T15:02:32.387661",
+      "timestamp": "2026-02-06T16:14:04.612413",
       "predicted_direction": "DOWN",
-      "confidence": 0.6047,
-      "probability": 0.1977,
+      "confidence": 0.0052,
+      "probability": 0.4974,
       "model_votes": {
-        "rf": 0.3979,
-        "xgb": 0.1289,
-        "lgb": 0.0754,
+        "rf": 0.4733,
+        "xgb": 0.3738,
+        "lgb": 0.6265,
         "lstm": 0.5
       },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T15:07:40.791386",
-      "predicted_direction": "UP",
-      "confidence": 0.1836,
-      "probability": 0.5918,
-      "model_votes": {
-        "rf": 0.6021,
-        "xgb": 0.5752,
-        "lgb": 0.5971,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T15:07:40.799809",
-      "predicted_direction": "UP",
-      "confidence": 0.1836,
-      "probability": 0.5918,
-      "model_votes": {
-        "rf": 0.6021,
-        "xgb": 0.5752,
-        "lgb": 0.5971,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T15:45:57.910704",
-      "predicted_direction": "UP",
-      "confidence": 0.5542,
-      "probability": 0.7771,
-      "model_votes": {
-        "rf": 0.6078,
-        "xgb": 0.8469,
-        "lgb": 0.8701,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T15:45:57.916971",
-      "predicted_direction": "UP",
-      "confidence": 0.5542,
-      "probability": 0.7771,
-      "model_votes": {
-        "rf": 0.6078,
-        "xgb": 0.8469,
-        "lgb": 0.8701,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T15:51:02.775789",
-      "predicted_direction": "UP",
-      "confidence": 0.5065,
-      "probability": 0.7532,
-      "model_votes": {
-        "rf": 0.6008,
-        "xgb": 0.7919,
-        "lgb": 0.8584,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T15:51:02.788415",
-      "predicted_direction": "UP",
-      "confidence": 0.5065,
-      "probability": 0.7532,
-      "model_votes": {
-        "rf": 0.6008,
-        "xgb": 0.7919,
-        "lgb": 0.8584,
-        "lstm": 0.5
-      },
-      "actual_direction": "UP",
+      "actual_direction": "DOWN",
       "correct": true
     },
     {
-      "timestamp": "2026-02-05T15:56:03.084702",
+      "timestamp": "2026-02-06T16:19:13.837184",
       "predicted_direction": "UP",
-      "confidence": 0.5441,
-      "probability": 0.772,
+      "confidence": 0.1238,
+      "probability": 0.5619,
       "model_votes": {
-        "rf": 0.6005,
-        "xgb": 0.8353,
-        "lgb": 0.8701,
+        "rf": 0.4653,
+        "xgb": 0.3993,
+        "lgb": 0.7916,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T15:56:03.094813",
+      "timestamp": "2026-02-06T16:19:13.849522",
       "predicted_direction": "UP",
-      "confidence": 0.5441,
-      "probability": 0.772,
+      "confidence": 0.1238,
+      "probability": 0.5619,
       "model_votes": {
-        "rf": 0.6005,
-        "xgb": 0.8353,
-        "lgb": 0.8701,
+        "rf": 0.4653,
+        "xgb": 0.3993,
+        "lgb": 0.7916,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T16:01:12.511670",
-      "predicted_direction": "DOWN",
-      "confidence": 0.5554,
-      "probability": 0.2223,
-      "model_votes": {
-        "rf": 0.4428,
-        "xgb": 0.1658,
-        "lgb": 0.0747,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T16:01:12.524272",
-      "predicted_direction": "DOWN",
-      "confidence": 0.5554,
-      "probability": 0.2223,
-      "model_votes": {
-        "rf": 0.4428,
-        "xgb": 0.1658,
-        "lgb": 0.0747,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T16:06:19.577334",
-      "predicted_direction": "DOWN",
-      "confidence": 0.0847,
-      "probability": 0.4576,
-      "model_votes": {
-        "rf": 0.4464,
-        "xgb": 0.3841,
-        "lgb": 0.5315,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T16:06:19.589916",
-      "predicted_direction": "DOWN",
-      "confidence": 0.0847,
-      "probability": 0.4576,
-      "model_votes": {
-        "rf": 0.4464,
-        "xgb": 0.3841,
-        "lgb": 0.5315,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T16:17:34.265896",
+      "timestamp": "2026-02-06T16:24:21.869642",
       "predicted_direction": "UP",
-      "confidence": 0.5946,
-      "probability": 0.7973,
+      "confidence": 0.0583,
+      "probability": 0.5292,
       "model_votes": {
-        "rf": 0.6106,
-        "xgb": 0.8464,
-        "lgb": 0.9218,
+        "rf": 0.4899,
+        "xgb": 0.4369,
+        "lgb": 0.6454,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T16:17:34.278280",
+      "timestamp": "2026-02-06T16:24:21.885059",
       "predicted_direction": "UP",
-      "confidence": 0.5946,
-      "probability": 0.7973,
+      "confidence": 0.0583,
+      "probability": 0.5292,
       "model_votes": {
-        "rf": 0.6106,
-        "xgb": 0.8464,
-        "lgb": 0.9218,
+        "rf": 0.4899,
+        "xgb": 0.4369,
+        "lgb": 0.6454,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T16:22:35.248256",
+      "timestamp": "2026-02-06T16:29:47.109447",
       "predicted_direction": "DOWN",
-      "confidence": 0.5594,
-      "probability": 0.2203,
+      "confidence": 0.2447,
+      "probability": 0.3776,
       "model_votes": {
-        "rf": 0.4096,
-        "xgb": 0.1456,
-        "lgb": 0.1159,
+        "rf": 0.4824,
+        "xgb": 0.4034,
+        "lgb": 0.2606,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T16:22:35.261392",
+      "timestamp": "2026-02-06T16:29:47.116341",
       "predicted_direction": "DOWN",
-      "confidence": 0.5594,
-      "probability": 0.2203,
+      "confidence": 0.2447,
+      "probability": 0.3776,
       "model_votes": {
-        "rf": 0.4096,
-        "xgb": 0.1456,
-        "lgb": 0.1159,
+        "rf": 0.4824,
+        "xgb": 0.4034,
+        "lgb": 0.2606,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T16:27:35.816754",
-      "predicted_direction": "DOWN",
-      "confidence": 0.6141,
-      "probability": 0.1929,
-      "model_votes": {
-        "rf": 0.4105,
-        "xgb": 0.1204,
-        "lgb": 0.0613,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T16:27:35.827878",
-      "predicted_direction": "DOWN",
-      "confidence": 0.6141,
-      "probability": 0.1929,
-      "model_votes": {
-        "rf": 0.4105,
-        "xgb": 0.1204,
-        "lgb": 0.0613,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T16:29:01.231001",
+      "timestamp": "2026-02-06T16:35:11.849330",
       "predicted_direction": "UP",
-      "confidence": 0.6614,
-      "probability": 0.8307,
+      "confidence": 0.3385,
+      "probability": 0.6693,
       "model_votes": {
-        "rf": 0.6089,
-        "xgb": 0.9143,
-        "lgb": 0.9566,
+        "rf": 0.5087,
+        "xgb": 0.6373,
+        "lgb": 0.842,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T16:29:01.250750",
+      "timestamp": "2026-02-06T16:35:11.877841",
       "predicted_direction": "UP",
-      "confidence": 0.6614,
-      "probability": 0.8307,
+      "confidence": 0.3385,
+      "probability": 0.6693,
       "model_votes": {
-        "rf": 0.6089,
-        "xgb": 0.9143,
-        "lgb": 0.9566,
+        "rf": 0.5087,
+        "xgb": 0.6373,
+        "lgb": 0.842,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T17:10:36.824569",
+      "timestamp": "2026-02-06T16:39:44.951592",
       "predicted_direction": "UP",
-      "confidence": 0.2086,
-      "probability": 0.6043,
+      "confidence": 0.1237,
+      "probability": 0.5619,
       "model_votes": {
-        "rf": 0.5455,
-        "xgb": 0.5299,
-        "lgb": 0.7215,
+        "rf": 0.4842,
+        "xgb": 0.4067,
+        "lgb": 0.7679,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T17:10:36.833704",
+      "timestamp": "2026-02-06T16:39:44.959387",
       "predicted_direction": "UP",
-      "confidence": 0.2086,
-      "probability": 0.6043,
+      "confidence": 0.1237,
+      "probability": 0.5619,
       "model_votes": {
-        "rf": 0.5455,
-        "xgb": 0.5299,
-        "lgb": 0.7215,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:15:46.614584",
-      "predicted_direction": "DOWN",
-      "confidence": 0.6018,
-      "probability": 0.1991,
-      "model_votes": {
-        "rf": 0.4586,
-        "xgb": 0.0967,
-        "lgb": 0.0558,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:15:46.619292",
-      "predicted_direction": "DOWN",
-      "confidence": 0.6018,
-      "probability": 0.1991,
-      "model_votes": {
-        "rf": 0.4586,
-        "xgb": 0.0967,
-        "lgb": 0.0558,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:21:05.485482",
-      "predicted_direction": "DOWN",
-      "confidence": 0.5769,
-      "probability": 0.2115,
-      "model_votes": {
-        "rf": 0.4266,
-        "xgb": 0.13,
-        "lgb": 0.0899,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:21:05.496079",
-      "predicted_direction": "DOWN",
-      "confidence": 0.5769,
-      "probability": 0.2115,
-      "model_votes": {
-        "rf": 0.4266,
-        "xgb": 0.13,
-        "lgb": 0.0899,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:26:05.057223",
-      "predicted_direction": "UP",
-      "confidence": 0.0491,
-      "probability": 0.5245,
-      "model_votes": {
-        "rf": 0.4809,
-        "xgb": 0.7183,
-        "lgb": 0.3954,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:26:05.068115",
-      "predicted_direction": "UP",
-      "confidence": 0.0491,
-      "probability": 0.5245,
-      "model_votes": {
-        "rf": 0.4809,
-        "xgb": 0.7183,
-        "lgb": 0.3954,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:31:04.642977",
-      "predicted_direction": "UP",
-      "confidence": 0.1217,
-      "probability": 0.5608,
-      "model_votes": {
-        "rf": 0.4781,
-        "xgb": 0.7274,
-        "lgb": 0.4902,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:31:04.654358",
-      "predicted_direction": "UP",
-      "confidence": 0.1217,
-      "probability": 0.5608,
-      "model_votes": {
-        "rf": 0.4781,
-        "xgb": 0.7274,
-        "lgb": 0.4902,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:36:15.912333",
-      "predicted_direction": "DOWN",
-      "confidence": 0.0847,
-      "probability": 0.4576,
-      "model_votes": {
-        "rf": 0.4464,
-        "xgb": 0.3841,
-        "lgb": 0.5315,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:36:15.924799",
-      "predicted_direction": "DOWN",
-      "confidence": 0.0847,
-      "probability": 0.4576,
-      "model_votes": {
-        "rf": 0.4464,
-        "xgb": 0.3841,
-        "lgb": 0.5315,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:41:15.443890",
-      "predicted_direction": "DOWN",
-      "confidence": 0.0847,
-      "probability": 0.4576,
-      "model_votes": {
-        "rf": 0.4464,
-        "xgb": 0.3841,
-        "lgb": 0.5315,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:41:15.456809",
-      "predicted_direction": "DOWN",
-      "confidence": 0.0847,
-      "probability": 0.4576,
-      "model_votes": {
-        "rf": 0.4464,
-        "xgb": 0.3841,
-        "lgb": 0.5315,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:46:17.827935",
-      "predicted_direction": "DOWN",
-      "confidence": 0.0645,
-      "probability": 0.4678,
-      "model_votes": {
-        "rf": 0.5291,
-        "xgb": 0.5701,
-        "lgb": 0.324,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:46:17.836083",
-      "predicted_direction": "DOWN",
-      "confidence": 0.0645,
-      "probability": 0.4678,
-      "model_votes": {
-        "rf": 0.5291,
-        "xgb": 0.5701,
-        "lgb": 0.324,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:51:30.313924",
-      "predicted_direction": "DOWN",
-      "confidence": 0.0471,
-      "probability": 0.4764,
-      "model_votes": {
-        "rf": 0.5333,
-        "xgb": 0.5701,
-        "lgb": 0.3441,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:51:30.323913",
-      "predicted_direction": "DOWN",
-      "confidence": 0.0471,
-      "probability": 0.4764,
-      "model_votes": {
-        "rf": 0.5333,
-        "xgb": 0.5701,
-        "lgb": 0.3441,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:56:33.042105",
-      "predicted_direction": "UP",
-      "confidence": 0.0635,
-      "probability": 0.5317,
-      "model_votes": {
-        "rf": 0.5369,
-        "xgb": 0.6148,
-        "lgb": 0.455,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T17:56:33.054295",
-      "predicted_direction": "UP",
-      "confidence": 0.0635,
-      "probability": 0.5317,
-      "model_votes": {
-        "rf": 0.5369,
-        "xgb": 0.6148,
-        "lgb": 0.455,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T18:01:35.287170",
-      "predicted_direction": "DOWN",
-      "confidence": 0.0847,
-      "probability": 0.4576,
-      "model_votes": {
-        "rf": 0.4464,
-        "xgb": 0.3841,
-        "lgb": 0.5315,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T18:01:35.291263",
-      "predicted_direction": "DOWN",
-      "confidence": 0.0847,
-      "probability": 0.4576,
-      "model_votes": {
-        "rf": 0.4464,
-        "xgb": 0.3841,
-        "lgb": 0.5315,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T18:06:47.266654",
-      "predicted_direction": "UP",
-      "confidence": 0.6767,
-      "probability": 0.8383,
-      "model_votes": {
-        "rf": 0.6521,
-        "xgb": 0.907,
-        "lgb": 0.9454,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T18:06:47.270850",
-      "predicted_direction": "UP",
-      "confidence": 0.6767,
-      "probability": 0.8383,
-      "model_votes": {
-        "rf": 0.6521,
-        "xgb": 0.907,
-        "lgb": 0.9454,
+        "rf": 0.4842,
+        "xgb": 0.4067,
+        "lgb": 0.7679,
         "lstm": 0.5
       },
       "actual_direction": "DOWN",
       "correct": false
     },
     {
-      "timestamp": "2026-02-05T18:11:55.124682",
-      "predicted_direction": "DOWN",
-      "confidence": 0.3322,
-      "probability": 0.3339,
-      "model_votes": {
-        "rf": 0.478,
-        "xgb": 0.1964,
-        "lgb": 0.3245,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T18:11:55.128720",
-      "predicted_direction": "DOWN",
-      "confidence": 0.3322,
-      "probability": 0.3339,
-      "model_votes": {
-        "rf": 0.478,
-        "xgb": 0.1964,
-        "lgb": 0.3245,
-        "lstm": 0.5
-      },
-      "actual_direction": null,
-      "correct": null
-    },
-    {
-      "timestamp": "2026-02-05T18:15:23.307067",
+      "timestamp": "2026-02-06T16:45:07.543050",
       "predicted_direction": "UP",
-      "confidence": 0.6912,
-      "probability": 0.8456,
+      "confidence": 0.11,
+      "probability": 0.555,
       "model_votes": {
-        "rf": 0.634,
-        "xgb": 0.9245,
-        "lgb": 0.9666,
+        "rf": 0.48,
+        "xgb": 0.3812,
+        "lgb": 0.7749,
         "lstm": 0.5
       },
       "actual_direction": null,
       "correct": null
     },
     {
-      "timestamp": "2026-02-05T18:15:23.365107",
+      "timestamp": "2026-02-06T16:45:07.549755",
       "predicted_direction": "UP",
-      "confidence": 0.6912,
-      "probability": 0.8456,
+      "confidence": 0.11,
+      "probability": 0.555,
       "model_votes": {
-        "rf": 0.634,
-        "xgb": 0.9245,
-        "lgb": 0.9666,
+        "rf": 0.48,
+        "xgb": 0.3812,
+        "lgb": 0.7749,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T16:50:12.944465",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0867,
+      "probability": 0.4566,
+      "model_votes": {
+        "rf": 0.4464,
+        "xgb": 0.3841,
+        "lgb": 0.5315,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T16:50:12.952443",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0867,
+      "probability": 0.4566,
+      "model_votes": {
+        "rf": 0.4464,
+        "xgb": 0.3841,
+        "lgb": 0.5315,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T16:54:04.648220",
+      "predicted_direction": "UP",
+      "confidence": 0.1219,
+      "probability": 0.5609,
+      "model_votes": {
+        "rf": 0.4795,
+        "xgb": 0.4227,
+        "lgb": 0.7611,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T16:54:04.655918",
+      "predicted_direction": "UP",
+      "confidence": 0.1219,
+      "probability": 0.5609,
+      "model_votes": {
+        "rf": 0.4795,
+        "xgb": 0.4227,
+        "lgb": 0.7611,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T16:59:06.278602",
+      "predicted_direction": "UP",
+      "confidence": 0.1453,
+      "probability": 0.5727,
+      "model_votes": {
+        "rf": 0.4831,
+        "xgb": 0.4348,
+        "lgb": 0.78,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T16:59:06.285695",
+      "predicted_direction": "UP",
+      "confidence": 0.1453,
+      "probability": 0.5727,
+      "model_votes": {
+        "rf": 0.4831,
+        "xgb": 0.4348,
+        "lgb": 0.78,
+        "lstm": 0.5
+      },
+      "actual_direction": "DOWN",
+      "correct": false
+    },
+    {
+      "timestamp": "2026-02-06T17:04:15.510982",
+      "predicted_direction": "DOWN",
+      "confidence": 0.5531,
+      "probability": 0.2234,
+      "model_votes": {
+        "rf": 0.4304,
+        "xgb": 0.166,
+        "lgb": 0.0798,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T17:04:15.517930",
+      "predicted_direction": "DOWN",
+      "confidence": 0.5531,
+      "probability": 0.2234,
+      "model_votes": {
+        "rf": 0.4304,
+        "xgb": 0.166,
+        "lgb": 0.0798,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T17:09:33.558324",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0495,
+      "probability": 0.4753,
+      "model_votes": {
+        "rf": 0.4647,
+        "xgb": 0.3373,
+        "lgb": 0.6133,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T17:09:33.563345",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0495,
+      "probability": 0.4753,
+      "model_votes": {
+        "rf": 0.4647,
+        "xgb": 0.3373,
+        "lgb": 0.6133,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T17:14:57.762279",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0882,
+      "probability": 0.4559,
+      "model_votes": {
+        "rf": 0.4464,
+        "xgb": 0.3841,
+        "lgb": 0.5315,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T17:14:57.777038",
+      "predicted_direction": "DOWN",
+      "confidence": 0.0882,
+      "probability": 0.4559,
+      "model_votes": {
+        "rf": 0.4464,
+        "xgb": 0.3841,
+        "lgb": 0.5315,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T17:19:58.347734",
+      "predicted_direction": "DOWN",
+      "confidence": 0.4089,
+      "probability": 0.2955,
+      "model_votes": {
+        "rf": 0.4362,
+        "xgb": 0.3308,
+        "lgb": 0.1289,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T17:19:58.361798",
+      "predicted_direction": "DOWN",
+      "confidence": 0.4089,
+      "probability": 0.2955,
+      "model_votes": {
+        "rf": 0.4362,
+        "xgb": 0.3308,
+        "lgb": 0.1289,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T17:22:32.542726",
+      "predicted_direction": "UP",
+      "confidence": 0.1134,
+      "probability": 0.5567,
+      "model_votes": {
+        "rf": 0.4801,
+        "xgb": 0.4376,
+        "lgb": 0.7401,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T17:22:32.547541",
+      "predicted_direction": "UP",
+      "confidence": 0.1134,
+      "probability": 0.5567,
+      "model_votes": {
+        "rf": 0.4801,
+        "xgb": 0.4376,
+        "lgb": 0.7401,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T17:24:31.256597",
+      "predicted_direction": "UP",
+      "confidence": 0.1048,
+      "probability": 0.5524,
+      "model_votes": {
+        "rf": 0.4751,
+        "xgb": 0.4376,
+        "lgb": 0.7325,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T17:24:31.271436",
+      "predicted_direction": "UP",
+      "confidence": 0.1048,
+      "probability": 0.5524,
+      "model_votes": {
+        "rf": 0.4751,
+        "xgb": 0.4376,
+        "lgb": 0.7325,
+        "lstm": 0.5
+      },
+      "actual_direction": "UP",
+      "correct": true
+    },
+    {
+      "timestamp": "2026-02-06T17:29:33.212964",
+      "predicted_direction": "UP",
+      "confidence": 0.0689,
+      "probability": 0.5345,
+      "model_votes": {
+        "rf": 0.4805,
+        "xgb": 0.3995,
+        "lgb": 0.7071,
+        "lstm": 0.5
+      },
+      "actual_direction": null,
+      "correct": null
+    },
+    {
+      "timestamp": "2026-02-06T17:29:33.224430",
+      "predicted_direction": "UP",
+      "confidence": 0.0689,
+      "probability": 0.5345,
+      "model_votes": {
+        "rf": 0.4805,
+        "xgb": 0.3995,
+        "lgb": 0.7071,
         "lstm": 0.5
       },
       "actual_direction": null,
@@ -1404,21 +1404,21 @@
   "last_retrain_date": null,
   "model_accuracy": {
     "rf": {
-      "correct": 20,
-      "total": 29
+      "correct": 23,
+      "total": 34
     },
     "xgb": {
-      "correct": 19,
-      "total": 29
+      "correct": 22,
+      "total": 34
     },
     "lgb": {
-      "correct": 24,
-      "total": 29
+      "correct": 26,
+      "total": 34
     },
     "lstm": {
-      "correct": 10,
-      "total": 29
+      "correct": 13,
+      "total": 34
     }
   },
-  "updated_at": "2026-02-05T18:15:23.365990"
+  "updated_at": "2026-02-06T17:29:33.225084"
 }

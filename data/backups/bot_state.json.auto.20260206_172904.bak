@@ -4,11 +4,6 @@
   "positions": [],
   "logs": [
     {
-      "time": "17:29:04",
-      "message": "\ud83d\udd0d No trade: Decision: HOLD (not BUY), Score -0.02 < 0.08 (uptrend threshold)",
-      "level": "info"
-    },
-    {
       "time": "17:29:01",
       "message": "SELL #1: $33.52 | P/L: $+0.19 (+0.56%)",
       "level": "success"
@@ -150,6 +145,11 @@
     },
     {
       "time": "17:06:20",
+      "message": "BUY skipped: After loss - need score >= 0.32 (got 0.20)",
+      "level": "info"
+    },
+    {
+      "time": "17:05:18",
       "message": "BUY skipped: After loss - need score >= 0.32 (got 0.20)",
       "level": "info"
     }

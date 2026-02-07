@@ -735,6 +735,111 @@
         "confidence_tier": "high",
         "volatility_tier": "low"
       }
+    },
+    {
+      "trade_id": 1,
+      "timestamp": "2026-02-06T15:51:45.766623",
+      "position_size": 33.6,
+      "conditions": {
+        "regime": "trending_up",
+        "volatility": "normal",
+        "volatility_ratio": 0.99,
+        "confidence": 0.4,
+        "confluence": 3,
+        "streak_multiplier": 0.75,
+        "confidence_tier": "low",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 3,
+      "timestamp": "2026-02-06T16:09:28.443943",
+      "position_size": 33.6,
+      "conditions": {
+        "regime": "trending_up",
+        "volatility": "normal",
+        "volatility_ratio": 0.89,
+        "confidence": 0.47,
+        "confluence": 4,
+        "streak_multiplier": 0.75,
+        "confidence_tier": "low",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 5,
+      "timestamp": "2026-02-06T16:15:52.696115",
+      "position_size": 33.6,
+      "conditions": {
+        "regime": "trending_up",
+        "volatility": "normal",
+        "volatility_ratio": 0.9,
+        "confidence": 0.35,
+        "confluence": 5,
+        "streak_multiplier": 1.0,
+        "confidence_tier": "low",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 7,
+      "timestamp": "2026-02-06T16:41:28.580736",
+      "position_size": 33.6,
+      "conditions": {
+        "regime": "trending_up",
+        "volatility": "normal",
+        "volatility_ratio": 1.16,
+        "confidence": 0.37,
+        "confluence": 6,
+        "streak_multiplier": 0.75,
+        "confidence_tier": "low",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 9,
+      "timestamp": "2026-02-06T17:00:25.918701",
+      "position_size": 33.6,
+      "conditions": {
+        "regime": "trending_up",
+        "volatility": "normal",
+        "volatility_ratio": 0.77,
+        "confidence": 0.44,
+        "confluence": 6,
+        "streak_multiplier": 0.5,
+        "confidence_tier": "low",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 11,
+      "timestamp": "2026-02-06T17:23:07.776142",
+      "position_size": 33.6,
+      "conditions": {
+        "regime": "trending_up",
+        "volatility": "normal",
+        "volatility_ratio": 0.76,
+        "confidence": 0.46,
+        "confluence": 5,
+        "streak_multiplier": 0.4,
+        "confidence_tier": "low",
+        "volatility_tier": "low"
+      }
+    },
+    {
+      "trade_id": 13,
+      "timestamp": "2026-02-06T17:25:16.596060",
+      "position_size": 33.6,
+      "conditions": {
+        "regime": "trending_up",
+        "volatility": "normal",
+        "volatility_ratio": 0.76,
+        "confidence": 0.48,
+        "confluence": 5,
+        "streak_multiplier": 0.4,
+        "confidence_tier": "low",
+        "volatility_tier": "low"
+      }
     }
   ],
   "trade_outcomes": {
@@ -875,8 +980,38 @@
       "pnl_dollar": -0.39078000000000035,
       "exit_type": "max_delays_reached_loss",
       "timestamp": "2026-02-05T18:12:52.478551"
+    },
+    "3": {
+      "pnl_percent": 0.4292112465787613,
+      "pnl_dollar": 0.14407200000000348,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-06T16:15:21.489848"
+    },
+    "5": {
+      "pnl_percent": -0.4065082538177823,
+      "pnl_dollar": -0.13649700000000173,
+      "exit_type": "max_delays_reached_loss",
+      "timestamp": "2026-02-06T16:18:17.119686"
+    },
+    "7": {
+      "pnl_percent": -0.28531663187195494,
+      "pnl_dollar": -0.09552999999999982,
+      "exit_type": "max_delays_reached_loss",
+      "timestamp": "2026-02-06T16:47:15.911738"
+    },
+    "9": {
+      "pnl_percent": 0.0,
+      "pnl_dollar": 0.0,
+      "exit_type": "max_delays_reached_loss",
+      "timestamp": "2026-02-06T17:03:16.766016"
+    },
+    "13": {
+      "pnl_percent": 0.5568026421033718,
+      "pnl_dollar": 0.18558800000000328,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-06T17:29:01.709935"
     }
   },
   "ml_model_trained": false,
-  "last_updated": "2026-02-05T18:12:52.478843"
+  "last_updated": "2026-02-06T17:29:01.710745"
 }

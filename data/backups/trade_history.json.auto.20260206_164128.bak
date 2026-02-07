@@ -1,0 +1,109 @@
+[
+  {
+    "id": 5,
+    "time": "2026-02-06 16:18:17",
+    "type": "SELL",
+    "symbol": "ETHUSDT",
+    "base_asset": "ETH",
+    "price": 1933.03,
+    "quantity": 0.0173,
+    "amount": 33.441419,
+    "pnl": -0.13649700000000173,
+    "pnl_percent": -0.4065082538177823,
+    "exit_type": "max_delays_reached_loss",
+    "regime": "trending_up",
+    "position_num": 1
+  },
+  {
+    "id": 5,
+    "time": "2026-02-06 16:15:52",
+    "type": "BUY",
+    "symbol": "ETHUSDT",
+    "base_asset": "ETH",
+    "price": 1940.92,
+    "quantity": 0.0173,
+    "amount": 33.6,
+    "pnl": 0,
+    "pnl_percent": 0,
+    "regime": "trending_up",
+    "sizing_conditions": {
+      "regime": "trending_up",
+      "volatility": "normal",
+      "volatility_ratio": 0.9,
+      "confidence": 0.35,
+      "confluence": 5,
+      "streak_multiplier": 1.0
+    }
+  },
+  {
+    "id": 3,
+    "time": "2026-02-06 16:15:21",
+    "type": "SELL",
+    "symbol": "ETHUSDT",
+    "base_asset": "ETH",
+    "price": 1937.4,
+    "quantity": 0.0174,
+    "amount": 33.71076,
+    "pnl": 0.14407200000000348,
+    "pnl_percent": 0.4292112465787613,
+    "exit_type": "min_profit",
+    "regime": "trending_up",
+    "position_num": 1
+  },
+  {
+    "id": 3,
+    "time": "2026-02-06 16:09:28",
+    "type": "BUY",
+    "symbol": "ETHUSDT",
+    "base_asset": "ETH",
+    "price": 1929.12,
+    "quantity": 0.0174,
+    "amount": 33.6,
+    "pnl": 0,
+    "pnl_percent": 0,
+    "regime": "trending_up",
+    "sizing_conditions": {
+      "regime": "trending_up",
+      "volatility": "normal",
+      "volatility_ratio": 0.89,
+      "confidence": 0.47,
+      "confluence": 4,
+      "streak_multiplier": 0.75
+    }
+  },
+  {
+    "id": 2,
+    "time": "2026-02-06 16:08:26",
+    "type": "SELL",
+    "symbol": "ETHUSDT",
+    "base_asset": "ETH",
+    "price": 1928.97,
+    "quantity": 0.0175,
+    "amount": 33.756975,
+    "pnl": 0.1591,
+    "pnl_percent": 0.47,
+    "exit_type": "startup_cleanup",
+    "regime": "unknown"
+  },
+  {
+    "id": 1,
+    "time": "2026-02-06 15:51:45",
+    "type": "BUY",
+    "symbol": "ETHUSDT",
+    "base_asset": "ETH",
+    "price": 1919.88,
+    "quantity": 0.0175,
+    "amount": 33.6,
+    "pnl": 0,
+    "pnl_percent": 0,
+    "regime": "trending_up",
+    "sizing_conditions": {
+      "regime": "trending_up",
+      "volatility": "normal",
+      "volatility_ratio": 0.99,
+      "confidence": 0.4,
+      "confluence": 3,
+      "streak_multiplier": 0.75
+    }
+  }
+]

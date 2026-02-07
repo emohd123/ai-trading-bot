@@ -1,42 +1,6 @@
 {
   "insights": [
     {
-      "timestamp": "2026-02-02T01:38:24.449131",
-      "summary": {
-        "win_rate": 61.1,
-        "total_profit": 1.54,
-        "weaknesses_count": 3,
-        "strengths_count": 2
-      }
-    },
-    {
-      "timestamp": "2026-02-02T10:39:26.360307",
-      "summary": {
-        "win_rate": 63.6,
-        "total_profit": 2.22,
-        "weaknesses_count": 2,
-        "strengths_count": 2
-      }
-    },
-    {
-      "timestamp": "2026-02-03T21:12:30.090792",
-      "summary": {
-        "win_rate": 60.9,
-        "total_profit": 2.22,
-        "weaknesses_count": 2,
-        "strengths_count": 2
-      }
-    },
-    {
-      "timestamp": "2026-02-04T01:17:03.759410",
-      "summary": {
-        "win_rate": 56.0,
-        "total_profit": 2.22,
-        "weaknesses_count": 2,
-        "strengths_count": 1
-      }
-    },
-    {
       "timestamp": "2026-02-04T05:25:46.061002",
       "summary": {
         "win_rate": 56.0,
@@ -431,41 +395,77 @@
         "weaknesses_count": 2,
         "strengths_count": 2
       }
+    },
+    {
+      "timestamp": "2026-02-06T13:32:29.939468",
+      "summary": {
+        "win_rate": 53.3,
+        "total_profit": 7.36,
+        "weaknesses_count": 2,
+        "strengths_count": 2
+      }
+    },
+    {
+      "timestamp": "2026-02-06T16:08:54.878904",
+      "summary": {
+        "win_rate": 100.0,
+        "total_profit": 0.16,
+        "weaknesses_count": 0,
+        "strengths_count": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-06T16:39:53.600978",
+      "summary": {
+        "win_rate": 66.7,
+        "total_profit": 0.3,
+        "weaknesses_count": 0,
+        "strengths_count": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-06T16:54:15.029677",
+      "summary": {
+        "win_rate": 50.0,
+        "total_profit": 0.3,
+        "weaknesses_count": 0,
+        "strengths_count": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-06T17:22:57.640452",
+      "summary": {
+        "win_rate": 40.0,
+        "total_profit": 0.3,
+        "weaknesses_count": 1,
+        "strengths_count": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-06T17:25:03.578425",
+      "summary": {
+        "win_rate": 50.0,
+        "total_profit": 0.32,
+        "weaknesses_count": 0,
+        "strengths_count": 1
+      }
     }
   ],
   "patterns": {
     "consecutive_losses": {
       "pattern": "consecutive_losses",
-      "description": "Had 6 consecutive losses",
-      "severity": "high",
+      "description": "Had 3 consecutive losses",
+      "severity": "medium",
       "recommendation": "Consider reducing position size after 2 consecutive losses"
     }
   },
-  "weaknesses": [
-    {
-      "weakness": "poor_risk_reward",
-      "description": "Profit factor is 0.86 (should be > 1.5)",
-      "impact": "high",
-      "suggestion": "Adjust profit targets and stop losses"
-    },
-    {
-      "weakness": "large_losses",
-      "description": "Worst trade was -5.09%",
-      "impact": "medium",
-      "suggestion": "Consider tighter stop losses or position sizing"
-    }
-  ],
+  "weaknesses": [],
   "strengths": [
     {
       "strength": "regime_expertise",
-      "description": "Excellent in trending_up regime (100.0% win rate)",
-      "leverage": "Increase position size during trending_up regime"
-    },
-    {
-      "strength": "time_expertise",
-      "description": "Strong performance at hour 3 (100.0%)",
-      "leverage": "Focus trading around hour 3"
+      "description": "Excellent in unknown regime (100.0% win rate)",
+      "leverage": "Increase position size during unknown regime"
     }
   ],
-  "last_updated": "2026-02-05T18:15:33.998555"
+  "last_updated": "2026-02-06T17:25:03.588017"
 }

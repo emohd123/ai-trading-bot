@@ -1,18 +1,116 @@
 {
   "running": true,
-  "position": null,
-  "positions": [],
+  "position": {
+    "symbol": "ETHUSDT",
+    "base_asset": "ETH",
+    "entry_price": 1937.85,
+    "quantity": 0.0173,
+    "entry_time": "2026-02-06 17:25:16",
+    "time": "2026-02-06 17:25:16",
+    "amount_usdt": 33.6,
+    "regime": "trending_up",
+    "indicator_scores": {
+      "momentum": -0.69,
+      "macd": 0.3,
+      "bollinger": -0.457,
+      "ema": -0.4,
+      "support_resistance": 0.8,
+      "ml_prediction": 0.1048,
+      "ichimoku": -0.7,
+      "mfi": -0.174,
+      "williams_r": -0.3,
+      "cci": 0.375
+    },
+    "position_id": 1,
+    "trade_id": 13,
+    "entry_conditions": {
+      "rsi_state": "neutral",
+      "rsi_value": 58.88,
+      "volatility": "normal",
+      "trend": "sideways",
+      "sr_position": "at_support",
+      "bb_position": "middle",
+      "hour": 17,
+      "day_of_week": "Friday",
+      "regime": "trending_up",
+      "fear_greed": "extreme_fear",
+      "confluence_count": 5
+    },
+    "indicator_combo_key": "macd_bullish+sr_support+stoch_bearish",
+    "volatility": "normal",
+    "lowest_price": 1937.85,
+    "highest_price": 1937.85,
+    "trailing_stop": null,
+    "trailing_stop_enabled": true,
+    "breakeven_activated": false,
+    "stop_delay_count": 0,
+    "previous_rsi": 59.75,
+    "sizing_conditions": {
+      "regime": "trending_up",
+      "volatility": "normal",
+      "volatility_ratio": 0.76,
+      "confidence": 0.48,
+      "confluence": 5,
+      "streak_multiplier": 0.4
+    }
+  },
+  "positions": [
+    {
+      "symbol": "ETHUSDT",
+      "base_asset": "ETH",
+      "entry_price": 1937.85,
+      "quantity": 0.0173,
+      "entry_time": "2026-02-06 17:25:16",
+      "time": "2026-02-06 17:25:16",
+      "amount_usdt": 33.6,
+      "regime": "trending_up",
+      "indicator_scores": {
+        "momentum": -0.69,
+        "macd": 0.3,
+        "bollinger": -0.457,
+        "ema": -0.4,
+        "support_resistance": 0.8,
+        "ml_prediction": 0.1048,
+        "ichimoku": -0.7,
+        "mfi": -0.174,
+        "williams_r": -0.3,
+        "cci": 0.375
+      },
+      "position_id": 1,
+      "trade_id": 13,
+      "entry_conditions": {
+        "rsi_state": "neutral",
+        "rsi_value": 58.88,
+        "volatility": "normal",
+        "trend": "sideways",
+        "sr_position": "at_support",
+        "bb_position": "middle",
+        "hour": 17,
+        "day_of_week": "Friday",
+        "regime": "trending_up",
+        "fear_greed": "extreme_fear",
+        "confluence_count": 5
+      },
+      "indicator_combo_key": "macd_bullish+sr_support+stoch_bearish",
+      "volatility": "normal",
+      "lowest_price": 1937.85,
+      "highest_price": 1937.85,
+      "trailing_stop": null,
+      "trailing_stop_enabled": true,
+      "breakeven_activated": false,
+      "stop_delay_count": 0,
+      "previous_rsi": 59.75,
+      "sizing_conditions": {
+        "regime": "trending_up",
+        "volatility": "normal",
+        "volatility_ratio": 0.76,
+        "confidence": 0.48,
+        "confluence": 5,
+        "streak_multiplier": 0.4
+      }
+    }
+  ],
   "logs": [
-    {
-      "time": "17:29:04",
-      "message": "\ud83d\udd0d No trade: Decision: HOLD (not BUY), Score -0.02 < 0.08 (uptrend threshold)",
-      "level": "info"
-    },
-    {
-      "time": "17:29:01",
-      "message": "SELL #1: $33.52 | P/L: $+0.19 (+0.56%)",
-      "level": "success"
-    },
     {
       "time": "17:28:59",
       "message": "SELL #1 (min_profit) ETH at $1,948.00",
@@ -151,6 +249,16 @@
     {
       "time": "17:06:20",
       "message": "BUY skipped: After loss - need score >= 0.32 (got 0.20)",
+      "level": "info"
+    },
+    {
+      "time": "17:05:18",
+      "message": "BUY skipped: After loss - need score >= 0.32 (got 0.20)",
+      "level": "info"
+    },
+    {
+      "time": "17:04:52",
+      "message": "\ud83d\udd0d No trade: Decision: HOLD (not BUY)",
       "level": "info"
     }
   ],

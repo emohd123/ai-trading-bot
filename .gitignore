@@ -37,3 +37,7 @@ models/*.pkl
 # OS
 .DS_Store
 Thumbs.db
+
+# Windows reserved name - causes "short read while indexing" in Git
+nul
+NUL

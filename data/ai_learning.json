@@ -1,42 +1,6 @@
 {
   "trade_history": [
     {
-      "profit_percent": -5.087764087299985,
-      "is_win": false,
-      "exit_type": "hard_stop",
-      "timestamp": "2026-02-01T23:16:15.733200",
-      "regime": "trending_down"
-    },
-    {
-      "profit_percent": -0.8241058331378455,
-      "is_win": false,
-      "exit_type": "stop_loss",
-      "timestamp": "2026-02-02T00:08:46.544857",
-      "regime": "trending_down"
-    },
-    {
-      "profit_percent": 0.5769732891198165,
-      "is_win": true,
-      "exit_type": "min_profit",
-      "timestamp": "2026-02-02T00:29:08.033020",
-      "regime": "trending_down"
-    },
-    {
-      "profit_percent": 0.7171015956487886,
-      "is_win": true,
-      "exit_type": "min_profit",
-      "timestamp": "2026-02-02T01:38:27.288907",
-      "regime": "trending_down"
-    },
-    {
-      "profit_percent": -1.02213557388474,
-      "is_win": false,
-      "exit_type": "stop_loss",
-      "timestamp": "2026-02-02T02:06:12.853804",
-      "regime": "trending_down",
-      "loss_reason": "wrong_regime"
-    },
-    {
       "profit_percent": 0.7637295406941361,
       "is_win": true,
       "exit_type": "min_profit",
@@ -362,93 +326,131 @@
       "timestamp": "2026-02-05T18:12:52.419270",
       "regime": "ranging",
       "loss_reason": "unknown"
+    },
+    {
+      "profit_percent": 0.4292112465787613,
+      "is_win": true,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-06T16:15:21.422239",
+      "regime": "trending_up"
+    },
+    {
+      "profit_percent": -0.4065082538177823,
+      "is_win": false,
+      "exit_type": "max_delays_reached_loss",
+      "timestamp": "2026-02-06T16:18:17.063674",
+      "regime": "trending_up",
+      "loss_reason": "unknown"
+    },
+    {
+      "profit_percent": -0.28531663187195494,
+      "is_win": false,
+      "exit_type": "max_delays_reached_loss",
+      "timestamp": "2026-02-06T16:47:15.734999",
+      "regime": "trending_up",
+      "loss_reason": "unknown"
+    },
+    {
+      "profit_percent": 0.0,
+      "is_win": false,
+      "exit_type": "max_delays_reached_loss",
+      "timestamp": "2026-02-06T17:03:16.683814",
+      "regime": "trending_up",
+      "loss_reason": "unknown"
+    },
+    {
+      "profit_percent": 0.5568026421033718,
+      "is_win": true,
+      "exit_type": "min_profit",
+      "timestamp": "2026-02-06T17:29:01.542476",
+      "regime": "trending_up"
     }
   ],
   "indicator_accuracy": {
-    "momentum": 0.2673996872080757,
-    "bollinger": 0.6745481779327719,
-    "support_resistance": 0.48704150333995344,
-    "mfi": 0.5370943024900893,
-    "cci": 0.5690767243650893,
-    "ml_prediction": 0.5394275767170548,
-    "williams_r": 0.5236887030654505,
-    "macd": 0.32548234083957606,
-    "ichimoku": 0.32545452563491073,
-    "ema": 0.32545182206722817
+    "momentum": 0.4970489492105101,
+    "bollinger": 0.5936671945680309,
+    "support_resistance": 0.5853037942496179,
+    "mfi": 0.5610487456104412,
+    "cci": 0.7922711367389812,
+    "ml_prediction": 0.5616024425217229,
+    "williams_r": 0.5578675340282271,
+    "macd": 0.40634004767970405,
+    "ichimoku": 0.5108256345012532,
+    "ema": 0.1826999929319692
   },
   "directional_accuracy": {
     "momentum": {
       "bullish": 0.6157833540207927,
-      "bearish": 0.298828125,
+      "bearish": 0.5045070648193359,
       "bullish_samples": 32,
-      "bearish_samples": 4
+      "bearish_samples": 9
     },
     "bollinger": {
       "bullish": 0.6745454743650893,
-      "bearish": 0.5,
+      "bearish": 0.55224609375,
       "bullish_samples": 36,
-      "bearish_samples": 0
+      "bearish_samples": 5
     },
     "support_resistance": {
-      "bullish": 0.649393965820119,
-      "bearish": 0.375,
-      "bullish_samples": 35,
-      "bearish_samples": 1
+      "bullish": 0.5609410594977721,
+      "bearish": 0.53125,
+      "bullish_samples": 39,
+      "bearish_samples": 2
     },
     "mfi": {
-      "bullish": 0.6745454743650893,
-      "bearish": 0.5,
-      "bullish_samples": 36,
-      "bearish_samples": 0
+      "bullish": 0.5669318293303627,
+      "bearish": 0.5390625,
+      "bullish_samples": 38,
+      "bearish_samples": 3
     },
     "cci": {
-      "bullish": 0.649393965820119,
-      "bearish": 0.375,
-      "bullish_samples": 35,
-      "bearish_samples": 1
+      "bullish": 0.6645880793303627,
+      "bearish": 0.6484375,
+      "bullish_samples": 38,
+      "bearish_samples": 3
     },
     "ml_prediction": {
-      "bullish": 0.675,
-      "bearish": 0.472265625,
-      "bullish_samples": 24,
-      "bearish_samples": 12
+      "bullish": 0.534765625,
+      "bearish": 0.5156494140625001,
+      "bullish_samples": 27,
+      "bearish_samples": 14
     },
     "williams_r": {
       "bullish": 0.6745454743650893,
-      "bearish": 0.5,
+      "bearish": 0.55224609375,
       "bullish_samples": 36,
-      "bearish_samples": 0
+      "bearish_samples": 5
     },
     "macd": {
-      "bullish": 0.548828125,
+      "bullish": 0.45934104919433594,
       "bearish": 0.32545315226190286,
-      "bullish_samples": 4,
+      "bullish_samples": 9,
       "bearish_samples": 32
     },
     "ichimoku": {
       "bullish": 0.5,
-      "bearish": 0.32545452563491073,
+      "bearish": 0.5108256345012532,
       "bullish_samples": 0,
-      "bearish_samples": 36
+      "bearish_samples": 41
     },
     "ema": {
-      "bullish": 0.5,
-      "bearish": 0.32545452563491073,
-      "bullish_samples": 0,
-      "bearish_samples": 36
+      "bullish": 0.28125,
+      "bearish": 0.324801128002228,
+      "bullish_samples": 2,
+      "bearish_samples": 39
     }
   },
   "indicator_samples": {
-    "momentum": 36,
-    "bollinger": 36,
-    "support_resistance": 36,
-    "mfi": 36,
-    "cci": 36,
-    "ml_prediction": 36,
-    "williams_r": 36,
-    "macd": 36,
-    "ichimoku": 36,
-    "ema": 36
+    "momentum": 41,
+    "bollinger": 41,
+    "support_resistance": 41,
+    "mfi": 41,
+    "cci": 41,
+    "ml_prediction": 41,
+    "williams_r": 41,
+    "macd": 41,
+    "ichimoku": 41,
+    "ema": 41
   },
   "regime_indicator_accuracy": {
     "trending_down": {
@@ -476,16 +478,16 @@
       "cci": 0.3515625
     },
     "trending_up": {
-      "momentum": 0.28125,
-      "bollinger": 0.71875,
-      "support_resistance": 0.46875,
-      "mfi": 0.28125,
-      "cci": 0.71875,
-      "ml_prediction": 0.53125,
-      "williams_r": 0.28125,
-      "macd": 0.28125,
-      "ichimoku": 0.28125,
-      "ema": 0.28125
+      "momentum": 0.500335693359375,
+      "bollinger": 0.604156494140625,
+      "support_resistance": 0.580963134765625,
+      "mfi": 0.500335693359375,
+      "cci": 0.827789306640625,
+      "ml_prediction": 0.559661865234375,
+      "williams_r": 0.500335693359375,
+      "macd": 0.395843505859375,
+      "ichimoku": 0.500335693359375,
+      "ema": 0.172210693359375
     }
   },
   "regime_accuracy": {
@@ -498,37 +500,37 @@
       "losses": 2
     },
     "regime_trending_up": {
-      "wins": 2,
-      "losses": 0
+      "wins": 4,
+      "losses": 3
     }
   },
-  "win_streak": 0,
-  "loss_streak": 1,
-  "streak_multiplier": 0.75,
+  "win_streak": 1,
+  "loss_streak": 0,
+  "streak_multiplier": 1.0,
   "condition_performance": {
     "rsi_neutral": {
-      "wins": 18,
-      "losses": 11
+      "wins": 20,
+      "losses": 12
     },
     "vol_normal": {
-      "wins": 22,
-      "losses": 13
+      "wins": 24,
+      "losses": 16
     },
     "trend_sideways": {
-      "wins": 22,
-      "losses": 13
+      "wins": 24,
+      "losses": 16
     },
     "sr_middle": {
       "wins": 15,
-      "losses": 10
+      "losses": 11
     },
     "bb_middle": {
-      "wins": 16,
-      "losses": 10
+      "wins": 18,
+      "losses": 11
     },
     "fg_extreme_fear": {
-      "wins": 22,
-      "losses": 13
+      "wins": 24,
+      "losses": 16
     },
     "regime_trending_down": {
       "wins": 19,
@@ -559,8 +561,8 @@
       "losses": 2
     },
     "hour_17": {
-      "wins": 1,
-      "losses": 1
+      "wins": 2,
+      "losses": 2
     },
     "hour_18": {
       "wins": 4,
@@ -575,8 +577,8 @@
       "losses": 2
     },
     "sr_at_support": {
-      "wins": 7,
-      "losses": 3
+      "wins": 9,
+      "losses": 5
     },
     "bb_near_lower": {
       "wins": 6,
@@ -595,12 +597,24 @@
       "losses": 0
     },
     "regime_trending_up": {
-      "wins": 2,
-      "losses": 0
+      "wins": 4,
+      "losses": 3
     },
     "hour_15": {
       "wins": 2,
       "losses": 0
+    },
+    "hour_16": {
+      "wins": 1,
+      "losses": 2
+    },
+    "rsi_overbought": {
+      "wins": 0,
+      "losses": 2
+    },
+    "bb_near_upper": {
+      "wins": 0,
+      "losses": 2
     }
   },
   "stop_loss_learning": {
@@ -617,14 +631,14 @@
       "samples": 3
     },
     "trending_up_normal": {
-      "avg_optimal": 0.3295897747959376,
-      "samples": 2
+      "avg_optimal": 0.3315692185474987,
+      "samples": 7
     }
   },
   "loss_reasons": {
     "wrong_regime": 11,
     "normal_stop": 1,
-    "unknown": 1
+    "unknown": 4
   },
   "indicator_combos": {
     "no_signals": {
@@ -666,7 +680,27 @@
     "macd_bearish+sr_support+stoch_bullish": {
       "wins": 0,
       "losses": 1
+    },
+    "macd_bullish+sr_support+stoch_bullish": {
+      "wins": 1,
+      "losses": 0
+    },
+    "macd_bullish+sr_support": {
+      "wins": 0,
+      "losses": 1
+    },
+    "macd_bullish+rsi_bearish": {
+      "wins": 0,
+      "losses": 1
+    },
+    "bb_bearish+macd_bullish+rsi_bearish+sr_support": {
+      "wins": 0,
+      "losses": 1
+    },
+    "macd_bullish+sr_support+stoch_bearish": {
+      "wins": 1,
+      "losses": 0
     }
   },
-  "last_updated": "2026-02-05T18:12:52.419448"
+  "last_updated": "2026-02-06T17:29:01.542969"
 }
