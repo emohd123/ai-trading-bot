@@ -93,12 +93,12 @@ class MLEnsemble:
         self.scaler = None
         self.feature_names = None
 
-        # Ensemble weights (4 models: RF, XGB, LGB, LSTM)
+        # Ensemble weights (3 models: RF, XGB, LGB)
+        # LSTM disabled: 38% accuracy (worse than random, hurts ensemble)
         self.weights = {
-            'rf': 0.25,
-            'xgb': 0.25,
-            'lgb': 0.25,
-            'lstm': 0.25
+            'rf': 0.35,
+            'xgb': 0.35,
+            'lgb': 0.30,
         }
 
     def load_models(self) -> bool:
@@ -148,16 +148,9 @@ class MLEnsemble:
         except Exception:
             pass
 
-        # Load LSTM
-        if LSTM_AVAILABLE:
-            try:
-                import tensorflow as tf
-                lstm_path = os.path.join(self.model_dir, 'lstm_model.keras')
-                if os.path.exists(lstm_path):
-                    self.lstm_model = tf.keras.models.load_model(lstm_path)
-                    loaded = True
-            except Exception:
-                pass
+        # LSTM disabled: 38% accuracy hurts ensemble performance
+        # Keeping the attribute for compatibility but not loading
+        self.lstm_model = None
 
         return loaded
 
@@ -168,7 +161,7 @@ class MLEnsemble:
         Returns dict: {'rf': prob_up, 'xgb': prob_up, 'lgb': prob_up, 'lstm': prob_up}
         """
         if X.empty or len(X) == 0:
-            base = {'rf': 0.5, 'xgb': 0.5, 'lgb': 0.5, 'lstm': 0.5}
+            base = {'rf': 0.5, 'xgb': 0.5, 'lgb': 0.5}
             return {k: v for k, v in base.items() if k in self.weights}
 
         # Ensure correct column order
@@ -216,18 +209,10 @@ class MLEnsemble:
             except Exception:
                 predictions['lgb'] = 0.5
 
-        if self.lstm_model is not None and LSTM_AVAILABLE and X_seq is not None and len(X_seq) >= SEQ_LENGTH:
-            try:
-                X_last = X_seq[-SEQ_LENGTH:] if len(X_seq) > SEQ_LENGTH else X_seq
-                lstm_prob = predict_lstm(self.lstm_model, X_last, scaler=None, seq_length=SEQ_LENGTH)
-                predictions['lstm'] = float(lstm_prob)
-            except Exception:
-                predictions['lstm'] = 0.5
-        elif 'lstm' in self.weights:
-            predictions['lstm'] = 0.5
+        # LSTM disabled - not included in predictions
 
         if not predictions:
-            return {'rf': 0.5, 'xgb': 0.5, 'lgb': 0.5, 'lstm': 0.5}
+            return {'rf': 0.5, 'xgb': 0.5, 'lgb': 0.5}
 
         return predictions
 
@@ -241,13 +226,12 @@ class MLEnsemble:
         votes = self.predict_proba(X, X_seq=X_seq)
 
         use_weights = weights if weights is not None else dict(self.weights)
-        if X_seq is None and "lstm" in votes:
+        # Remove any LSTM weight if present (LSTM disabled)
+        if "lstm" in use_weights:
             use_weights = {k: v for k, v in use_weights.items() if k != "lstm"}
             total_w = sum(use_weights.values())
             if total_w > 0:
                 use_weights = {k: v / total_w for k, v in use_weights.items()}
-            else:
-                use_weights = {k: 1.0 / 3 for k in ["rf", "xgb", "lgb"] if k in votes}
 
         total_weight = 0
         weighted_sum = 0

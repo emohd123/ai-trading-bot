@@ -32,15 +32,20 @@ class ParameterOptimizer:
             "MIN_CONFIDENCE_BUY": {"min": 0.30, "max": 0.65, "step": 0.05},
             "TRAILING_ACTIVATION": {"min": 0.005, "max": 0.02, "step": 0.002},
         }
-        
+
         # Performance tracking
         self.param_history = {}  # {param_name: [{value, performance, timestamp}]}
         self.adjustment_log = []
-        
+
+        # Auto-rollback: track pre-adjustment state so we can revert if performance degrades
+        self.pre_adjustment_snapshot = {}  # {param: value before last adjustment}
+        self.post_adjustment_trades = []   # trades after last adjustment for rollback eval
+        self.rollback_eval_trades = 10     # evaluate rollback after this many trades
+
         # Optimization state
         self.last_optimization = None
         self.optimization_interval_hours = 6  # How often to optimize
-        
+
         # Load saved state
         self._load_state()
     
@@ -53,7 +58,9 @@ class ParameterOptimizer:
                 
                 self.param_history = state.get("param_history", {})
                 self.adjustment_log = state.get("adjustment_log", [])
-                
+                self.pre_adjustment_snapshot = state.get("pre_adjustment_snapshot", {})
+                self.post_adjustment_trades = state.get("post_adjustment_trades", [])
+
                 last_opt = state.get("last_optimization")
                 if last_opt:
                     self.last_optimization = datetime.fromisoformat(last_opt)
@@ -66,14 +73,16 @@ class ParameterOptimizer:
         try:
             state = {
                 "param_history": self.param_history,
-                "adjustment_log": self.adjustment_log[-100:],  # Keep last 100
+                "adjustment_log": self.adjustment_log[-100:],
                 "last_optimization": self.last_optimization.isoformat() if self.last_optimization else None,
+                "pre_adjustment_snapshot": getattr(self, 'pre_adjustment_snapshot', {}),
+                "post_adjustment_trades": getattr(self, 'post_adjustment_trades', []),
                 "timestamp": datetime.now().isoformat()
             }
-            
+
             with open(self.OPTIMIZER_STATE_FILE, 'w') as f:
                 json.dump(state, f, indent=2)
-                
+
         except Exception as e:
             print(f"[OPTIMIZER] Error saving state: {e}")
     
@@ -133,64 +142,92 @@ class ParameterOptimizer:
     
     def analyze_parameter(self, param_name: str) -> Dict:
         """
-        Analyze performance for a specific parameter
-        
-        Returns:
-            Analysis results including optimal value suggestion
+        Analyze performance for a specific parameter with statistical significance testing.
+
+        Requires minimum 15 total samples and 8 per group before making recommendations.
+        Uses a simple t-test approximation to check if differences are significant.
         """
         history = self.param_history.get(param_name, [])
-        
-        if len(history) < 5:
-            return {"status": "insufficient_data", "samples": len(history)}
-        
+
+        if len(history) < 15:
+            return {"status": "insufficient_data", "samples": len(history), "min_required": 15}
+
         # Group by value ranges
         param_config = self.tunable_params[param_name]
         step = param_config["step"]
-        
+
         value_groups = {}
         for record in history:
-            # Round to step
             value = record["value"]
             if param_config.get("is_int"):
                 rounded = int(value)
             else:
                 rounded = round(value / step) * step
-            
+
             if rounded not in value_groups:
-                value_groups[rounded] = {"wins": 0, "losses": 0, "total_pnl": 0}
-            
+                value_groups[rounded] = {"wins": 0, "losses": 0, "pnl_list": []}
+
             if record["is_win"]:
                 value_groups[rounded]["wins"] += 1
             else:
                 value_groups[rounded]["losses"] += 1
-            value_groups[rounded]["total_pnl"] += record["pnl_percent"]
-        
-        # Calculate win rate and avg PnL for each value
+            value_groups[rounded]["pnl_list"].append(record["pnl_percent"])
+
+        # Calculate win rate and avg PnL for each value - require minimum 8 samples per group
+        min_samples_per_group = 8
         value_scores = []
         for value, data in value_groups.items():
             total = data["wins"] + data["losses"]
-            if total >= 2:  # Need at least 2 samples
+            if total >= min_samples_per_group:
                 win_rate = data["wins"] / total * 100
-                avg_pnl = data["total_pnl"] / total
-                
+                pnl_list = data["pnl_list"]
+                avg_pnl = sum(pnl_list) / len(pnl_list) if pnl_list else 0
+                std_pnl = (sum((p - avg_pnl) ** 2 for p in pnl_list) / max(1, len(pnl_list) - 1)) ** 0.5 if len(pnl_list) > 1 else 0
+
                 # Score: weighted combination of win rate and PnL
                 score = (win_rate * 0.6) + (avg_pnl * 10 * 0.4)
-                
+
                 value_scores.append({
                     "value": value,
                     "win_rate": win_rate,
                     "avg_pnl": avg_pnl,
+                    "std_pnl": std_pnl,
                     "samples": total,
                     "score": score
                 })
-        
+
         if not value_scores:
-            return {"status": "insufficient_data", "samples": len(history)}
-        
+            return {"status": "insufficient_data", "samples": len(history), "reason": "no group has 8+ samples"}
+
         # Find best and current values
         current_value = getattr(config, param_name, None)
         best = max(value_scores, key=lambda x: x["score"])
-        
+
+        # Statistical significance test: compare best vs current
+        significant = False
+        if current_value is not None and len(value_scores) >= 2:
+            # Find current value group
+            current_rounded = int(current_value) if param_config.get("is_int") else round(current_value / step) * step
+            current_group = next((vs for vs in value_scores if vs["value"] == current_rounded), None)
+
+            if current_group and current_group != best:
+                # Two-sample t-test approximation
+                n1, n2 = best["samples"], current_group["samples"]
+                s1, s2 = best.get("std_pnl", 0), current_group.get("std_pnl", 0)
+                mean_diff = best["avg_pnl"] - current_group["avg_pnl"]
+
+                se = ((s1**2 / max(1, n1)) + (s2**2 / max(1, n2))) ** 0.5
+                t_stat = mean_diff / se if se > 0 else 0
+                # |t| > 2.0 ~ p < 0.05
+                significant = abs(t_stat) > 2.0
+
+        # Only recommend adjustment if statistically significant with enough samples
+        should_adjust = (
+            best["value"] != current_value and
+            best["samples"] >= min_samples_per_group and
+            significant
+        )
+
         return {
             "status": "ok",
             "param_name": param_name,
@@ -199,8 +236,9 @@ class ParameterOptimizer:
             "best_win_rate": best["win_rate"],
             "best_avg_pnl": best["avg_pnl"],
             "best_samples": best["samples"],
+            "statistically_significant": significant,
             "all_values": value_scores,
-            "should_adjust": best["value"] != current_value and best["samples"] >= 3
+            "should_adjust": should_adjust
         }
     
     def optimize_all(self) -> Dict:
@@ -254,42 +292,96 @@ class ParameterOptimizer:
     
     def apply_recommendations(self, recommendations: List[Dict]) -> List[Dict]:
         """
-        Apply recommended parameter adjustments
-        
-        Args:
-            recommendations: List of recommendations from optimize_all()
-            
-        Returns:
-            List of applied adjustments
+        Apply recommended parameter adjustments with auto-rollback support.
+        Saves a snapshot of current values so we can revert if performance degrades.
         """
         applied = []
-        
+
+        # Save snapshot for rollback
+        self.pre_adjustment_snapshot = {}
+        self.post_adjustment_trades = []
+
         for rec in recommendations:
             param_name = rec["param"]
             new_value = rec["recommended"]
             old_value = rec["current"]
-            
+
             try:
+                # Save old value for rollback
+                self.pre_adjustment_snapshot[param_name] = old_value
+
                 # Apply to config
                 setattr(config, param_name, new_value)
-                
+
                 adjustment = {
                     "param": param_name,
                     "old_value": old_value,
                     "new_value": new_value,
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
+                    "significant": rec.get("significant", False)
                 }
-                
+
                 applied.append(adjustment)
                 self.adjustment_log.append(adjustment)
-                
-                print(f"[OPTIMIZER] Adjusted {param_name}: {old_value} -> {new_value}")
-                
+
+                print(f"[OPTIMIZER] Adjusted {param_name}: {old_value} -> {new_value} (rollback saved)")
+
             except Exception as e:
                 print(f"[OPTIMIZER] Error adjusting {param_name}: {e}")
-        
+
         self._save_state()
         return applied
+
+    def record_post_adjustment_trade(self, is_win: bool, pnl_percent: float):
+        """Record a trade after parameter adjustment for rollback evaluation."""
+        self.post_adjustment_trades.append({
+            "is_win": is_win,
+            "pnl_percent": pnl_percent,
+            "timestamp": datetime.now().isoformat()
+        })
+
+        # Check if we have enough trades to evaluate
+        if len(self.post_adjustment_trades) >= self.rollback_eval_trades:
+            self._evaluate_rollback()
+
+        self._save_state()
+
+    def _evaluate_rollback(self):
+        """Evaluate if we should roll back parameter changes.
+        If win rate dropped below 40% or avg PnL is negative after adjustment, revert."""
+        if not self.post_adjustment_trades or not self.pre_adjustment_snapshot:
+            return
+
+        trades = self.post_adjustment_trades
+        win_rate = sum(1 for t in trades if t["is_win"]) / len(trades)
+        avg_pnl = sum(t["pnl_percent"] for t in trades) / len(trades)
+
+        if win_rate < 0.40 or avg_pnl < -0.002:
+            print(f"[OPTIMIZER] ROLLBACK: Post-adjustment performance poor (WR: {win_rate:.1%}, PnL: {avg_pnl:.3%})")
+            print(f"[OPTIMIZER] Reverting {len(self.pre_adjustment_snapshot)} parameters...")
+
+            for param_name, old_value in self.pre_adjustment_snapshot.items():
+                try:
+                    setattr(config, param_name, old_value)
+                    print(f"[OPTIMIZER] Reverted {param_name} -> {old_value}")
+                    self.adjustment_log.append({
+                        "param": param_name,
+                        "old_value": getattr(config, param_name, None),
+                        "new_value": old_value,
+                        "timestamp": datetime.now().isoformat(),
+                        "reason": "auto_rollback"
+                    })
+                except Exception as e:
+                    print(f"[OPTIMIZER] Rollback failed for {param_name}: {e}")
+
+            self.pre_adjustment_snapshot = {}
+            self.post_adjustment_trades = []
+        else:
+            print(f"[OPTIMIZER] Post-adjustment performance OK (WR: {win_rate:.1%}, PnL: {avg_pnl:.3%}) - keeping changes")
+            self.pre_adjustment_snapshot = {}
+            self.post_adjustment_trades = []
+
+        self._save_state()
     
     def auto_optimize(self) -> Dict:
         """
@@ -375,8 +467,12 @@ def get_optimizer() -> ParameterOptimizer:
 
 
 def record_trade(is_win: bool, pnl_percent: float, exit_type: str, regime: str = None):
-    """Convenience function to record trade for optimization"""
-    get_optimizer().record_trade_performance(is_win, pnl_percent, exit_type, regime)
+    """Convenience function to record trade for optimization and rollback evaluation"""
+    optimizer = get_optimizer()
+    optimizer.record_trade_performance(is_win, pnl_percent, exit_type, regime)
+    # Feed into rollback evaluation if we have a pending adjustment
+    if optimizer.pre_adjustment_snapshot:
+        optimizer.record_post_adjustment_trade(is_win, pnl_percent)
 
 
 def auto_tune() -> Dict:

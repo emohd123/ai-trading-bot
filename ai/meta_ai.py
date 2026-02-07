@@ -141,7 +141,7 @@ class MetaAI:
         try:
             self.analyzer = get_analyzer()
             self.optimizer = get_optimizer()
-            self.evolver = StrategyEvolver(population_size=8)
+            self.evolver = StrategyEvolver(population_size=30)
             self.backtester = Backtester()
             logger.info("META-AI: Subsystems initialized")
         except Exception as e:
@@ -417,20 +417,43 @@ class MetaAI:
         }
     
     def _do_ml_retrain(self) -> Dict:
-        """Request ML retrain (writes request file; worker or cron runs training)."""
+        """Actually retrain ML models with safe deployment (auto-rollback if worse).
+
+        Previously just wrote a request file. Now runs training directly with
+        safe_deploy=True so new models are only kept if validation accuracy improves.
+        """
         self.state = AIState.LEARNING
         reason = self.awareness.get("ml_retrain_reason", "meta_ai") or "meta_ai"
-        self.log_action("Requesting ML retrain", {"reason": reason})
+        self.log_action("Running ML retrain with safe deploy", {"reason": reason})
+
+        retrain_result = {}
         try:
-            from ai.ml_training import request_ml_retrain
-            request_ml_retrain(reason="meta_ai")
+            from ai.ml_training import train_models
+            # Run training with safe_deploy=True: backs up old models, only keeps new if better
+            retrain_result = train_models(safe_deploy=True)
+            logger.info("META-AI: ML retrain completed: %s", retrain_result)
+
+            # Reload models in predictor
+            try:
+                from ai.ml_predictor import MLPredictor
+                _ml = MLPredictor()
+                _ml.models_loaded = _ml.ensemble.load_models()
+                _ml.last_retrain_date = datetime.now().isoformat()
+                _ml._save_performance()
+                logger.info("META-AI: Reloaded ML models after retrain")
+            except Exception as e:
+                logger.warning("META-AI: Could not reload models: %s", e)
+
         except Exception as e:
-            logger.warning("META-AI: Could not request ML retrain: %s", e)
+            logger.warning("META-AI: ML retrain failed: %s", e)
+            retrain_result = {"error": str(e)}
+
         self.state = AIState.IDLE
         return {
             "action": "ml_retrain",
             "status": "complete",
-            "reason": reason
+            "reason": reason,
+            "result": retrain_result
         }
     
     def _do_optimization(self) -> Dict:
@@ -468,17 +491,23 @@ class MetaAI:
                 # Load previous state
                 self.evolver.load_state()
                 
-                # Run evolution (fewer generations for regular runs)
-                best = self.evolver.run_evolution(generations=2, days=7)
+                # Run evolution with OOS validation (10 gen, 14 days with 3-day holdout)
+                best = self.evolver.run_evolution(generations=10, days=14)
                 
                 if best:
                     result["best_score"] = best.fitness
                     result["best_params"] = best.to_params()
-                    
-                    # If significantly better, apply parameters
-                    if best.fitness > 50:  # Threshold for "good enough"
+                    oos_score = getattr(best, 'oos_score', 0)
+                    result["oos_score"] = oos_score
+
+                    # Only apply if both training and OOS scores are good
+                    if best.fitness > 50 and oos_score > 20:
                         self._apply_evolved_params(best.to_params())
                         result["applied"] = True
+                        logger.info("META-AI: Applied evolved params (train: %.1f, OOS: %.1f)", best.fitness, oos_score)
+                    else:
+                        result["applied"] = False
+                        logger.info("META-AI: Evolution result not strong enough (train: %.1f, OOS: %.1f) - not applying", best.fitness, oos_score)
                 
                 self.evolver.save_state()
                 

@@ -80,8 +80,8 @@ def clear_retrain_request() -> None:
         pass
 
 
-def fetch_historical_data(limit: int = 4320) -> pd.DataFrame:
-    """Fetch 6 months of hourly data from Binance."""
+def fetch_historical_data(limit: int = 8760) -> pd.DataFrame:
+    """Fetch 12 months of hourly data from Binance (increased from 6 months for better training)."""
     try:
         from binance.client import Client
         client = Client()
@@ -123,9 +123,16 @@ def fetch_historical_data(limit: int = 4320) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def create_target(df: pd.DataFrame, horizon: int = 4) -> np.ndarray:
-    """Target: Will price be higher in N hours? 1=UP, 0=DOWN"""
-    target = (df['close'].shift(-horizon) > df['close']).astype(int)
+def create_target(df: pd.DataFrame, horizon: int = 4, min_move_pct: float = 0.001) -> np.ndarray:
+    """Target: Will price move up enough to cover transaction costs?
+
+    A move must exceed min_move_pct (default 0.1% = typical round-trip fees) to count as UP.
+    Moves smaller than min_move_pct in either direction are labeled as DOWN (no-trade).
+    This prevents the model from learning that tiny 0.01% moves are profitable.
+    """
+    future_return = (df['close'].shift(-horizon) - df['close']) / df['close']
+    # Only label as UP if return exceeds transaction costs
+    target = (future_return > min_move_pct).astype(int)
     return target.values
 
 
@@ -216,8 +223,8 @@ def train_models(model_dir: str = None, horizon: str = DEFAULT_HORIZON, safe_dep
 
     h = HORIZONS.get(horizon, 4)
 
-    print("Fetching historical data (6 months)...")
-    df = fetch_historical_data(limit=4320)
+    print("Fetching historical data (12 months)...")
+    df = fetch_historical_data(limit=8760)
     if df.empty or len(df) < 500:
         print("Insufficient data for training")
         return {"error": "Insufficient data"}
@@ -229,13 +236,18 @@ def train_models(model_dir: str = None, horizon: str = DEFAULT_HORIZON, safe_dep
     features_list = []
     targets_list = []
 
+    # Transaction cost threshold: only count as UP if return > 0.1% (covers fees)
+    min_move_pct = 0.001
+
     max_horizon = max(HORIZONS.values())
     for i in range(100, len(df) - max_horizon):
         df_slice = df.iloc[:i + 1].copy()
         feat_df = engineer.create_features(df_slice)
         if not feat_df.empty:
             features_list.append(feat_df)
-            target = 1 if df['close'].iloc[i + h] > df['close'].iloc[i] else 0
+            # Cost-aware target: only UP if return exceeds transaction costs
+            future_return = (df['close'].iloc[i + h] - df['close'].iloc[i]) / df['close'].iloc[i]
+            target = 1 if future_return > min_move_pct else 0
             targets_list.append(target)
 
     if len(features_list) < 100:
@@ -248,19 +260,24 @@ def train_models(model_dir: str = None, horizon: str = DEFAULT_HORIZON, safe_dep
     X = X.fillna(0)
     X = X.replace([np.inf, -np.inf], 0)
 
-    # Feature selection - get n_selected_features from hyperparams or use default
-    hyperparams = get_ml_hyperparams()
-    n_selected_features = hyperparams.get("n_selected_features", N_SELECTED_FEATURES)
-    print(f"Selecting top {n_selected_features} features...")
-    X_selected, selected_features = select_features(X, y, n_features=n_selected_features)
-    X = X_selected
-
+    # SPLIT FIRST, then feature selection on training data only (prevents data leakage)
     n = len(X)
     train_end = int(n * 0.7)
     val_end = int(n * 0.85)
 
-    X_train, X_val, X_test = X.iloc[:train_end], X.iloc[train_end:val_end], X.iloc[val_end:]
+    X_train_raw, X_val_raw, X_test_raw = X.iloc[:train_end], X.iloc[train_end:val_end], X.iloc[val_end:]
     y_train, y_val, y_test = y[:train_end], y[train_end:val_end], y[val_end:]
+
+    # Feature selection on TRAINING data only (fixes data leakage)
+    hyperparams = get_ml_hyperparams()
+    n_selected_features = hyperparams.get("n_selected_features", N_SELECTED_FEATURES)
+    print(f"Selecting top {n_selected_features} features (from training data only)...")
+    X_train_selected, selected_features = select_features(X_train_raw, y_train, n_features=n_selected_features)
+
+    # Apply same feature selection to val and test sets
+    X_train = X_train_selected
+    X_val = X_val_raw[selected_features] if selected_features else X_val_raw
+    X_test = X_test_raw[selected_features] if selected_features else X_test_raw
 
     rf, xgb_model, lgb_model = None, None, None
 
@@ -322,30 +339,11 @@ def train_models(model_dir: str = None, horizon: str = DEFAULT_HORIZON, safe_dep
             joblib.dump(lgb_model, os.path.join(model_dir, 'lgb_model.pkl'))
             print(f"  LGB Accuracy: {metrics['accuracy']:.2%}")
 
-    # Train LSTM (optional)
-    try:
-        from ml_lstm import train_lstm, SEQ_LENGTH
-        print("Training LSTM...")
-        lstm_model = train_lstm(
-            X_train_scaled, y_train,
-            X_val_scaled, y_val,
-            seq_length=SEQ_LENGTH,
-            epochs=30,
-            batch_size=32
-        )
-        if lstm_model is not None:
-            from ml_lstm import create_sequences
-            X_test_seq, y_test_seq = create_sequences(X_test_scaled, y_test, SEQ_LENGTH)
-            if len(X_test_seq) > 0:
-                y_prob_lstm = lstm_model.predict(X_test_seq, verbose=0).flatten()
-                y_pred_lstm = (y_prob_lstm > 0.5).astype(int)
-                metrics = evaluate_model(y_test_seq, y_pred_lstm, y_prob_lstm)
-                results['lstm_accuracy'] = round(metrics['accuracy'], 4)
-                results['lstm_metrics'] = metrics
-                lstm_model.save(os.path.join(model_dir, 'lstm_model.keras'))
-                print(f"  LSTM Accuracy: {metrics['accuracy']:.2%}")
-    except Exception as e:
-        print(f"  LSTM skipped: {e}")
+    # LSTM disabled: consistently performs at 38% accuracy (worse than random)
+    # Tree-based models (RF, XGB, LGB) are sufficient for the ensemble
+    print("  LSTM: Disabled (38% accuracy - worse than random, hurts ensemble)")
+    results['lstm_accuracy'] = None
+    results['lstm_status'] = 'disabled'
 
     val_accuracy = 0.5
     try:

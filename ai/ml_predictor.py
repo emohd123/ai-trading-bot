@@ -184,10 +184,11 @@ class MLPredictor:
     def get_ensemble_weights(self, regime: Optional[str] = None) -> Dict[str, float]:
         """
         Get dynamic ensemble weights from per-model accuracy (from prediction outcomes).
-        When a model has too few evaluations, use prior 0.25 each so we don't overfit to tiny samples.
+        When a model has too few evaluations, use equal weights so we don't overfit to tiny samples.
+        LSTM disabled: only uses RF, XGB, LGB.
         """
         acc = getattr(self, "_model_accuracy", {})
-        default_models = ["rf", "xgb", "lgb", "lstm"]
+        default_models = ["rf", "xgb", "lgb"]
         min_eval = 10
         prior = 1.0 / len(default_models)
         weights = {}
@@ -443,21 +444,8 @@ class MLPredictor:
                     'error': 'Feature creation failed'
                 }
 
-            # Create sequence for LSTM only when enabled (LSTM is slow; config.ML_USE_LSTM = False for fast path)
+            # LSTM disabled: 38% accuracy hurts ensemble. Only using RF/XGB/LGB.
             X_seq = None
-            if getattr(config, "ML_USE_LSTM", False) and self.ensemble.lstm_model is not None and len(df) >= 100 + SEQ_LENGTH:
-                feat_seq = self.feature_engineer.create_features_sequence(df, n_rows=SEQ_LENGTH)
-                if not feat_seq.empty and len(feat_seq) >= SEQ_LENGTH:
-                    feat_seq = feat_seq.fillna(0).replace([np.inf, -np.inf], 0)
-                    if self.ensemble.feature_names:
-                        missing = set(self.ensemble.feature_names) - set(feat_seq.columns)
-                        for m in missing:
-                            feat_seq[m] = 0
-                        feat_seq = feat_seq[[c for c in self.ensemble.feature_names if c in feat_seq.columns]]
-                    if self.ensemble.scaler is not None:
-                        X_seq = self.ensemble.scaler.transform(feat_seq)
-                    else:
-                        X_seq = feat_seq.values
 
             # Get ensemble prediction (with dynamic weights from recent accuracy)
             dynamic_weights = self.get_ensemble_weights()

@@ -152,39 +152,38 @@ class PositionSizeLearner:
         self._save_state()
     
     def _get_confidence_tier(self, confidence: float) -> str:
-        """Convert confidence value to tier"""
-        if confidence >= 0.7:
+        """Convert confidence value to tier (simplified: 2 tiers instead of 3)"""
+        if confidence >= 0.5:
             return "high"
-        elif confidence >= 0.5:
-            return "medium"
         else:
             return "low"
-    
+
     def _get_volatility_tier(self, vol_ratio: float) -> str:
-        """Convert volatility ratio to tier"""
-        if vol_ratio >= 2.0:
-            return "extreme"
-        elif vol_ratio >= 1.5:
+        """Convert volatility ratio to tier (simplified: 2 tiers instead of 4)"""
+        if vol_ratio >= 1.5:
             return "high"
-        elif vol_ratio >= 1.2:
-            return "medium"
         else:
-            return "low"
-    
+            return "normal"
+
     def _get_condition_key(self, conditions: Dict) -> str:
-        """Generate key for grouping trades by conditions"""
+        """Generate key for grouping trades by conditions.
+
+        Simplified from 48 groups (4 regimes x 4 vol x 3 conf) to 16 groups
+        (4 regimes x 2 vol x 2 conf) to prevent data fragmentation.
+        """
         regime = conditions.get("regime", "unknown")
-        vol_tier = conditions.get("volatility_tier", "medium")
-        conf_tier = conditions.get("confidence_tier", "medium")
+        vol_tier = conditions.get("volatility_tier", "normal")
+        conf_tier = conditions.get("confidence_tier", "low")
         return f"{regime}_{vol_tier}_{conf_tier}"
     
     def learn_optimal_sizes(self) -> None:
         """
         Analyze historical trades to find optimal position sizes per condition.
         Groups trades by condition combinations and finds size that maximizes profit.
+        Requires minimum 15 total trades and 8 per condition group.
         """
-        if len(self.trade_entries) < 5:
-            return  # Need at least 5 trades to learn
+        if len(self.trade_entries) < 15:
+            return  # Need at least 15 trades to learn (increased from 5)
         
         # Build dataset: entry conditions + size used + outcome
         complete_trades = []
@@ -197,8 +196,8 @@ class PositionSizeLearner:
                     "outcome": outcome
                 })
         
-        if len(complete_trades) < 5:
-            return  # Need completed trades
+        if len(complete_trades) < 15:
+            return  # Need at least 15 completed trades
         
         # Group by condition key
         groups = defaultdict(list)
@@ -208,8 +207,8 @@ class PositionSizeLearner:
         
         # Analyze each group to find optimal size
         base_size = config.TRADE_AMOUNT_USDT
-        min_samples = getattr(config, 'POSITION_SIZE_MIN_SAMPLES', 5)
-        
+        min_samples = max(8, getattr(config, 'POSITION_SIZE_MIN_SAMPLES', 8))
+
         for condition_key, trades in groups.items():
             if len(trades) < min_samples:
                 continue
@@ -271,8 +270,8 @@ class PositionSizeLearner:
         
         logger.info(f"Learned optimal sizes for {len(self.optimal_sizes)} condition groups")
         
-        # Auto-train ML model if enough data (every 20 trades)
-        if len(complete_trades) >= 20 and not self.ml_model_trained:
+        # Auto-train ML model if enough data (need 50+ trades for meaningful regression)
+        if len(complete_trades) >= 50 and not self.ml_model_trained:
             try:
                 self.train_ml_model()
             except Exception as e:
@@ -334,8 +333,8 @@ class PositionSizeLearner:
                     "outcome": outcome
                 })
         
-        if len(complete_trades) < 20:
-            return False  # Need more data for ML
+        if len(complete_trades) < 50:
+            return False  # Need 50+ trades for ML regression (was 20 - too few)
         
         try:
             # Prepare features
@@ -373,7 +372,7 @@ class PositionSizeLearner:
                 X.append(features)
                 y.append(target_mult)
             
-            if len(X) < 20:
+            if len(X) < 50:
                 return False
             
             # Train XGBoost regression

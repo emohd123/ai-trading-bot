@@ -111,19 +111,20 @@ LOSS_AVOIDANCE_TIMEOUT_MINUTES = 60  # Reset loss avoidance after 60 min if no t
 # When buying in downtrend is allowed (or for positions carried into downtrend): use smaller size
 POSITION_SIZE_DOWNTREND_MULT = 0.6   # 60% of normal size in downtrend (0.7 = 70%, 1.0 = no reduction)
 
-# Indicator weights for AI scoring (must sum to 1.0) - 10 indicators with ML prediction
-# UPDATED based on 51 trades learned accuracy! Best: Momentum/Bollinger/SR/MFI/CCI (77%), Worst: MACD/Ichimoku/EMA (23%)
+# Indicator weights for AI scoring (must sum to 1.0) - 10 indicators
+# ML prediction reduced to 0.02 until model accuracy improves beyond 55%
+# LSTM disabled. Best performers get most weight.
 INDICATOR_WEIGHTS = {
-    "momentum": 0.25,           # BEST: 76.9% accuracy - INCREASED
-    "bollinger": 0.18,          # GOOD: 76.8% accuracy - INCREASED
-    "support_resistance": 0.15, # GOOD: 76.8% accuracy - INCREASED
-    "mfi": 0.12,                # GOOD: 76.8% accuracy - INCREASED
-    "cci": 0.10,                # GOOD: 76.8% accuracy - INCREASED
-    "ml_prediction": 0.05,      # AVG: 47.6% accuracy - DECREASED
-    "williams_r": 0.05,         # AVG: 48.2% accuracy - DECREASED
-    "macd": 0.04,               # WORST: 23.2% accuracy - DECREASED
-    "ichimoku": 0.03,           # WORST: 23.2% accuracy - DECREASED
-    "ema": 0.03,                # WORST: 23.2% accuracy - DECREASED
+    "momentum": 0.25,           # BEST: 76.9% accuracy
+    "bollinger": 0.20,          # GOOD: 76.8% accuracy
+    "support_resistance": 0.17, # GOOD: 76.8% accuracy
+    "mfi": 0.12,                # GOOD: 76.8% accuracy
+    "cci": 0.10,                # GOOD: 76.8% accuracy
+    "williams_r": 0.05,         # AVG: 48.2% accuracy
+    "ml_prediction": 0.02,      # REDUCED: ~50% accuracy (near random) - reduced until retrained
+    "macd": 0.04,               # WEAK: 23.2% accuracy
+    "ichimoku": 0.03,           # WEAK: 23.2% accuracy
+    "ema": 0.02,                # WEAK: 23.2% accuracy
 }
 
 # Entry rules (stricter to reduce weak entries and losses)

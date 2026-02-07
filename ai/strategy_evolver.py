@@ -161,20 +161,23 @@ class StrategyEvolver:
     Genetic algorithm for evolving trading strategies
     """
     
-    def __init__(self, population_size: int = 10):
+    def __init__(self, population_size: int = 30):
         self.population_size = population_size
         self.population: List[Strategy] = []
         self.best_strategy: Optional[Strategy] = None
         self.generation = 0
         self.backtester = Backtester()
-        
+
         # Evolution parameters
         self.mutation_rate = 0.15
-        self.elite_count = 2  # Best strategies to keep unchanged
-        self.tournament_size = 3
-        
+        self.elite_count = 4  # Best strategies to keep unchanged
+        self.tournament_size = 5
+
         # History
         self.evolution_history = []
+
+        # Out-of-sample validation
+        self.oos_validation_days = 3  # Last 3 days reserved for validation
         
     def initialize_population(self):
         """Create initial random population"""
@@ -224,27 +227,45 @@ class StrategyEvolver:
         strategy.id = "current_config"
         return strategy
     
-    def evaluate_population(self, days: int = 7):
-        """Evaluate all strategies in population via backtesting"""
-        print(f"[EVOLVER] Evaluating {len(self.population)} strategies...")
-        
+    def evaluate_population(self, days: int = 14):
+        """Evaluate all strategies via backtesting with out-of-sample validation.
+
+        Training backtest uses `days - oos_validation_days` days.
+        Best strategy is validated on the held-out `oos_validation_days` period.
+        """
+        train_days = max(7, days - self.oos_validation_days)
+        print(f"[EVOLVER] Evaluating {len(self.population)} strategies (train={train_days}d, OOS={self.oos_validation_days}d)...")
+
         for i, strategy in enumerate(self.population):
             if strategy.backtest_result is None:
                 print(f"  Testing strategy {i+1}/{len(self.population)} ({strategy.id})...")
                 params = strategy.to_params()
-                result = self.backtester.run_backtest(strategy_params=params, days=days)
+                result = self.backtester.run_backtest(strategy_params=params, days=train_days)
                 strategy.backtest_result = result
                 strategy.fitness = result.score()
-                
+
                 # Save to history
                 save_backtest_result(params, result)
-        
+
         # Sort by fitness
         self.population.sort(key=lambda s: s.fitness, reverse=True)
-        
-        # Update best
-        if self.population and (self.best_strategy is None or 
-                                self.population[0].fitness > self.best_strategy.fitness):
+
+        # Out-of-sample validation for the best strategy
+        if self.population and self.population[0].fitness > 0:
+            best_candidate = self.population[0]
+            params = best_candidate.to_params()
+            oos_result = self.backtester.run_backtest(strategy_params=params, days=self.oos_validation_days)
+            oos_score = oos_result.score()
+
+            # Only accept if OOS score is positive (strategy generalizes)
+            if oos_score > 0:
+                if self.best_strategy is None or best_candidate.fitness > self.best_strategy.fitness:
+                    self.best_strategy = best_candidate.copy()
+                    self.best_strategy.oos_score = oos_score
+                    print(f"[EVOLVER] New best! Train: {best_candidate.fitness:.1f}, OOS: {oos_score:.1f}")
+            else:
+                print(f"[EVOLVER] Best candidate failed OOS validation (train: {best_candidate.fitness:.1f}, OOS: {oos_score:.1f}) - rejected")
+        elif self.population and (self.best_strategy is None or self.population[0].fitness > self.best_strategy.fitness):
             self.best_strategy = self.population[0].copy()
             print(f"[EVOLVER] New best strategy! Score: {self.best_strategy.fitness:.1f}")
     
@@ -287,7 +308,7 @@ class StrategyEvolver:
             "timestamp": datetime.now().isoformat()
         })
     
-    def run_evolution(self, generations: int = 5, days: int = 7) -> Strategy:
+    def run_evolution(self, generations: int = 10, days: int = 14) -> Strategy:
         """
         Run complete evolution cycle
         
@@ -314,10 +335,22 @@ class StrategyEvolver:
             self.evolve_generation()
             self.evaluate_population(days=days)
             
-            # Adaptive mutation rate
+            # Adaptive mutation rate with stagnation detection
             if gen > 0 and self.evolution_history[-1]["avg_fitness"] == self.evolution_history[-2].get("avg_fitness", 0):
                 # No improvement - increase mutation
-                self.mutation_rate = min(0.3, self.mutation_rate * 1.2)
+                self.mutation_rate = min(0.4, self.mutation_rate * 1.3)
+                # If stagnated for 3+ generations, inject new random strategies
+                stagnation_count = 0
+                for j in range(len(self.evolution_history) - 1, max(0, len(self.evolution_history) - 4), -1):
+                    if self.evolution_history[j].get("avg_fitness", -1) == self.evolution_history[j-1].get("avg_fitness", -2) if j > 0 else False:
+                        stagnation_count += 1
+                if stagnation_count >= 3:
+                    # Replace bottom half of population with fresh random strategies
+                    mid = len(self.population) // 2
+                    for k in range(mid, len(self.population)):
+                        self.population[k] = Strategy()
+                        self.population[k].backtest_result = None
+                    print(f"  [EVOLVER] Population stagnated - injected {len(self.population) - mid} new random strategies")
             else:
                 # Improvement - decrease mutation
                 self.mutation_rate = max(0.05, self.mutation_rate * 0.9)
@@ -417,9 +450,9 @@ class StrategyEvolver:
 
 
 # Quick evolution function
-def quick_evolve(generations: int = 3, days: int = 7) -> Dict:
-    """Run a quick evolution and return best parameters"""
-    evolver = StrategyEvolver(population_size=8)
+def quick_evolve(generations: int = 10, days: int = 14) -> Dict:
+    """Run evolution with out-of-sample validation and return best parameters"""
+    evolver = StrategyEvolver(population_size=30)
     best = evolver.run_evolution(generations=generations, days=days)
     evolver.save_state()
     return best.to_params() if best else None
