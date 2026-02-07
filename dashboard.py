@@ -592,6 +592,29 @@ def update_dashboard():
         add_log(f"Dashboard update error: {e}", "error")
 
 
+def _get_risk_block_reason():
+    """Get specific reason why trading is blocked by risk rules"""
+    reasons = []
+    risk_status = bot_state.get("risk_status", {})
+    
+    max_consecutive = getattr(config, 'MAX_CONSECUTIVE_LOSSES', 5)
+    if consecutive_losses >= max_consecutive:
+        reasons.append(f"consecutive_losses ({consecutive_losses}/{max_consecutive})")
+    
+    max_daily_loss = risk_status.get("max_daily_loss", 0)
+    if max_daily_loss > 0 and daily_losses >= max_daily_loss:
+        reasons.append(f"daily_loss_limit (${daily_losses:.2f}/${max_daily_loss:.2f})")
+    
+    max_trades = getattr(config, 'MAX_DAILY_TRADES', 20)
+    if daily_trades >= max_trades:
+        reasons.append(f"daily_trade_limit ({daily_trades}/{max_trades})")
+    
+    if not reasons:
+        reasons.append("unknown risk rule")
+    
+    return ", ".join(reasons)
+
+
 # === REAL-TIME PRICE TICKER ===
 _price_ticker_running = False
 _price_ticker_thread = None
@@ -2480,8 +2503,10 @@ def bot_loop():
             max_daily_trades = getattr(config, 'MAX_DAILY_TRADES', 20)
             daily_loss_pct = (daily_losses / total_value * 100) if total_value > 0 else 0
             
+            # MAX_CONSECUTIVE_LOSSES: configurable limit (default 5, was hardcoded 3)
+            max_consecutive_losses = getattr(config, 'MAX_CONSECUTIVE_LOSSES', 5)
             can_trade = (
-                consecutive_losses < 3 and 
+                consecutive_losses < max_consecutive_losses and 
                 daily_losses < max_daily_loss and
                 daily_trades < max_daily_trades
             )
@@ -2494,6 +2519,7 @@ def bot_loop():
                 "daily_trades": daily_trades,
                 "max_daily_trades": max_daily_trades,
                 "consecutive_losses": consecutive_losses,
+                "max_consecutive_losses": max_consecutive_losses,
                 "position_size_mult": bot_state["risk_status"].get("position_size_mult", 1.0)
             }
 
@@ -2664,7 +2690,9 @@ def bot_loop():
                             update_dashboard()
                             execute_buy(current_price, regime_data, details=details)
                         else:
-                            add_log("Trade blocked by risk rules", "warning")
+                            # Detailed risk block reason
+                            risk_reason = _get_risk_block_reason()
+                            add_log(f"Trade blocked: {risk_reason}", "warning")
                     elif no_buy_downtrend:
                         # Show detailed selection status if available
                         selection_info = bot_state.get("selection_status", "")
@@ -2678,7 +2706,8 @@ def bot_loop():
                         update_dashboard()
                         execute_buy(current_price, regime_data, details=details)
                     else:
-                        add_log("Trade blocked by risk rules", "warning")
+                        risk_reason = _get_risk_block_reason()
+                        add_log(f"Trade blocked: {risk_reason}", "warning")
                 elif not loss_avoid_block and bot_state["risk_status"]["can_trade"]:
                     bot_state["activity_status"] = f"Executing BUY #{current_positions+1}/{max_positions}..."
                     update_dashboard()
@@ -2687,7 +2716,8 @@ def bot_loop():
                     if loss_avoid_block:
                         pass  # Already logged above
                     else:
-                        add_log("Trade blocked by risk rules", "warning")
+                        risk_reason = _get_risk_block_reason()
+                        add_log(f"Trade blocked: {risk_reason}", "warning")
             elif decision == Decision.BUY and not can_open_new:
                 # At max positions - wait for one to close
                 bot_state["activity_status"] = f"Max positions ({current_positions}/{max_positions}) - waiting for exit"
@@ -3841,6 +3871,51 @@ def get_risk():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/risk/reset', methods=['POST'])
+def reset_risk_counters():
+    """Reset risk counters (consecutive losses, daily losses, etc.) - use after bot gets stuck"""
+    global consecutive_losses, daily_losses, daily_trades
+    try:
+        # Reset in-memory counters
+        old_consecutive = consecutive_losses
+        old_daily_losses = daily_losses
+        old_daily_trades = daily_trades
+        
+        consecutive_losses = 0
+        daily_losses = 0
+        daily_trades = 0
+        
+        # Also reset the RiskManager state
+        risk_mgr = get_risk_manager()
+        risk_mgr.reset_daily_stats()
+        
+        # Update bot_state
+        bot_state["risk_status"]["can_trade"] = True
+        bot_state["risk_status"]["consecutive_losses"] = 0
+        bot_state["risk_status"]["daily_losses"] = 0
+        bot_state["risk_status"]["daily_trades"] = 0
+        
+        add_log("Risk counters RESET via API", "success")
+        
+        return jsonify({
+            'status': 'ok',
+            'message': 'Risk counters reset successfully',
+            'previous': {
+                'consecutive_losses': old_consecutive,
+                'daily_losses': old_daily_losses,
+                'daily_trades': old_daily_trades
+            },
+            'current': {
+                'consecutive_losses': 0,
+                'daily_losses': 0,
+                'daily_trades': 0,
+                'can_trade': True
+            }
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/state')
 def get_state():
     """Get current bot state"""
@@ -4719,6 +4794,360 @@ def send_telegram_summary():
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
+
+
+# =============================================================================
+# AI CHAT ASSISTANT API
+# =============================================================================
+
+@app.route('/api/chat', methods=['POST'])
+def chat_with_assistant():
+    """
+    Chat with AI assistant.
+    
+    POST /api/chat
+    Body: {"message": "your message here"}
+    
+    Returns: {"response": "AI response", "command": null or {action, params}}
+    """
+    try:
+        from ai.chat_assistant import get_chat_assistant
+        
+        data = request.get_json() or {}
+        message = data.get('message', '').strip()
+        
+        if not message:
+            return jsonify({'status': 'error', 'message': 'No message provided'}), 400
+        
+        assistant = get_chat_assistant()
+        response, command = assistant.chat(message, bot_state)
+        
+        result = {
+            'status': 'ok',
+            'response': response,
+            'command': command,
+            'ai_available': assistant.is_available,
+            'provider': assistant.provider
+        }
+        
+        # If there's a command, execute it
+        if command:
+            cmd_result = assistant.execute_command(command, bot_state)
+            result['command_result'] = cmd_result
+            
+            # Handle pending commands that need dashboard to execute
+            if cmd_result.get('status') == 'pending':
+                action = cmd_result.get('action')
+                if action == 'start_bot':
+                    start_bot()
+                    result['command_result'] = {'status': 'ok', 'message': 'Bot started'}
+                elif action == 'stop_bot':
+                    stop_bot_route()
+                    result['command_result'] = {'status': 'ok', 'message': 'Bot stopped'}
+                elif action == 'pause_bot':
+                    pause_bot()
+                    result['command_result'] = {'status': 'ok', 'message': 'Bot paused'}
+                elif action == 'resume_bot':
+                    resume_bot()
+                    result['command_result'] = {'status': 'ok', 'message': 'Bot resumed'}
+        
+        # Handle fallback commands (basic mode)
+        if response.startswith("COMMAND:"):
+            cmd = response.split("COMMAND:")[1].strip()
+            if cmd == "reset_risk":
+                reset_risk_counters()
+                result['response'] = "Risk counters have been reset."
+                result['command_result'] = {'status': 'ok'}
+            elif cmd == "start_bot":
+                start_bot()
+                result['response'] = "Bot has been started."
+                result['command_result'] = {'status': 'ok'}
+            elif cmd == "stop_bot":
+                stop_bot_route()
+                result['response'] = "Bot has been stopped."
+                result['command_result'] = {'status': 'ok'}
+            elif cmd == "pause_bot":
+                pause_bot()
+                result['response'] = "Bot has been paused."
+                result['command_result'] = {'status': 'ok'}
+            elif cmd == "resume_bot":
+                resume_bot()
+                result['response'] = "Bot has been resumed."
+                result['command_result'] = {'status': 'ok'}
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        import traceback
+        logger.error(f"Chat error: {traceback.format_exc()}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/chat/status', methods=['GET'])
+def chat_status():
+    """Check if AI chat is available and configured"""
+    try:
+        from ai.chat_assistant import get_chat_assistant
+        assistant = get_chat_assistant()
+        
+        return jsonify({
+            'status': 'ok',
+            'available': assistant.is_available,
+            'provider': assistant.provider,
+            'message': 'AI chat is ready' if assistant.is_available else 'Set ANTHROPIC_API_KEY or OPENAI_API_KEY in .env'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'available': False,
+            'message': str(e)
+        })
+
+
+@app.route('/api/chat/clear', methods=['POST'])
+def chat_clear_history():
+    """Clear chat conversation history"""
+    try:
+        from ai.chat_assistant import get_chat_assistant
+        assistant = get_chat_assistant()
+        assistant.clear_history()
+        return jsonify({'status': 'ok', 'message': 'Chat history cleared'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/api/chat/execute', methods=['POST'])
+def chat_execute_command():
+    """Execute a command directly (for confirmed actions)"""
+    try:
+        from ai.chat_assistant import get_chat_assistant
+        
+        data = request.get_json() or {}
+        command = data.get('command', {})
+        
+        if not command or not command.get('action'):
+            return jsonify({'status': 'error', 'message': 'No command provided'}), 400
+        
+        assistant = get_chat_assistant()
+        result = assistant.execute_command(command, bot_state)
+        
+        # Handle pending commands
+        if result.get('status') == 'pending':
+            action = result.get('action')
+            if action == 'start_bot':
+                start_bot()
+                result = {'status': 'ok', 'message': 'Bot started'}
+            elif action == 'stop_bot':
+                stop_bot_route()
+                result = {'status': 'ok', 'message': 'Bot stopped'}
+            elif action == 'pause_bot':
+                pause_bot()
+                result = {'status': 'ok', 'message': 'Bot paused'}
+            elif action == 'resume_bot':
+                resume_bot()
+                result = {'status': 'ok', 'message': 'Bot resumed'}
+            elif action == 'sync_balance':
+                sync_balance()
+                result = {'status': 'ok', 'message': 'Balance synced'}
+            elif action == 'update_code':
+                return auto_update()
+            elif action == 'restart_bot':
+                # Pull and restart
+                request._cached_json = {'branch': 'main', 'restart': True}
+                return auto_update()
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        import traceback
+        return jsonify({'status': 'error', 'message': str(e), 'traceback': traceback.format_exc()}), 500
+
+
+# =============================================================================
+# AUTO-UPDATE / DEPLOY API
+# =============================================================================
+
+@app.route('/api/update', methods=['POST'])
+def auto_update():
+    """
+    Pull latest code from git and optionally restart the bot.
+    
+    POST /api/update
+    Body (optional): {"restart": true, "branch": "main"}
+    
+    This allows remote deployment after pushing code to GitHub.
+    """
+    import subprocess
+    
+    try:
+        data = request.get_json() or {}
+        branch = data.get('branch', 'main')
+        do_restart = data.get('restart', False)
+        
+        results = {
+            'git_fetch': None,
+            'git_pull': None,
+            'restart': None
+        }
+        
+        # Get current commit before pull
+        try:
+            old_commit = subprocess.check_output(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+        except:
+            old_commit = 'unknown'
+        
+        # Git fetch
+        try:
+            fetch_output = subprocess.check_output(
+                ['git', 'fetch', 'origin', branch],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT,
+                timeout=30
+            ).decode()
+            results['git_fetch'] = 'ok'
+        except subprocess.CalledProcessError as e:
+            results['git_fetch'] = f'error: {e.output.decode()}'
+            return jsonify({'status': 'error', 'message': 'Git fetch failed', 'details': results}), 500
+        except subprocess.TimeoutExpired:
+            results['git_fetch'] = 'timeout'
+            return jsonify({'status': 'error', 'message': 'Git fetch timeout', 'details': results}), 500
+        
+        # Git pull (merge)
+        try:
+            pull_output = subprocess.check_output(
+                ['git', 'pull', 'origin', branch],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT,
+                timeout=30
+            ).decode()
+            results['git_pull'] = pull_output.strip()
+        except subprocess.CalledProcessError as e:
+            results['git_pull'] = f'error: {e.output.decode()}'
+            return jsonify({'status': 'error', 'message': 'Git pull failed', 'details': results}), 500
+        
+        # Get new commit after pull
+        try:
+            new_commit = subprocess.check_output(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+        except:
+            new_commit = 'unknown'
+        
+        updated = old_commit != new_commit
+        
+        add_log(f"Code updated via API: {old_commit} → {new_commit}", "success" if updated else "info")
+        
+        # Restart if requested
+        if do_restart:
+            # Try systemd first (recommended for VPS deployment)
+            try:
+                subprocess.run(
+                    ['systemctl', 'restart', 'tradingbot'],
+                    check=True,
+                    timeout=10
+                )
+                results['restart'] = 'systemd restart initiated'
+                add_log("Bot restart initiated via systemd", "warning")
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                # Fallback: schedule a restart via os._exit (will be restarted by systemd/supervisor)
+                results['restart'] = 'process exit scheduled (will be restarted by service manager)'
+                add_log("Bot exit scheduled for restart", "warning")
+                
+                # Schedule exit after response is sent
+                import threading
+                def delayed_exit():
+                    time.sleep(2)
+                    os._exit(0)  # Exit with 0 so systemd restarts us
+                threading.Thread(target=delayed_exit, daemon=True).start()
+        
+        return jsonify({
+            'status': 'ok',
+            'message': 'Update successful' + (' - restart initiated' if do_restart else ' - restart not requested'),
+            'old_commit': old_commit,
+            'new_commit': new_commit,
+            'updated': updated,
+            'details': results
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'status': 'error',
+            'message': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
+@app.route('/api/update/status', methods=['GET'])
+def update_status():
+    """Get current git status and commit info"""
+    import subprocess
+    
+    try:
+        results = {}
+        
+        # Current commit
+        try:
+            results['commit'] = subprocess.check_output(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+        except:
+            results['commit'] = 'unknown'
+        
+        # Current branch
+        try:
+            results['branch'] = subprocess.check_output(
+                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+        except:
+            results['branch'] = 'unknown'
+        
+        # Last commit message
+        try:
+            results['last_commit_message'] = subprocess.check_output(
+                ['git', 'log', '-1', '--pretty=%s'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+        except:
+            results['last_commit_message'] = 'unknown'
+        
+        # Check if there are updates available
+        try:
+            subprocess.check_output(
+                ['git', 'fetch', 'origin'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT,
+                timeout=15
+            )
+            local = subprocess.check_output(
+                ['git', 'rev-parse', 'HEAD'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+            remote = subprocess.check_output(
+                ['git', 'rev-parse', f'origin/{results["branch"]}'],
+                cwd=os.path.dirname(__file__),
+                stderr=subprocess.STDOUT
+            ).decode().strip()
+            results['updates_available'] = local != remote
+        except:
+            results['updates_available'] = None  # Unknown
+        
+        return jsonify({'status': 'ok', **results})
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 _last_stopped_analysis = 0
