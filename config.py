@@ -70,12 +70,12 @@ MAX_POSITIONS = 1  # Single position mode - wait for position to close before op
 # Profit and loss targets (as decimals) - 2:1 Risk/Reward Ratio
 PROFIT_TARGET = 0.015  # 1.5% profit target (improved from 1% for better risk/reward)
 PROFIT_TARGET_HIGH_VOL = 0.003  # 0.3% profit target in high volatility (faster sells for quick profits - optimized)
-MIN_PROFIT = 0.005   # 0.5% minimum profit to take (was 0.25% - need bigger wins to offset losses)
-MIN_PROFIT_HIGH_VOL = 0.003  # 0.3% minimum profit in high volatility (faster exits)
+MIN_PROFIT = 0.006   # 0.6% minimum profit to take (above 0.2% round-trip fees)
+MIN_PROFIT_HIGH_VOL = 0.004  # 0.4% minimum profit in high volatility (above fees)
 
 # Quick Profit Mode: Exit quickly on fast gains
 QUICK_PROFIT_ENABLED = True  # Enable quick profit mode for fast gainers
-QUICK_PROFIT_TARGET = 0.005  # 0.5% profit target for quick exits
+QUICK_PROFIT_TARGET = 0.008  # 0.8% profit target for quick exits (meaningful after 0.2% fees)
 QUICK_PROFIT_TIME_LIMIT = 30  # Exit at quick profit if reached within 30 minutes
 STOP_LOSS = 0.007        # 0.7% stop loss (base) - cut losses faster
 STOP_LOSS_TRENDING_DOWN = 0.005  # 0.5% in downtrend - cut losses faster
@@ -104,6 +104,8 @@ AI_DECIDES_ALL = False  # Respect NO_BUY_IN_DOWNTREND to avoid losses in bear ma
 BUY_THRESHOLD_AFTER_LOSS = 0.32   # After 1+ consecutive loss, require slightly stronger signal (more active recovery)
 BUY_THRESHOLD_AFTER_TWO_LOSSES = 0.38  # After 2+ consecutive losses, require stronger signal (balanced recovery)
 COOLDOWN_AFTER_LOSS_MINUTES = 5  # Wait 5 min after stop loss before next buy (faster recovery - anti-whipsaw)
+MIN_TRADE_INTERVAL_SECONDS = 120  # 2 min minimum between ANY trades (prevents rapid-fire overtrading)
+TRADING_FEE_RATE = 0.001          # 0.1% per trade (Binance standard maker/taker fee; 0.2% round-trip)
 ONLY_BUY_STRICT_UPTREND = False   # True = only buy when regime is "trending_up" (not "ranging") - very conservative
 MIN_CONFLUENCE_AFTER_LOSS = 4     # After a loss, require 4+ indicators (more active recovery, normal is 5)
 LOSS_AVOIDANCE_TIMEOUT_MINUTES = 60  # Reset loss avoidance after 60 min if no trades (prevents permanent blocking)
@@ -141,8 +143,8 @@ VOLUME_NO_CONFIRM_PENALTY = 0.15  # Reduce score by 15% if no volume confirmatio
 ADAPTIVE_WEIGHTS_ENABLED = True # Learn indicator weights from trade outcomes
 
 # Trailing stop activation - activate earlier to lock profits
-TRAILING_ACTIVATION = 0.003     # Activate at +0.3% (optimized for faster profit locking)
-TRAILING_ACTIVATION_HOT = 0.002  # +0.2% during win streak (even earlier for quick gains)
+TRAILING_ACTIVATION = 0.005     # Activate at +0.5% (above fees, prevents premature trailing)
+TRAILING_ACTIVATION_HOT = 0.003  # +0.3% during win streak (above fees)
 
 # Gainer Detection Boost Settings
 GAINER_BOOST_1H_THRESHOLD = 0.02  # +2% gain in 1h triggers boost
@@ -162,7 +164,7 @@ MAX_DAILY_TRADES = 12          # Cap round-trips to reduce churn and fee drag
 # =============================================================================
 # Break-even stop - move stop to entry after reaching this profit %
 BREAKEVEN_ACTIVATION = 0.005   # +0.5% profit = move stop to entry (lock in no-loss)
-BREAKEVEN_BUFFER = 0.001       # Small buffer above entry (0.1%) to cover fees
+BREAKEVEN_BUFFER = 0.003       # 0.3% buffer above entry to cover round-trip fees (0.2%) + small profit
 
 # Support-based stops - use support level instead of fixed %
 USE_SUPPORT_STOP = True        # Enable support-based stop loss
@@ -186,8 +188,10 @@ MIN_HOLD_MINUTES = 45          # Don't apply regular stop in first 45 min (hard 
 AI_STOP_ENABLED = True         # Enable AI involvement in stop decisions
 
 # AI Score Override - if AI is bullish, delay stop
-AI_BULLISH_OVERRIDE = 0.15     # If AI score > 0.15, delay stop (turning bullish)
-AI_STRONG_BULLISH = 0.30       # If AI score > 0.30, give maximum tolerance
+# NOTE: These must be high enough that only genuinely strong signals delay stops.
+# Too low (was 0.15/0.30) = bot delays stops endlessly on mediocre scores, bleeding losses.
+AI_BULLISH_OVERRIDE = 0.45     # If AI score > 0.45, delay stop (must be genuinely bullish)
+AI_STRONG_BULLISH = 0.60       # If AI score > 0.60, give maximum tolerance (strong conviction only)
 
 # AI Decision Override - if AI says HOLD, widen stop
 AI_HOLD_STOP_MULTIPLIER = 1.5  # If AI=HOLD, multiply stop % by 1.5x (wider)

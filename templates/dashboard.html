@@ -1785,7 +1785,7 @@
             }
             
             // Update AI score display
-            const aiScoreEl = document.getElementById('aiScoreValue');
+            const aiScoreEl = document.getElementById('aiScore');
             if (aiScoreEl && tick.ai_score !== undefined) {
                 aiScoreEl.textContent = (tick.ai_score >= 0 ? '+' : '') + tick.ai_score.toFixed(3);
             }
@@ -2669,21 +2669,24 @@
 
             if (position) {
                 card.classList.remove('no-position');
+                card.classList.add('position-active');
                 const pnlClass = pnlPercent >= 0 ? 'positive' : 'negative';
                 const pnlSign = pnlPercent >= 0 ? '+' : '';
+                const baseAsset = position.base_asset || 'BTC';
                 info.innerHTML = `
                     <div style="font-size: 1.2em; margin-bottom: 10px;">
                         Entry: <strong>$${formatNumber(position.entry_price)}</strong>
                     </div>
                     <div style="margin-bottom: 5px;">
-                        Quantity: ${position.quantity.toFixed(6)} BTC
+                        Quantity: ${position.quantity.toFixed(6)} ${baseAsset}
                     </div>
                     <div class="card-value ${pnlClass}" style="font-size: 1.5em;">
-                        ${pnlSign}${pnlPercent.toFixed(2)}%
+                        <span id="pnlPercent" class="${pnlPercent >= 0 ? 'pnl-positive' : 'pnl-negative'}">${pnlSign}${pnlPercent.toFixed(2)}%</span>
                     </div>
                 `;
             } else {
                 card.classList.add('no-position');
+                card.classList.remove('position-active');
                 info.innerHTML = '<div class="card-value neutral">No Position</div>';
             }
         }

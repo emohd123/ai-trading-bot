@@ -288,8 +288,11 @@ class SelfHealer:
             if actual_balance is None:
                 return None
 
-            min_balance = 0.0001  # About $8 at $80k BTC; still safe for most majors
-            if not position and actual_balance >= min_balance:
+            # Use USD-value check instead of fixed quantity (0.0001 BTC = $8 but 0.0001 XRP = $0.00014)
+            min_notional_usd = getattr(config, "TRADE_AMOUNT_MIN", 10) * 0.5  # $5 minimum to count
+            current_price = self.client.get_current_price(symbol=symbol)
+            notional_value = actual_balance * current_price if current_price else 0
+            if not position and notional_value >= min_notional_usd:
                 self.log_issue(
                     f"Orphan {base_asset} detected: {actual_balance} {base_asset} on Binance but no position tracked"
                 )
